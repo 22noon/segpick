@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ gene.name }} — SegPick</title>
+  <style>
+    :root { --bg:#f8fafc; --card:#fff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --blue:#2563eb; }
+    * { box-sizing:border-box; }
+    body { font-family:Inter,ui-sans-serif,system-ui,sans-serif; margin:0; background:var(--bg); color:var(--ink); }
+    main { max-width:1450px; margin:auto; padding:1.5rem; }
+    .back { display:inline-block; margin-bottom:1rem; color:var(--blue); text-decoration:none; font-weight:650; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1rem; margin-bottom:1rem; box-shadow:0 1px 2px rgb(15 23 42 / .04); }
+    .meta { display:flex; gap:1rem; flex-wrap:wrap; color:#475569; margin-bottom:1rem; }
+    .recommend { display:grid; grid-template-columns:minmax(220px,.8fr) minmax(280px,1.4fr); gap:1rem; border-left:5px solid #2563eb; }
+    .rec-name { font-size:1.45rem; font-weight:800; margin:.15rem 0 .7rem; }
+    .mini-grid { display:grid; grid-template-columns:repeat(2,minmax(100px,1fr)); gap:.55rem; }
+    .mini { padding:.6rem; background:#f8fafc; border-radius:9px; }
+    .mini strong { display:block; font-size:1.05rem; }
+    .mini span { color:var(--muted); font-size:.78rem; }
+    table { width:100%; border-collapse:collapse; font-size:.88rem; }
+    th,td { padding:.58rem; border-bottom:1px solid var(--line); text-align:left; }
+    th { background:#f1f5f9; cursor:pointer; position:sticky; top:0; z-index:1; }
+    tbody tr { cursor:pointer; }
+    tbody tr:hover td, tbody tr.selected td { background:#eff6ff; }
+    .scroll { overflow:auto; max-height:520px; }
+    .seq { border-top:1px solid var(--line); padding:.75rem 0; scroll-margin-top:1rem; }
+    .seq.selected { outline:2px solid #93c5fd; border-radius:8px; padding:.75rem; }
+    pre { white-space:pre-wrap; word-break:break-all; background:#f8fafc; padding:.75rem; max-height:220px; overflow:auto; }
+    button { border:0; border-radius:8px; padding:.55rem .8rem; cursor:pointer; background:var(--blue); color:white; margin-right:.4rem; }
+    button.secondary { background:#475569; }
+    .download-panel { display:flex; gap:1rem; flex-wrap:wrap; align-items:center; }
+    .badge { display:inline-block; padding:.24rem .6rem; border-radius:999px; font-size:.76rem; font-weight:750; }
+    .status-COMPLETE,.status-ANCHOR { background:#dcfce7; color:#166534; }
+    .status-PARTIAL { background:#fef3c7; color:#92400e; }
+    .status-FRAGMENTED { background:#ffedd5; color:#9a3412; }
+    .status-POOR,.status-NO_ALIGNMENT { background:#fee2e2; color:#991b1b; }
+    .progress { min-width:92px; height:8px; background:#e2e8f0; border-radius:999px; overflow:hidden; margin-top:.2rem; }
+    .progress > span { display:block; height:100%; background:#2563eb; }
+    .muted { color:var(--muted); }
+    footer { color:var(--muted); font-size:.8rem; margin-top:1rem; }
+    @media(max-width:800px){ .recommend{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<main>
+  <a class="back" href="../index.html">← All genes</a>
+  <h1>{{ gene.name }}</h1>
+  <div class="meta"><span>Segment: {{ gene.segment }}</span><span>Anchor: {{ gene.anchor_id }}</span><span>Candidates: {{ gene.candidates|length }}</span><span>References: {{ gene.references|length }}</span></div>
+
+  {% if recommendation %}
+  <section class="card recommend">
+    <div>
+      <div class="muted">Provisional curation suggestion</div>
+      <div class="rec-name">{{ recommendation.id }}</div>
+      <span class="badge status-{{ recommendation.status }}">{{ recommendation.status }}</span>
+      <p><button onclick="selectSequence('{{ recommendation.id }}')">Highlight candidate</button></p>
+    </div>
+    <div>
+      <div class="mini-grid">
+        <div class="mini"><strong>{{ "%.3f"|format(recommendation.confidence) }}</strong><span>Protein confidence</span></div>
+        <div class="mini"><strong>{{ "%.3f"|format(recommendation.structural_score) }}</strong><span>Structural score</span></div>
+        <div class="mini"><strong>{{ "%.1f%%"|format(recommendation.query_coverage*100) }}</strong><span>Sequence coverage</span></div>
+        <div class="mini"><strong>{{ "%.2f%%"|format(recommendation.identity*100) }}</strong><span>Identity</span></div>
+      </div>
+      <ul>{% for reason in recommendation.reason %}<li>{{ reason }}</li>{% endfor %}</ul>
+      <div class="muted">This is a transparent heuristic, not the later configurable-weight recommendation engine.</div>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="card">{{ dotplot|safe }}</section>
+  <section class="card">{{ containment|safe }}</section>
+
+  <section class="card">
+    <h2>Evidence table</h2>
+    <div class="scroll">
+    <table id="evidence-table">
+      <thead><tr>{% for h in ["Sequence","Type","Length","Confidence","z","Cluster","Query cov.","Anchor cov.","Identity","Fragmentation","Blocks","Structural","Status"] %}<th onclick="sortTable({{ loop.index0 }})">{{ h }}</th>{% endfor %}</tr></thead>
+      <tbody>
+      {% for row in rows %}
+      <tr data-sequence-id="{{ row.id }}" onclick="selectSequence('{{ row.id }}')">
+        <td>{{ row.id }}{% if row.is_anchor %} ★{% endif %}</td><td>{{ row.type }}</td><td>{{ row.length }}</td>
+        <td>{{ "" if row.confidence is none else "%.3f"|format(row.confidence|float) }}</td>
+        <td>{{ "" if row.z is none else "%.3f"|format(row.z|float) }}</td><td>{{ "" if row.cluster is none else row.cluster }}</td>
+        <td><span>{{ "%.1f%%"|format(row.query_coverage*100) }}</span><div class="progress"><span style="width:{{ row.query_coverage*100 }}%"></span></div></td>
+        <td><span>{{ "%.1f%%"|format(row.anchor_coverage*100) }}</span><div class="progress"><span style="width:{{ row.anchor_coverage*100 }}%"></span></div></td>
+        <td>{{ "%.2f%%"|format(row.identity*100) }}</td><td>{{ "%.3f"|format(row.fragmentation) }}</td><td>{{ row.n_blocks }}</td><td>{{ "%.3f"|format(row.structural_score) }}</td>
+        <td><span class="badge status-{{ row.status }}">{{ row.status }}</span></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section class="card"><h2>Download selected sequences</h2><div class="download-panel">{% for seq in sequences %}<label><input type="checkbox" class="seq-check" value="{{ seq.id }}" checked> {{ seq.id }}</label>{% endfor %}<button onclick="downloadSelected()">Download FASTA</button><button class="secondary" onclick="clearSelection()">Clear highlight</button></div></section>
+
+  <section class="card"><h2>Sequence browser</h2>{% for seq in sequences %}<details class="seq" data-sequence-id="{{ seq.id }}"><summary><strong>{{ seq.id }}</strong> — {{ seq.type }}, {{ seq.length }} bp</summary><p><button onclick="copySequence('{{ seq.id }}')">Copy sequence</button><button onclick="downloadOne('{{ seq.id }}')">Download FASTA</button></p><pre>{{ seq.sequence }}</pre></details>{% endfor %}</section>
+  <footer>Generated by SegPick {{ package_version }}</footer>
+</main>
+<script>
+const sequences={{ sequences_json|safe }};
+function fastaText(items){return items.map(x=>`>${x.id}\n${(x.sequence.match(/.{1,80}/g)||[x.sequence]).join("\n")}`).join("\n")+"\n";}
+function triggerDownload(text,filename){const blob=new Blob([text],{type:"text/plain"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);}
+function downloadSelected(){const ids=[...document.querySelectorAll(".seq-check:checked")].map(x=>x.value);triggerDownload(fastaText(sequences.filter(x=>ids.includes(x.id))),"{{ gene.name }}_selected.fa");}
+function downloadOne(id){const item=sequences.find(x=>x.id===id);triggerDownload(fastaText([item]),`${id}.fa`);}
+function copySequence(id){navigator.clipboard.writeText(sequences.find(x=>x.id===id).sequence);}
+function traceSequence(trace){return trace.meta&&trace.meta.sequence_id?trace.meta.sequence_id:null;}
+function highlightPlot(divId,id){const div=document.getElementById(divId);if(!div||!div.data)return;const op=div.data.map(t=>!id||traceSequence(t)===id?1:0.16);const widths=div.data.map(t=>{const w=(t.line&&t.line.width)||4;return !id||traceSequence(t)===id?Math.max(w,6):Math.max(2,w*.55);});Plotly.restyle(div,{opacity:op,"line.width":widths});}
+function selectSequence(id){document.querySelectorAll("#evidence-table tbody tr").forEach(r=>r.classList.toggle("selected",r.dataset.sequenceId===id));document.querySelectorAll("details.seq").forEach(d=>{const yes=d.dataset.sequenceId===id;d.classList.toggle("selected",yes);if(yes){d.open=true;d.scrollIntoView({behavior:"smooth",block:"nearest"});}});highlightPlot("dotplot",id);highlightPlot("containment-plot",id);}
+function clearSelection(){document.querySelectorAll(".selected").forEach(x=>x.classList.remove("selected"));highlightPlot("dotplot",null);highlightPlot("containment-plot",null);}
+function bindPlotClick(id){const div=document.getElementById(id);if(div&&div.on)div.on("plotly_click",e=>{const sid=e.points&&e.points[0]&&e.points[0].customdata;if(sid)selectSequence(sid);});}
+window.addEventListener("load",()=>{bindPlotClick("dotplot");bindPlotClick("containment-plot");});
+function sortTable(col){const table=document.getElementById("evidence-table"),tbody=table.tBodies[0],rows=[...tbody.rows],asc=table.dataset.sortCol!=col||table.dataset.sortDir!="asc";rows.sort((a,b)=>{const av=a.cells[col].innerText.trim().replace("%",""),bv=b.cells[col].innerText.trim().replace("%","");const an=Number(av),bn=Number(bv),cmp=(!Number.isNaN(an)&&!Number.isNaN(bn))?an-bn:av.localeCompare(bv);return asc?cmp:-cmp;});rows.forEach(r=>tbody.appendChild(r));table.dataset.sortCol=col;table.dataset.sortDir=asc?"asc":"desc";}
+</script>
+</body>
+</html>

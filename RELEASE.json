@@ -1,0 +1,14 @@
+{
+  "project": "SegPick",
+  "version": "0.1.0",
+  "package": "segpick",
+  "config_precedence": [
+    "defaults",
+    "config.yml",
+    "command line"
+  ],
+  "entry_points": [
+    "python -m segpick.cli",
+    "segpick"
+  ]
+}

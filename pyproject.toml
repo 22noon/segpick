@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "segpick"
+version = "0.1.0"
+description = "Evidence-based curation of segmented viral genome assemblies"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "biopython",
+    "pandas",
+    "plotly",
+    "jinja2",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "black"]
+
+[project.scripts]
+segpick = "segpick.cli:main"
+
+[tool.setuptools.package-data]
+segpick = ["reporting/templates/*.html"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

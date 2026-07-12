@@ -1,0 +1,16 @@
+sample: sample1
+outdir: results
+strict: false
+
+input:
+  hits: selected_hits.tsv
+  contigs: assembly.fasta
+  references: references.nt.fasta
+
+alignment:
+  run: true
+  use_existing_paf: false
+  preset: asm5
+
+dashboard:
+  html: true
