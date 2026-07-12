@@ -14,3 +14,11 @@ alignment:
 
 dashboard:
   html: true
+
+scoring:
+  weights:
+    protein_confidence: 0.30
+    length_plausibility: 0.15
+    containment: 0.25
+    identity: 0.15
+    fragmentation: 0.15
