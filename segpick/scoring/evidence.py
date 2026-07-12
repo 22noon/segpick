@@ -7,25 +7,31 @@ from dataclasses import asdict, dataclass
 class Evidence:
     """Normalised evidence values for one candidate.
 
-    Every value is expected to be between 0 and 1.
-    Raw measurements such as confidence, z-score, identity, and coverage
-    remain stored elsewhere and are not modified by this class.
+    Values are between 0 and 1. A value of None means that the evidence
+    channel is unavailable and its scoring weight should be redistributed
+    across the available channels.
     """
 
-    protein_confidence: float
-    length_plausibility: float
-    containment: float
-    identity: float
-    fragmentation: float
+    protein_confidence: float | None
+    length_plausibility: float | None
+    containment: float | None
+    identity: float | None
+    fragmentation: float | None
 
     def __post_init__(self) -> None:
         for name, value in asdict(self).items():
-            if not 0.0 <= value <= 1.0:
-                raise ValueError(
-                    f"{name} must be between 0 and 1; received {value}"
-                )
+            if value is None:
+                continue
 
-    def to_dict(self) -> dict[str, float]:
-        """Return evidence as a plain dictionary."""
+            if not 0.0 <= value <= 1.0:
+                raise ValueError(f"{name} must be between 0 and 1; received {value}")
+
+    def available(self) -> dict[str, float]:
+        """Return only evidence channels that are available."""
+
+        return {name: value for name, value in asdict(self).items() if value is not None}
+
+    def to_dict(self) -> dict[str, float | None]:
+        """Return all evidence channels as a plain dictionary."""
 
         return asdict(self)

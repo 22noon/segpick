@@ -26,9 +26,22 @@ segpick = "segpick.cli:main"
 segpick = ["reporting/templates/*.html"]
 
 [tool.black]
-line-length = 100
+line-length = 1000
 target-version = ["py312"]
 
 [tool.ruff]
-line-length = 100
+line-length = 1000
 target-version = "py312"
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

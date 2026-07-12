@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from pathlib import Path
 import platform
 import shutil
 import subprocess
 import sys
+from datetime import UTC, datetime
+from pathlib import Path
+
 import yaml
 
 from segpick import __version__
@@ -17,9 +18,7 @@ def _tool_version(command: str) -> str | None:
     if path is None:
         return None
     try:
-        proc = subprocess.run(
-            [command, "--version"], capture_output=True, text=True, timeout=10, check=False
-        )
+        proc = subprocess.run([command, "--version"], capture_output=True, text=True, timeout=10, check=False)
     except OSError:
         return None
     text = (proc.stdout or proc.stderr).strip().splitlines()
@@ -33,7 +32,7 @@ def write_provenance(config: RunConfig, path: str | Path, argv: list[str]) -> Pa
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "segpick_version": __version__,
-        "generated_utc": datetime.now(timezone.utc).isoformat(),
+        "generated_utc": datetime.now(UTC).isoformat(),
         "command": argv,
         "python": sys.version.split()[0],
         "platform": platform.platform(),

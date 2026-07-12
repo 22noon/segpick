@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from pathlib import Path
 import json
+from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from plotly.io import to_html
 
 from segpick import __version__
-from segpick.models import Sample, Gene, CandidateContig
-from segpick.visualization import make_dotplot, make_containment_plot
 from segpick.alignment.export import safe_name
+from segpick.models import Gene, Sample
+from segpick.visualization import make_containment_plot, make_dotplot
 
 
 def _sequence_payload(gene: Gene) -> list[dict[str, object]]:
@@ -91,11 +91,7 @@ def _provisional_recommendation(gene: Gene) -> dict[str, object] | None:
     if not gene.candidates:
         return None
 
-    complete = [
-        c
-        for c in gene.candidates
-        if c.analysis.containment.status in {"COMPLETE", "ANCHOR"}
-    ]
+    complete = [c for c in gene.candidates if c.analysis.containment.status in {"COMPLETE", "ANCHOR"}]
     if complete:
         chosen = max(complete, key=lambda c: c.metadata.confidence)
         reason = [

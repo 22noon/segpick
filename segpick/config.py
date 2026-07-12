@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
+
 import yaml
 
 
@@ -43,9 +44,7 @@ def _flatten_yaml(data: dict[str, Any]) -> dict[str, Any]:
     result["sample_name"] = data.get("sample", data.get("sample_name"))
     result["strict"] = data.get("strict")
     result["align"] = alignment_cfg.get("run", alignment_cfg.get("align", data.get("align")))
-    result["use_existing_paf"] = alignment_cfg.get(
-        "use_existing_paf", data.get("use_existing_paf")
-    )
+    result["use_existing_paf"] = alignment_cfg.get("use_existing_paf", data.get("use_existing_paf"))
     result["preset"] = alignment_cfg.get("preset", data.get("preset"))
     result["html"] = dashboard_cfg.get("html", data.get("html"))
     return {key: value for key, value in result.items() if value is not None}

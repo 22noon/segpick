@@ -26,9 +26,7 @@ def rank_gene(
     """
 
     if not gene.candidates:
-        raise ValueError(
-            f"Gene {gene.name!r} has no candidates to rank"
-        )
+        raise ValueError(f"Gene {gene.name!r} has no candidates to rank")
 
     evidence_by_id = build_gene_evidence(gene.candidates)
 
@@ -36,9 +34,7 @@ def rank_gene(
         CandidateRecommendation(
             candidate_id=candidate.id,
             length=candidate.length,
-            protein_confidence_raw=float(
-                candidate.metadata.confidence
-            ),
+            protein_confidence_raw=float(candidate.metadata.confidence),
             evidence=evidence_by_id[candidate.id],
             scored=score_evidence(
                 evidence_by_id[candidate.id],

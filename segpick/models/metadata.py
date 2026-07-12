@@ -1,7 +1,10 @@
 from dataclasses import dataclass
+
+
 @dataclass(slots=True)
 class ContigMetadata:
     """Static metadata for a candidate contig from selected_hits.tsv."""
+
     segment: str
     score: float
     confidence: float

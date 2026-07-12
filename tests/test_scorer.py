@@ -14,13 +14,7 @@ def test_score_uses_all_available_channels() -> None:
 
     result = score_evidence(evidence, ScoringWeights())
 
-    expected = (
-        1.0 * 0.30
-        + 0.5 * 0.15
-        + 0.8 * 0.25
-        + 0.9 * 0.15
-        + 1.0 * 0.15
-    )
+    expected = 1.0 * 0.30 + 0.5 * 0.15 + 0.8 * 0.25 + 0.9 * 0.15 + 1.0 * 0.15
 
     assert result.score == pytest.approx(expected)
     assert sum(result.effective_weights.values()) == pytest.approx(1.0)
@@ -40,12 +34,8 @@ def test_missing_channel_weight_is_redistributed() -> None:
     assert "length_plausibility" not in result.effective_weights
     assert sum(result.effective_weights.values()) == pytest.approx(1.0)
 
-    assert result.effective_weights["protein_confidence"] == pytest.approx(
-        0.30 / 0.85
-    )
-    assert result.effective_weights["containment"] == pytest.approx(
-        0.25 / 0.85
-    )
+    assert result.effective_weights["protein_confidence"] == pytest.approx(0.30 / 0.85)
+    assert result.effective_weights["containment"] == pytest.approx(0.25 / 0.85)
 
 
 def test_missing_evidence_does_not_count_as_zero() -> None:

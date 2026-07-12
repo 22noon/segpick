@@ -1,13 +1,54 @@
-from pathlib import Path
-import json
-from segpick.alignment.export import safe_name
+from __future__ import annotations
 
-def write_gene_json_reports(sample,outdir):
-    outdir=Path(outdir); outdir.mkdir(parents=True,exist_ok=True)
-    for name,g in sample.genes.items():
-        data={'gene':g.name,'segment':g.segment,'anchor':g.anchor_id,'candidates':[],'references':[]}
+import json
+from collections.abc import Mapping
+from pathlib import Path
+
+from segpick.alignment.export import safe_name
+from segpick.models import Sample
+from segpick.scoring import GeneRecommendation
+
+
+def write_gene_json_reports(
+    sample: Sample,
+    outdir: str | Path,
+    recommendations: Mapping[str, GeneRecommendation] | None = None,
+) -> None:
+    outdir = Path(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+    for name, g in sample.genes.items():
+        payload = {
+            "gene": g.name,
+            "segment": g.segment,
+            "anchor": g.anchor_id,
+            "candidates": [],
+            "references": [],
+        }
+        if recommendations and g.name in recommendations:
+            payload["recommendation"] = recommendations[g.name].to_dict()
+        else:
+            payload["recommendation"] = None
+
         for c in g.candidates:
-            data['candidates'].append({'id':c.id,'length':c.length,'confidence':c.metadata.confidence,'score':c.metadata.score,'z':c.metadata.z,'cluster':c.metadata.cluster,'blast_reference':c.metadata.sseqid,'containment':c.analysis.containment.to_dict()})
+            payload["candidates"].append(
+                {
+                    "id": c.id,
+                    "length": c.length,
+                    "confidence": c.metadata.confidence,
+                    "score": c.metadata.score,
+                    "z": c.metadata.z,
+                    "cluster": c.metadata.cluster,
+                    "blast_reference": c.metadata.sseqid,
+                    "containment": c.analysis.containment.to_dict(),
+                }
+            )
         for r in g.references:
-            data['references'].append({'id':r.accession,'description':r.description,'length':r.length,'containment':r.containment.to_dict()})
-        (outdir/f'{safe_name(name)}.json').write_text(json.dumps(data,indent=2))
+            payload["references"].append(
+                {
+                    "id": r.accession,
+                    "description": r.description,
+                    "length": r.length,
+                    "containment": r.containment.to_dict(),
+                }
+            )
+        (outdir / f"{safe_name(name)}.json").write_text(json.dumps(payload, indent=2))

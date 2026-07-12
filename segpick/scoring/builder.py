@@ -34,7 +34,9 @@ def protein_confidence_evidence(
     return clamp01(max(0.0, float(candidate.metadata.confidence)) / maximum)
 
 
-def length_plausibility_evidence(candidate: CandidateContig) -> float:
+def length_plausibility_evidence(
+    candidate: CandidateContig,
+) -> float | None:
     """Convert the candidate length z-score into a 0–1 plausibility value.
 
     Uses the standard normal density-shaped penalty:
@@ -49,14 +51,13 @@ def length_plausibility_evidence(candidate: CandidateContig) -> float:
     - |z| = 3 gives approximately 0.011
 
     A missing z-score is treated as unavailable evidence and currently receives
-    zero. Later, missing evidence can be handled explicitly by the weighting
-    layer rather than being interpreted as poor evidence.
+    zero. Missing evidence is to be handled with adjusting other weights
+    (rather than being interpreted as poor evidence.)
     """
-
     z = candidate.metadata.z
 
     if z is None:
-        return 0.0
+        return None
 
     return clamp01(math.exp(-0.5 * float(z) ** 2))
 
@@ -66,9 +67,7 @@ def containment_evidence(candidate: CandidateContig) -> float:
 
     metrics = candidate.analysis.containment
 
-    return clamp01(
-        float(metrics.query_coverage) * float(metrics.anchor_coverage)
-    )
+    return clamp01(float(metrics.query_coverage) * float(metrics.anchor_coverage))
 
 
 def identity_evidence(candidate: CandidateContig) -> float:
@@ -124,7 +123,4 @@ def build_gene_evidence(
 
     candidate_list = list(candidates)
 
-    return {
-        candidate.id: build_evidence(candidate, candidate_list)
-        for candidate in candidate_list
-    }
+    return {candidate.id: build_evidence(candidate, candidate_list) for candidate in candidate_list}

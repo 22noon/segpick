@@ -16,14 +16,7 @@ def make_dotplot(gene: Gene) -> go.Figure:
         else:
             y = [aln.target_end, aln.target_start]
 
-        hover = (
-            f"Query: {aln.query_id}<br>"
-            f"Target: {aln.target_id}<br>"
-            f"Strand: {aln.strand}<br>"
-            f"Identity: {aln.identity * 100:.2f}%<br>"
-            f"Alignment: {aln.alignment_length:,} bp<br>"
-            f"MAPQ: {aln.mapq}"
-        )
+        hover = f"Query: {aln.query_id}<br>Target: {aln.target_id}<br>Strand: {aln.strand}<br>Identity: {aln.identity * 100:.2f}%<br>Alignment: {aln.alignment_length:,} bp<br>MAPQ: {aln.mapq}"
 
         fig.add_trace(
             go.Scatter(

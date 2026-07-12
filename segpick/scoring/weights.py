@@ -16,9 +16,7 @@ class ScoringWeights:
     def __post_init__(self) -> None:
         for name, value in asdict(self).items():
             if value < 0:
-                raise ValueError(
-                    f"{name} weight cannot be negative; received {value}"
-                )
+                raise ValueError(f"{name} weight cannot be negative; received {value}")
 
         if self.total == 0:
             raise ValueError("At least one scoring weight must be greater than zero")
@@ -29,34 +27,23 @@ class ScoringWeights:
 
         return sum(asdict(self).values())
 
-    def normalised(self) -> "ScoringWeights":
+    def normalised(self) -> ScoringWeights:
         """Return weights scaled so they sum to one."""
 
         total = self.total
-        return ScoringWeights(
-            **{
-                name: value / total
-                for name, value in asdict(self).items()
-            }
-        )
+        return ScoringWeights(**{name: value / total for name, value in asdict(self).items()})
 
     def with_overrides(
         self,
         **overrides: float | None,
-    ) -> "ScoringWeights":
+    ) -> ScoringWeights:
         """Return a copy with non-None values replaced."""
 
-        valid = {
-            name: value
-            for name, value in overrides.items()
-            if value is not None
-        }
+        valid = {name: value for name, value in overrides.items() if value is not None}
 
         unknown = set(valid) - set(asdict(self))
         if unknown:
-            raise ValueError(
-                "Unknown scoring weights: " + ", ".join(sorted(unknown))
-            )
+            raise ValueError("Unknown scoring weights: " + ", ".join(sorted(unknown)))
 
         return replace(self, **valid)
 

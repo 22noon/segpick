@@ -71,22 +71,13 @@ def make_containment_plot(gene: Gene) -> go.Figure:
                     showlegend=False,
                     meta={"sequence_id": seq_id, "track": "alignment"},
                     customdata=[seq_id, seq_id],
-                    hovertemplate=(
-                        f"{seq_id}<br>Anchor<br>Length: {anchor_len:,} bp<extra></extra>"
-                    ),
+                    hovertemplate=(f"{seq_id}<br>Anchor<br>Length: {anchor_len:,} bp<extra></extra>"),
                 )
             )
         else:
             for aln in hits:
                 color = "#2563eb" if aln.strand == "+" else "#f97316"
-                hover = (
-                    f"{seq_id}<br>"
-                    f"Type: {row['type']}<br>"
-                    f"Identity: {aln.identity * 100:.2f}%<br>"
-                    f"Query coverage: {metrics.query_coverage * 100:.1f}%<br>"
-                    f"Anchor coverage: {metrics.anchor_coverage * 100:.1f}%<br>"
-                    f"Status: {metrics.status}"
-                )
+                hover = f"{seq_id}<br>Type: {row['type']}<br>Identity: {aln.identity * 100:.2f}%<br>Query coverage: {metrics.query_coverage * 100:.1f}%<br>Anchor coverage: {metrics.anchor_coverage * 100:.1f}%<br>Status: {metrics.status}"
                 fig.add_trace(
                     go.Scatter(
                         x=[aln.target_start, aln.target_end],

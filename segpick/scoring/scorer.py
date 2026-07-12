@@ -35,25 +35,14 @@ def score_evidence(
     evidence_values = evidence.available()
     configured_weights = asdict(weights)
 
-    available_weight_total = sum(
-        configured_weights[name]
-        for name in evidence_values
-    )
+    available_weight_total = sum(configured_weights[name] for name in evidence_values)
 
     if available_weight_total <= 0:
-        raise ValueError(
-            "No positive scoring weight is available for this candidate's evidence"
-        )
+        raise ValueError("No positive scoring weight is available for this candidate's evidence")
 
-    effective_weights = {
-        name: configured_weights[name] / available_weight_total
-        for name in evidence_values
-    }
+    effective_weights = {name: configured_weights[name] / available_weight_total for name in evidence_values}
 
-    contributions = {
-        name: evidence_values[name] * effective_weights[name]
-        for name in evidence_values
-    }
+    contributions = {name: evidence_values[name] * effective_weights[name] for name in evidence_values}
 
     return ScoredEvidence(
         score=sum(contributions.values()),

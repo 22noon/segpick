@@ -44,8 +44,5 @@ class GeneRecommendation:
         return {
             "gene": self.gene,
             "recommended": self.recommended.to_dict(),
-            "candidates": [
-                candidate.to_dict()
-                for candidate in self.candidates
-            ],
+            "candidates": [candidate.to_dict() for candidate in self.candidates],
         }

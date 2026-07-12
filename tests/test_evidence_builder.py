@@ -122,7 +122,7 @@ def test_fragmentation_is_converted_to_positive_evidence() -> None:
     assert evidence.fragmentation == pytest.approx(0.75)
 
 
-def test_missing_z_score_gives_zero_length_evidence() -> None:
+def test_missing_z_score_is_unavailable() -> None:
     candidate = make_candidate(
         "candidate",
         confidence=100,
@@ -135,7 +135,7 @@ def test_missing_z_score_gives_zero_length_evidence() -> None:
 
     evidence = build_evidence(candidate, [candidate])
 
-    assert evidence.length_plausibility == 0.0
+    assert evidence.length_plausibility is None
 
 
 def test_zero_confidence_gene_is_handled() -> None:

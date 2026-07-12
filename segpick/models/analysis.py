@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
+
 from .containment import ContainmentMetrics
+
 
 @dataclass(slots=True)
 class ContigAnalysis:
