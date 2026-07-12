@@ -8,11 +8,14 @@ from .builder import (
     protein_confidence_evidence,
 )
 from .evidence import Evidence
+from .scorer import ScoredEvidence, score_evidence
 from .weights import ScoringWeights
 
 __all__ = [
     "Evidence",
     "ScoringWeights",
+    "ScoredEvidence",
+    "score_evidence",
     "build_evidence",
     "build_gene_evidence",
     "protein_confidence_evidence",
