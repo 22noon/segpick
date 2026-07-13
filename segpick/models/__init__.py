@@ -6,6 +6,7 @@ from .gene import Gene
 from .metadata import ContigMetadata
 from .reference import ReferenceSequence
 from .sample import Sample
+from .read_support import ReadSupportMetrics
 
 __all__ = [
     "Sample",
