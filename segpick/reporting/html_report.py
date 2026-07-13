@@ -1,6 +1,8 @@
 from __future__ import annotations
+from segpick.reporting.view_models import build_gene_page_view
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -9,6 +11,7 @@ from plotly.io import to_html
 from segpick import __version__
 from segpick.alignment.export import safe_name
 from segpick.models import Gene, Sample
+from segpick.scoring import GeneRecommendation
 from segpick.visualization import make_containment_plot, make_dotplot
 
 
@@ -80,57 +83,6 @@ def _table_rows(gene: Gene) -> list[dict[str, object]]:
     return rows
 
 
-def _provisional_recommendation(gene: Gene) -> dict[str, object] | None:
-    """Return a transparent dashboard-only curation hint.
-
-    This is not the final configurable weighting engine. COMPLETE/ANCHOR candidates
-    are preferred and ranked by protein confidence. If none are structurally
-    complete, structural score is used first and confidence breaks ties.
-    """
-
-    if not gene.candidates:
-        return None
-
-    complete = [c for c in gene.candidates if c.analysis.containment.status in {"COMPLETE", "ANCHOR"}]
-    if complete:
-        chosen = max(complete, key=lambda c: c.metadata.confidence)
-        reason = [
-            "Structurally complete relative to the selected anchor.",
-            "Highest protein confidence among complete candidates.",
-        ]
-    else:
-        chosen = max(
-            gene.candidates,
-            key=lambda c: (
-                c.analysis.containment.structural_score,
-                c.metadata.confidence,
-            ),
-        )
-        reason = [
-            "No candidate met the current COMPLETE criteria.",
-            "Highest structural score, with protein confidence used as a tie-breaker.",
-        ]
-
-    m = chosen.analysis.containment
-    if m.fragmentation <= 0.10:
-        reason.append("Alignment is not strongly fragmented.")
-    if m.identity >= 0.95:
-        reason.append("High nucleotide identity to the anchor.")
-
-    return {
-        "id": chosen.id,
-        "confidence": chosen.metadata.confidence,
-        "z": chosen.metadata.z,
-        "status": m.status,
-        "query_coverage": m.query_coverage,
-        "anchor_coverage": m.anchor_coverage,
-        "identity": m.identity,
-        "fragmentation": m.fragmentation,
-        "structural_score": m.structural_score,
-        "reason": reason,
-    }
-
-
 def _gene_overview(gene: Gene, page: str) -> dict[str, object]:
     recommendation = _provisional_recommendation(gene)
     statuses = [c.analysis.containment.status for c in gene.candidates]
@@ -153,7 +105,12 @@ def _gene_overview(gene: Gene, page: str) -> dict[str, object]:
     }
 
 
-def render_gene_page(gene: Gene, outdir: Path, env: Environment) -> Path:
+def render_gene_page(
+    gene: Gene,
+    outdir: Path,
+    env: Environment,
+    recommendation: GeneRecommendation | None = None,
+) -> Path:
     template = env.get_template("gene.html")
 
     dot_html = to_html(
@@ -173,26 +130,30 @@ def render_gene_page(gene: Gene, outdir: Path, env: Environment) -> Path:
 
     sequences = _sequence_payload(gene)
     rows = _table_rows(gene)
-    recommendation = _provisional_recommendation(gene)
+    view = build_gene_page_view( gene, recommendation,)
 
     out = outdir / "genes" / f"{safe_name(gene.name)}.html"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
         template.render(
+            view=view,
             gene=gene,
+            recommendation=recommendation,
             dotplot=dot_html,
             containment=containment_html,
             rows=rows,
             sequences=sequences,
             sequences_json=json.dumps(sequences),
-            recommendation=recommendation,
-            package_version=__version__,
         )
     )
     return out
 
 
-def write_html_dashboard(sample: Sample, outdir: str | Path) -> Path:
+def write_html_dashboard(
+    sample: Sample,
+    outdir: str | Path,
+    recommendations: Mapping[str, GeneRecommendation] | None = None,
+) -> Path:
     """Write static interactive HTML dashboard pages."""
 
     outdir = Path(outdir)
@@ -205,11 +166,31 @@ def write_html_dashboard(sample: Sample, outdir: str | Path) -> Path:
     )
 
     overviews: list[dict[str, object]] = []
-    for gene_name in sorted(sample.genes):
-        gene = sample.genes[gene_name]
-        page = f"genes/{safe_name(gene_name)}.html"
-        render_gene_page(gene, outdir, env)
-        overviews.append(_gene_overview(gene, page))
+
+    for gene_name, gene in sample.genes.items():
+        recommendation = None
+
+        if recommendations is not None:
+            recommendation = recommendations.get(gene_name)
+
+        render_gene_page(
+            gene,
+            outdir,
+            env,
+            recommendation=recommendation,
+        )
+
+        overviews.append(
+            {
+                "gene": gene.name,
+                "segment": gene.segment,
+                "candidates": len(gene.candidates),
+                "references": len(gene.references),
+                "anchor": gene.anchor_id,
+                "recommended": (recommendation.recommended.candidate_id if recommendation is not None else None),
+                "score": (recommendation.recommended.score if recommendation is not None else None),
+            }
+        )
 
     index_template = env.get_template("index.html")
     index = outdir / "index.html"
@@ -220,4 +201,5 @@ def write_html_dashboard(sample: Sample, outdir: str | Path) -> Path:
             package_version=__version__,
         )
     )
+
     return index
