@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
 
-
 @dataclass(frozen=True, slots=True)
 class ScoringWeights:
     """Relative weights applied to normalised evidence channels."""
 
-    protein_confidence: float = 0.30
-    length_plausibility: float = 0.15
-    containment: float = 0.25
+    protein_confidence: float = 0.25
+    length_plausibility: float = 0.10
+    containment: float = 0.20
     identity: float = 0.15
-    fragmentation: float = 0.15
+    fragmentation: float = 0.10
+    read_support: float = 0.20
 
     def __post_init__(self) -> None:
         for name, value in asdict(self).items():
@@ -26,12 +26,17 @@ class ScoringWeights:
         """Return the sum of all configured weights."""
 
         return sum(asdict(self).values())
-
-    def normalised(self) -> ScoringWeights:
-        """Return weights scaled so they sum to one."""
-
+    def normalised(self) -> "ScoringWeights":
         total = self.total
-        return ScoringWeights(**{name: value / total for name, value in asdict(self).items()})
+
+        return ScoringWeights(
+            protein_confidence=self.protein_confidence / total,
+            length_plausibility=self.length_plausibility / total,
+            containment=self.containment / total,
+            identity=self.identity / total,
+            fragmentation=self.fragmentation / total,
+            read_support=self.read_support / total,
+        )
 
     def with_overrides(
         self,

@@ -6,6 +6,7 @@ from .builder import (
     identity_evidence,
     length_plausibility_evidence,
     protein_confidence_evidence,
+    read_support_evidence,
 )
 from .evidence import Evidence
 from .ranking import rank_gene

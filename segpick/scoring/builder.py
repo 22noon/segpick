@@ -103,7 +103,6 @@ def build_evidence(
     """
 
     candidate_list = list(candidates)
-
     return Evidence(
         protein_confidence=protein_confidence_evidence(
             candidate,
@@ -113,8 +112,8 @@ def build_evidence(
         containment=containment_evidence(candidate),
         identity=identity_evidence(candidate),
         fragmentation=fragmentation_evidence(candidate),
+        read_support=read_support_evidence(candidate),
     )
-
 
 def build_gene_evidence(
     candidates: Iterable[CandidateContig],
@@ -124,3 +123,15 @@ def build_gene_evidence(
     candidate_list = list(candidates)
 
     return {candidate.id: build_evidence(candidate, candidate_list) for candidate in candidate_list}
+
+def read_support_evidence(
+    candidate: CandidateContig,
+) -> float | None:
+    """Return attached read-support evidence when available."""
+
+    metrics = candidate.analysis.read_support
+
+    if metrics is None:
+        return None
+
+    return clamp01(float(metrics.read_support))

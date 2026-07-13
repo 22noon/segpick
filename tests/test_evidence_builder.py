@@ -1,4 +1,5 @@
 import math
+from segpick.read_support import attach_read_support
 
 import pytest
 from Bio.Seq import Seq
@@ -162,3 +163,42 @@ def test_zero_confidence_gene_is_handled() -> None:
 
     assert evidence["first"].protein_confidence == 0.0
     assert evidence["second"].protein_confidence == 0.0
+
+def test_read_support_is_unavailable_without_depth_metrics() -> None:
+    candidate = make_candidate(
+        "candidate",
+        confidence=100,
+        z=0,
+        query_coverage=1,
+        anchor_coverage=1,
+        identity=1,
+        fragmentation=0,
+    )
+
+    evidence = build_evidence(candidate, [candidate])
+
+    assert evidence.read_support is None
+
+def test_attached_read_support_becomes_evidence() -> None:
+    candidate = make_candidate(
+        "candidate",
+        confidence=100,
+        z=0,
+        query_coverage=1,
+        anchor_coverage=1,
+        identity=1,
+        fragmentation=0,
+    )
+
+    attach_read_support(
+        candidate,
+        {
+            position: 10
+            for position in range(1, candidate.length + 1)
+        },
+        minimum_terminal_bases=1,
+    )
+
+    evidence = build_evidence(candidate, [candidate])
+
+    assert evidence.read_support == pytest.approx(1.0)
