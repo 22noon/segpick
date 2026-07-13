@@ -1,5 +1,6 @@
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+import pytest
 
 from segpick.models import (
     CandidateContig,
@@ -64,3 +65,30 @@ def test_build_gene_page_view() -> None:
     assert view.recommendation.candidate_id == "contig_a"
     assert len(view.candidates) == 2
     assert view.candidates[0].recommended is True
+    assert view.recommendation.evidence
+    assert {
+        item.name
+        for item in view.recommendation.evidence
+    } == {
+        "protein_confidence",
+        "length_plausibility",
+        "containment",
+        "identity",
+        "fragmentation",
+    }
+    evidence_by_name = {
+    item.name: item
+    for item in view.recommendation.evidence
+    }
+
+    protein = evidence_by_name["protein_confidence"]
+
+    assert protein.value is not None
+    assert protein.contribution is not None
+    assert protein.effective_weight is not None
+
+    assert sum(
+        item.contribution
+        for item in view.recommendation.evidence
+        if item.contribution is not None
+    ) == pytest.approx(view.recommendation.score)

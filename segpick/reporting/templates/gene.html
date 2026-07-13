@@ -40,6 +40,104 @@
     .muted { color:var(--muted); }
     footer { color:var(--muted); font-size:.8rem; margin-top:1rem; }
     @media(max-width:800px){ .recommend{grid-template-columns:1fr;} }
+    .recommendation-card {
+        border-left: 6px solid #2563eb;
+    }
+
+    .recommended-id {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .recommendation-score {
+        font-size: 1.05rem;
+    }
+
+    .recommendation-note {
+    color: #64748b;
+           margin-bottom: 0;
+    }
+
+    .evidence-value {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .unavailable {
+      color: #64748b;
+      font-style: italic;
+    }
+
+
+    .evidence-list {
+  margin-top: 1.25rem;
+}
+
+.evidence-row {
+  display: grid;
+  grid-template-columns: 180px minmax(280px, 1fr) 150px;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+.evidence-label {
+  font-weight: 650;
+}
+
+.evidence-bars {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.evidence-bar-group {
+  display: grid;
+  grid-template-columns: 85px minmax(120px, 1fr) 55px;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.bar-caption {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.evidence-bar {
+  height: 11px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.evidence-fill {
+  height: 100%;
+  background: #2563eb;
+  border-radius: 999px;
+}
+
+.contribution-fill {
+  height: 100%;
+  background: #0f766e;
+  border-radius: 999px;
+}
+
+.bar-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+}
+
+.evidence-weight {
+  color: #475569;
+  font-size: 0.88rem;
+}
+
+.evidence-unavailable {
+  color: #64748b;
+  font-style: italic;
+}
   </style>
 </head>
 <body>
@@ -48,26 +146,84 @@
   <h1>{{ gene.name }}</h1>
   <div class="meta"><span>Segment: {{ gene.segment }}</span><span>Anchor: {{ gene.anchor_id }}</span><span>Candidates: {{ gene.candidates|length }}</span><span>References: {{ gene.references|length }}</span></div>
 
-  {% if recommendation %}
-  <section class="card recommend">
-    <div>
-      <div class="muted">Provisional curation suggestion</div>
-      <div class="rec-name">{{ recommendation.id }}</div>
-      <span class="badge status-{{ recommendation.status }}">{{ recommendation.status }}</span>
-      <p><button onclick="selectSequence('{{ recommendation.id }}')">Highlight candidate</button></p>
-    </div>
-    <div>
-      <div class="mini-grid">
-        <div class="mini"><strong>{{ "%.3f"|format(recommendation.confidence) }}</strong><span>Protein confidence</span></div>
-        <div class="mini"><strong>{{ "%.3f"|format(recommendation.structural_score) }}</strong><span>Structural score</span></div>
-        <div class="mini"><strong>{{ "%.1f%%"|format(recommendation.query_coverage*100) }}</strong><span>Sequence coverage</span></div>
-        <div class="mini"><strong>{{ "%.2f%%"|format(recommendation.identity*100) }}</strong><span>Identity</span></div>
+    {% if view.recommendation is not none %}
+    <section class="card recommendation-card">
+      <h2>Recommended candidate</h2>
+
+      <div class="recommended-id">
+        {{ view.recommendation.candidate_id }}
       </div>
-      <ul>{% for reason in recommendation.reason %}<li>{{ reason }}</li>{% endfor %}</ul>
-      <div class="muted">This is a transparent heuristic, not the later configurable-weight recommendation engine.</div>
+
+      <div class="recommendation-score">
+        Overall evidence score:
+        <strong>
+          {{ "%.3f"|format(view.recommendation.score) }}
+        </strong>
+      </div>
+      <div class="evidence-list">
+      <div class="evidence-list">
+      {% for item in view.recommendation.evidence %}
+      <div class="evidence-row">
+        <div class="evidence-label">
+          {{ item.name|replace("_", " ")|title }}
+        </div>
+
+        {% if item.value is none %}
+          <div class="evidence-unavailable">
+            Unavailable
+          </div>
+
+          <div class="evidence-weight">
+            Weight redistributed
+          </div>
+        {% else %}
+          <div class="evidence-bars">
+            <div class="evidence-bar-group">
+              <span class="bar-caption">Evidence</span>
+
+              <div class="evidence-bar">
+                <div
+                  class="evidence-fill"
+                  style="width: {{ item.value * 100 }}%">
+                </div>
+              </div>
+
+              <span class="bar-value">
+                {{ "%.3f"|format(item.value) }}
+              </span>
+            </div>
+
+            <div class="evidence-bar-group">
+              <span class="bar-caption">Contribution</span>
+
+              <div class="evidence-bar contribution-bar">
+                <div
+                  class="contribution-fill"
+                  style="width: {{ item.contribution * 100 }}%">
+                </div>
+              </div>
+
+              <span class="bar-value">
+                {{ "%.3f"|format(item.contribution) }}
+              </span>
+            </div>
+          </div>
+
+          <div class="evidence-weight">
+            Effective weight:
+            {{ "%.1f%%"|format(item.effective_weight * 100) }}
+          </div>
+        {% endif %}
+      </div>
+      {% endfor %}
     </div>
-  </section>
-  {% endif %}
+  </div>
+
+  <p class="recommendation-note">
+    This recommendation was calculated using the current evidence weights.
+  </p>
+</section>
+{% endif %}
 
   <section class="card">{{ dotplot|safe }}</section>
   <section class="card">{{ containment|safe }}</section>
@@ -78,16 +234,29 @@
     <table id="evidence-table">
       <thead><tr>{% for h in ["Sequence","Type","Length","Confidence","z","Cluster","Query cov.","Anchor cov.","Identity","Fragmentation","Blocks","Structural","Status"] %}<th onclick="sortTable({{ loop.index0 }})">{{ h }}</th>{% endfor %}</tr></thead>
       <tbody>
-      {% for row in rows %}
-      <tr data-sequence-id="{{ row.id }}" onclick="selectSequence('{{ row.id }}')">
-        <td>{{ row.id }}{% if row.is_anchor %} ★{% endif %}</td><td>{{ row.type }}</td><td>{{ row.length }}</td>
-        <td>{{ "" if row.confidence is none else "%.3f"|format(row.confidence|float) }}</td>
-        <td>{{ "" if row.z is none else "%.3f"|format(row.z|float) }}</td><td>{{ "" if row.cluster is none else row.cluster }}</td>
-        <td><span>{{ "%.1f%%"|format(row.query_coverage*100) }}</span><div class="progress"><span style="width:{{ row.query_coverage*100 }}%"></span></div></td>
-        <td><span>{{ "%.1f%%"|format(row.anchor_coverage*100) }}</span><div class="progress"><span style="width:{{ row.anchor_coverage*100 }}%"></span></div></td>
-        <td>{{ "%.2f%%"|format(row.identity*100) }}</td><td>{{ "%.3f"|format(row.fragmentation) }}</td><td>{{ row.n_blocks }}</td><td>{{ "%.3f"|format(row.structural_score) }}</td>
-        <td><span class="badge status-{{ row.status }}">{{ row.status }}</span></td>
-      </tr>
+      {% for candidate in view.candidates %}
+        <tr data-sequence-id="{{ candidate.candidate_id }}">
+          <td>
+            {{ candidate.candidate_id }}
+            {% if candidate.recommended %} ★{% endif %}
+          </td>
+          <td>{{ candidate.length }}</td>
+          <td>{{ "%.3f"|format(candidate.confidence) }}</td>
+          <td>
+            {% if candidate.z is none %}
+              —
+            {% else %}
+              {{ "%.3f"|format(candidate.z) }}
+            {% endif %}
+          </td>
+          <td>{{ candidate.cluster }}</td>
+          <td>{{ "%.1f%%"|format(candidate.query_coverage * 100) }}</td>
+          <td>{{ "%.1f%%"|format(candidate.anchor_coverage * 100) }}</td>
+          <td>{{ "%.2f%%"|format(candidate.identity * 100) }}</td>
+          <td>{{ "%.3f"|format(candidate.fragmentation) }}</td>
+          <td>{{ "%.3f"|format(candidate.structural_score) }}</td>
+          <td>{{ candidate.status }}</td>
+        </tr>
       {% endfor %}
       </tbody>
     </table>

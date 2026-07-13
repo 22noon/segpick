@@ -12,6 +12,7 @@ from segpick.models import (
 )
 from segpick.reporting import (
     write_gene_json_reports,
+    write_html_dashboard,
     write_recommendations_tsv,
 )
 from segpick.scoring import ScoringWeights, rank_gene
@@ -96,3 +97,25 @@ def test_gene_json_contains_recommendation(tmp_path) -> None:
     assert payload["recommendation"] is not None
     assert payload["recommendation"]["recommended"]["candidate_id"] == "contig_a"
     assert len(payload["recommendation"]["candidates"]) == 2
+
+
+def test_dashboard_contains_recommendation(tmp_path) -> None:
+    sample, recommendations = make_sample()
+
+    write_html_dashboard(
+        sample,
+        tmp_path,
+        recommendations=recommendations,
+    )
+
+    html = (tmp_path / "genes" / "VP2.html").read_text()
+
+    assert "Recommended candidate" in html
+    assert "contig_a" in html
+    assert "Recommended candidate" in html
+    assert "Overall evidence score" in html
+    assert "Protein Confidence" in html
+    assert "contig_a" in html
+    assert "Contribution" in html
+    assert "Effective weight" in html
+    assert "Protein Confidence" in html
