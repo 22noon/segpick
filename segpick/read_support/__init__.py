@@ -1,3 +1,9 @@
+from .directory import (
+    DepthAttachmentSummary,
+    attach_depth_directory,
+    attached_read_support,
+    candidate_depth_path,
+)
 from .attach import (
     attach_gene_depth_file,
     attach_gene_depths,
@@ -16,4 +22,8 @@ __all__ = [
     "attach_read_support",
     "attach_gene_depths",
     "attach_gene_depth_file",
+    "DepthAttachmentSummary",
+    "attach_depth_directory",
+    "attached_read_support",
+    "candidate_depth_path",
 ]
