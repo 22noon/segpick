@@ -119,3 +119,23 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "Contribution" in html
     assert "Effective weight" in html
     assert "Protein Confidence" in html
+    assert "Read support" in html
+
+    assert "selectCandidate" in html
+    assert "DashboardState" in html
+    assert "candidate-row" in html
+    assert "candidate-detail" in html
+    assert 'data-sequence-id="contig_a"' in html
+
+    assert "Runner-up" in html
+    assert "Score gap" in html
+
+    index_html = (tmp_path / "index.html").read_text()
+
+    assert "VP2" in index_html
+    assert "contig_a" in index_html
+    assert "genes/VP2.html" in index_html
+    assert "Candidates" in index_html
+    assert "Recommended candidate" in index_html
+
+

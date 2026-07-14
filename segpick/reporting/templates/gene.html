@@ -71,73 +71,131 @@
 
 
     .evidence-list {
-  margin-top: 1.25rem;
-}
+      margin-top: 1.25rem;
+    }
 
-.evidence-row {
-  display: grid;
-  grid-template-columns: 180px minmax(280px, 1fr) 150px;
-  gap: 1rem;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-top: 1px solid #e2e8f0;
-}
+    .evidence-row {
+      display: grid;
+      grid-template-columns: 180px minmax(280px, 1fr) 150px;
+      gap: 1rem;
+      align-items: center;
+      padding: 0.75rem 0;
+      border-top: 1px solid #e2e8f0;
+    }
 
-.evidence-label {
-  font-weight: 650;
-}
+    .evidence-label {
+      font-weight: 650;
+    }
 
-.evidence-bars {
-  display: grid;
-  gap: 0.55rem;
-}
+    .evidence-bars {
+      display: grid;
+      gap: 0.55rem;
+    }
 
-.evidence-bar-group {
-  display: grid;
-  grid-template-columns: 85px minmax(120px, 1fr) 55px;
-  gap: 0.6rem;
-  align-items: center;
-}
+    .evidence-bar-group {
+      display: grid;
+      grid-template-columns: 85px minmax(120px, 1fr) 55px;
+      gap: 0.6rem;
+      align-items: center;
+    }
 
-.bar-caption {
-  color: #64748b;
-  font-size: 0.85rem;
-}
+    .bar-caption {
+      color: #64748b;
+      font-size: 0.85rem;
+    }
 
-.evidence-bar {
-  height: 11px;
-  background: #e2e8f0;
-  border-radius: 999px;
-  overflow: hidden;
-}
+    .evidence-bar {
+      height: 11px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
 
-.evidence-fill {
-  height: 100%;
-  background: #2563eb;
-  border-radius: 999px;
-}
+    .evidence-fill {
+      height: 100%;
+      background: #2563eb;
+      border-radius: 999px;
+    }
 
-.contribution-fill {
-  height: 100%;
-  background: #0f766e;
-  border-radius: 999px;
-}
+    .contribution-fill {
+      height: 100%;
+      background: #0f766e;
+      border-radius: 999px;
+    }
 
-.bar-value {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-size: 0.9rem;
-}
+    .bar-value {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.9rem;
+    }
 
-.evidence-weight {
-  color: #475569;
-  font-size: 0.88rem;
-}
+    .evidence-weight {
+      color: #475569;
+      font-size: 0.88rem;
+    }
 
-.evidence-unavailable {
-  color: #64748b;
-  font-style: italic;
-}
+    .evidence-unavailable {
+      color: #64748b;
+      font-style: italic;
+    }
+    .candidate-row {
+      cursor: pointer;
+      transition:
+      background-color 0.15s ease,
+      box-shadow 0.15s ease;
+    }
+
+    .candidate-row:hover {
+      background: #eff6ff;
+    }
+
+    .candidate-row.selected {
+      background: #dbeafe;
+      box-shadow: inset 4px 0 0 #2563eb;
+    }
+
+    .candidate-detail {
+      display: none;
+    }
+
+    .candidate-detail.active {
+      display: block;
+    }
+
+    .runner-up {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+    }
+
+    .runner-up-close {
+      border-left: 5px solid #f59e0b;
+    }
+
+    .runner-up-secondary {
+      border-left: 5px solid #94a3b8;
+    }
+
+    .runner-up-weak {
+      opacity: 0.55;
+      filter: grayscale(0.65);
+    }
+
+    .runner-up-label {
+      display: block;
+      color: #64748b;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .runner-up-note {
+      margin-top: 0.4rem;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
@@ -160,6 +218,40 @@
           {{ "%.3f"|format(view.recommendation.score) }}
         </strong>
       </div>
+
+      {% if view.recommendation.runner_up_id %}
+        <div class="runner-up runner-up-{{ view.recommendation.runner_up_strength }}">
+          <div>
+            <span class="runner-up-label">Runner-up</span>
+            <strong>{{ view.recommendation.runner_up_id }}</strong>
+          </div>
+
+          <div>
+            Score:
+            {{ "%.3f"|format(view.recommendation.runner_up_score) }}
+          </div>
+
+          <div>
+            Score gap:
+            {{ "%.3f"|format(view.recommendation.score_gap) }}
+          </div>
+
+          {% if view.recommendation.runner_up_strength == "close" %}
+            <div class="runner-up-note">
+              Close alternative — manual review may be useful.
+            </div>
+          {% elif view.recommendation.runner_up_strength == "secondary" %}
+            <div class="runner-up-note">
+              Plausible secondary candidate.
+            </div>
+          {% else %}
+            <div class="runner-up-note">
+              Substantially weaker than the recommended candidate.
+            </div>
+          {% endif %}
+        </div>
+    {% endif %}
+
       <div class="evidence-list">
       <div class="evidence-list">
       {% for item in view.recommendation.evidence %}
@@ -231,17 +323,49 @@
   <section class="card">
     <h2>Evidence table</h2>
     <div class="scroll">
+
     <table id="evidence-table">
-      <thead><tr>{% for h in ["Sequence","Type","Length","Confidence","z","Cluster","Query cov.","Anchor cov.","Identity","Fragmentation","Blocks","Structural","Status"] %}<th onclick="sortTable({{ loop.index0 }})">{{ h }}</th>{% endfor %}</tr></thead>
+      <thead>
+        <tr>
+          {% for h in [
+            "Sequence",
+            "Length",
+            "Confidence",
+            "z",
+            "Cluster",
+            "Query cov.",
+            "Anchor cov.",
+            "Identity",
+            "Fragmentation",
+            "Structural",
+            "Status",
+            "Read support"
+          ] %}
+            <th onclick="sortTable({{ loop.index0 }})">
+              {{ h }}
+            </th>
+          {% endfor %}
+        </tr>
+      </thead>
+
       <tbody>
+
       {% for candidate in view.candidates %}
-        <tr data-sequence-id="{{ candidate.candidate_id }}">
+        <tr
+          class="candidate-row{% if candidate.recommended %} selected{% endif %}"
+          data-sequence-id="{{ candidate.candidate_id }}"
+          onclick="selectCandidate('{{ candidate.candidate_id }}')"
+        >
+
           <td>
             {{ candidate.candidate_id }}
             {% if candidate.recommended %} ★{% endif %}
           </td>
+
           <td>{{ candidate.length }}</td>
+
           <td>{{ "%.3f"|format(candidate.confidence) }}</td>
+
           <td>
             {% if candidate.z is none %}
               —
@@ -249,23 +373,73 @@
               {{ "%.3f"|format(candidate.z) }}
             {% endif %}
           </td>
+
           <td>{{ candidate.cluster }}</td>
+
           <td>{{ "%.1f%%"|format(candidate.query_coverage * 100) }}</td>
+
           <td>{{ "%.1f%%"|format(candidate.anchor_coverage * 100) }}</td>
+
           <td>{{ "%.2f%%"|format(candidate.identity * 100) }}</td>
+
           <td>{{ "%.3f"|format(candidate.fragmentation) }}</td>
+
           <td>{{ "%.3f"|format(candidate.structural_score) }}</td>
+
           <td>{{ candidate.status }}</td>
+
+          <td>
+            {% if candidate.read_support.available %}
+              {{ "%.3f"|format(candidate.read_support.overall_support) }}
+            {% else %}
+              <span class="unavailable">—</span>
+            {% endif %}
+          </td>
+
         </tr>
       {% endfor %}
+
       </tbody>
     </table>
+
     </div>
   </section>
 
-  <section class="card"><h2>Download selected sequences</h2><div class="download-panel">{% for seq in sequences %}<label><input type="checkbox" class="seq-check" value="{{ seq.id }}" checked> {{ seq.id }}</label>{% endfor %}<button onclick="downloadSelected()">Download FASTA</button><button class="secondary" onclick="clearSelection()">Clear highlight</button></div></section>
+  <section class="card"><h2>Download selected sequences</h2>
+  <div class="download-panel">{% for seq in sequences %}<label><input type="checkbox" class="seq-check" value="{{ seq.id }}" checked> {{ seq.id }}</label>{% endfor %}<button onclick="downloadSelected()">Download FASTA</button><button class="secondary" onclick="clearSelection()">Clear highlight</button></div>
+  </section>
 
-  <section class="card"><h2>Sequence browser</h2>{% for seq in sequences %}<details class="seq" data-sequence-id="{{ seq.id }}"><summary><strong>{{ seq.id }}</strong> — {{ seq.type }}, {{ seq.length }} bp</summary><p><button onclick="copySequence('{{ seq.id }}')">Copy sequence</button><button onclick="downloadOne('{{ seq.id }}')">Download FASTA</button></p><pre>{{ seq.sequence }}</pre></details>{% endfor %}</section>
+  <section class="card">
+      <h2>Selected candidate sequence</h2>
+
+      {% for seq in sequences %}
+        {% if seq.type == "candidate" %}
+        <div
+          id="candidate-detail-{{ seq.id|replace('|', '_')|replace('.', '_') }}"
+          class="candidate-detail{% if view.recommendation and seq.id == view.recommendation.candidate_id %} active{% endif %}"
+          data-sequence-id="{{ seq.id }}"
+        >
+          <h3>{{ seq.id }}</h3>
+
+          <p>
+            Candidate sequence, {{ seq.length }} bp
+          </p>
+
+          <p>
+            <button onclick="copySequence('{{ seq.id }}')">
+              Copy sequence
+            </button>
+
+            <button onclick="downloadOne('{{ seq.id }}')">
+              Download FASTA
+            </button>
+          </p>
+
+          <pre>{{ seq.sequence }}</pre>
+        </div>
+        {% endif %}
+      {% endfor %}
+  </section>
   <footer>Generated by SegPick {{ package_version }}</footer>
 </main>
 <script>
@@ -282,6 +456,35 @@ function clearSelection(){document.querySelectorAll(".selected").forEach(x=>x.cl
 function bindPlotClick(id){const div=document.getElementById(id);if(div&&div.on)div.on("plotly_click",e=>{const sid=e.points&&e.points[0]&&e.points[0].customdata;if(sid)selectSequence(sid);});}
 window.addEventListener("load",()=>{bindPlotClick("dotplot");bindPlotClick("containment-plot");});
 function sortTable(col){const table=document.getElementById("evidence-table"),tbody=table.tBodies[0],rows=[...tbody.rows],asc=table.dataset.sortCol!=col||table.dataset.sortDir!="asc";rows.sort((a,b)=>{const av=a.cells[col].innerText.trim().replace("%",""),bv=b.cells[col].innerText.trim().replace("%","");const an=Number(av),bn=Number(bv),cmp=(!Number.isNaN(an)&&!Number.isNaN(bn))?an-bn:av.localeCompare(bv);return asc?cmp:-cmp;});rows.forEach(r=>tbody.appendChild(r));table.dataset.sortCol=col;table.dataset.sortDir=asc?"asc":"desc";}
+
+<script>
+const sequences = {{ sequences_json|safe }};
+
+const DashboardState = {
+  selectedCandidate: {% if view.recommendation %}{{ view.recommendation.candidate_id|tojson }}{% else %}null{% endif %}
+};
+
+function selectCandidate(candidateId) {
+  DashboardState.selectedCandidate = candidateId;
+
+  document.querySelectorAll(".candidate-row").forEach((row) => {
+    row.classList.toggle(
+      "selected",
+      row.dataset.sequenceId === candidateId
+    );
+  });
+
+  document.querySelectorAll(".candidate-detail").forEach((detail) => {
+    detail.classList.toggle(
+      "active",
+      detail.dataset.sequenceId === candidateId
+    );
+  });
+}
+
+if (DashboardState.selectedCandidate) {
+  selectCandidate(DashboardState.selectedCandidate);
+}
 </script>
 </body>
 </html>

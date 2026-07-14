@@ -4,7 +4,18 @@ from dataclasses import dataclass
 
 from segpick.models import Gene
 from segpick.scoring import GeneRecommendation
+from segpick.models import CandidateContig
 
+@dataclass(frozen=True, slots=True)
+class ReadSupportView:
+    available: bool
+    mean_depth: float | None
+    median_depth: float | None
+    covered_fraction: float | None
+    uniformity: float | None
+    left_terminal_support: float | None
+    right_terminal_support: float | None
+    overall_support: float | None
 
 @dataclass(frozen=True, slots=True)
 class EvidenceView:
@@ -19,6 +30,10 @@ class RecommendationView:
     candidate_id: str
     score: float
     evidence: tuple[EvidenceView, ...]
+    runner_up_id: str | None
+    runner_up_score: float | None
+    score_gap: float | None
+    runner_up_strength: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +50,7 @@ class CandidateView:
     structural_score: float
     status: str
     recommended: bool
+    read_support: ReadSupportView
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,12 +80,34 @@ def build_recommendation_view(
         for name, value in selected.evidence.to_dict().items()
     )
 
+    runner_up = (
+        recommendation.candidates[1]
+        if len(recommendation.candidates) > 1
+        else None
+    )
+
+    if runner_up is None:
+        score_gap = None
+        runner_up_strength = None
+    else:
+        score_gap = selected.score - runner_up.score
+
+        if score_gap < 0.05:
+            runner_up_strength = "close"
+        elif score_gap <= 0.15:
+            runner_up_strength = "secondary"
+        else:
+            runner_up_strength = "weak"
+
     return RecommendationView(
         candidate_id=selected.candidate_id,
         score=selected.score,
         evidence=evidence,
+        runner_up_id=runner_up.candidate_id if runner_up else None,
+        runner_up_score=runner_up.score if runner_up else None,
+        score_gap=score_gap,
+        runner_up_strength=runner_up_strength,
     )
-
 
 def build_gene_page_view(
     gene: Gene,
@@ -92,11 +130,10 @@ def build_gene_page_view(
             anchor_coverage=candidate.analysis.containment.anchor_coverage,
             identity=candidate.analysis.containment.identity,
             fragmentation=candidate.analysis.containment.fragmentation,
-            structural_score=(
-                candidate.analysis.containment.structural_score
-            ),
+            structural_score=candidate.analysis.containment.structural_score,
             status=candidate.analysis.containment.status,
             recommended=candidate.id == recommended_id,
+            read_support=build_read_support_view(candidate),
         )
         for candidate in gene.candidates
     )
@@ -107,4 +144,34 @@ def build_gene_page_view(
         anchor=gene.anchor_id,
         recommendation=build_recommendation_view(recommendation),
         candidates=candidates,
+    )
+ 
+def build_read_support_view(
+    gene_candidate,
+) -> ReadSupportView:
+    """Build optional read-support data for dashboard presentation."""
+
+    metrics = gene_candidate.analysis.read_support
+
+    if metrics is None:
+        return ReadSupportView(
+            available=False,
+            mean_depth=None,
+            median_depth=None,
+            covered_fraction=None,
+            uniformity=None,
+            left_terminal_support=None,
+            right_terminal_support=None,
+            overall_support=None,
+        )
+
+    return ReadSupportView(
+        available=True,
+        mean_depth=metrics.mean_depth,
+        median_depth=metrics.median_depth,
+        covered_fraction=metrics.covered_fraction,
+        uniformity=metrics.uniformity,
+        left_terminal_support=metrics.left_terminal_support,
+        right_terminal_support=metrics.right_terminal_support,
+        overall_support=metrics.read_support,
     )
