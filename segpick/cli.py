@@ -21,6 +21,7 @@ from segpick.reporting import (
     write_summary_tsv,
 )
 from segpick.scoring import rank_gene
+from segpick.read_support import attach_depth_directory
 
 
 def run_doctor() -> int:
@@ -72,6 +73,42 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("doctor", help="check dependencies and import location")
     run = sub.add_parser("run", help="run the complete SegPick workflow")
+    run.add_argument(
+        "--depth-dir",
+        default=None,
+        help="Directory containing one depth file per candidate",
+    )
+
+    run.add_argument(
+        "--depth-suffix",
+        default=None,
+        help="Suffix appended to candidate IDs; default .depth.txt",
+    )
+
+    run.add_argument(
+        "--minimum-depth",
+        type=int,
+        default=None,
+    )
+
+    run.add_argument(
+        "--terminal-fraction",
+        type=float,
+        default=None,
+    )
+
+    run.add_argument(
+        "--minimum-terminal-bases",
+        type=int,
+        default=None,
+    )
+
+    run.add_argument(
+        "--strict-depth",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Fail when a candidate depth file is missing",
+    )
     _add_run_arguments(run)
     return parser
 
@@ -140,8 +177,28 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
 
             attach_existing_paf(gene, paf_path)
 
-        analyse_gene(gene)
 
+        depth_summary = None
+        if config.read_support.depth_dir is not None:
+            depth_summary = attach_depth_directory(
+                sample,
+                config.read_support.depth_dir,
+                suffix=config.read_support.suffix,
+                strict=config.read_support.strict,
+                minimum_depth=config.read_support.minimum_depth,
+                terminal_fraction=config.read_support.terminal_fraction,
+                minimum_terminal_bases=(
+                    config.read_support.minimum_terminal_bases
+                ),
+            )
+
+            print(
+                "Read support: "
+                f"{depth_summary.metrics_attached}/"
+                f"{depth_summary.candidate_count} candidates attached"
+            )
+
+        analyse_gene(gene)
         recommendations[gene_name] = rank_gene(
             gene,
             config.scoring_weights,
@@ -173,6 +230,7 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
         dashboard = write_html_dashboard(
             sample,
             outdir / "dashboard",
+            recommendations=recommendations,
         )
         print(f"Dashboard: {dashboard}")
 

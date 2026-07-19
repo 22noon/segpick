@@ -1,12 +1,25 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
-from segpick.scoring import ScoringWeights
-from dataclasses import dataclass, field
 
 import yaml
+
+from segpick.scoring import ScoringWeights
+
+from dataclasses import dataclass, field
+from pathlib import Path
+
+
+@dataclass(frozen=True, slots=True)
+class ReadSupportConfig:
+    depth_dir: Path | None = None
+    suffix: str = ".depth.txt"
+    minimum_depth: int = 3
+    terminal_fraction: float = 0.05
+    minimum_terminal_bases: int = 50
+    strict: bool = False
 
 @dataclass(slots=True)
 class RunConfig:
@@ -20,15 +33,15 @@ class RunConfig:
     preset: str = "asm5"
     html: bool = False
     strict: bool = False
-    scoring_weights: ScoringWeights = field(
-        default_factory=ScoringWeights
+    scoring_weights: ScoringWeights = field(default_factory=ScoringWeights)
+    read_support: ReadSupportConfig = field(
+        default_factory=ReadSupportConfig
     )
-
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
-DEFAULTS = RunConfig()
 
+DEFAULTS = RunConfig()
 
 
 def _flatten_yaml(data: dict[str, Any]) -> dict[str, Any]:
@@ -65,11 +78,30 @@ def load_config(path: str | Path | None) -> dict[str, Any]:
         raise ValueError("The YAML configuration root must be a mapping")
     return _flatten_yaml(raw)
 
+
 def resolve_config(
     yaml_values: dict[str, Any],
     cli_values: dict[str, Any],
 ) -> RunConfig:
     """Resolve built-in defaults < YAML < explicit CLI values."""
+    read_data = yaml_values.get("read_support", {}) or {}
+
+    read_support = ReadSupportConfig(
+        depth_dir=(
+            Path(read_data["depth_dir"])
+            if read_data.get("depth_dir")
+            else None
+        ),
+        suffix=str(read_data.get("suffix", ".depth.txt")),
+        minimum_depth=int(read_data.get("minimum_depth", 3)),
+        terminal_fraction=float(
+            read_data.get("terminal_fraction", 0.05)
+        ),
+        minimum_terminal_bases=int(
+            read_data.get("minimum_terminal_bases", 50)
+        ),
+        strict=bool(read_data.get("strict", False)),
+    )
 
     merged = DEFAULTS.to_dict()
 
@@ -78,40 +110,69 @@ def resolve_config(
     weights_data = scoring_data.get("weights", {}) or {}
 
     scoring_weights = ScoringWeights(
-        protein_confidence=float(
-            weights_data.get("protein_confidence", 0.30)
-        ),
-        length_plausibility=float(
-            weights_data.get("length_plausibility", 0.15)
-        ),
-        containment=float(
-            weights_data.get("containment", 0.25)
-        ),
-        identity=float(
-            weights_data.get("identity", 0.15)
-        ),
-        fragmentation=float(
-            weights_data.get("fragmentation", 0.15)
-        ),
+        protein_confidence=float(weights_data.get("protein_confidence", 0.30)),
+        length_plausibility=float(weights_data.get("length_plausibility", 0.15)),
+        containment=float(weights_data.get("containment", 0.25)),
+        identity=float(weights_data.get("identity", 0.15)),
+        fragmentation=float(weights_data.get("fragmentation", 0.15)),
     )
 
     # Do not pass the nested "scoring" dictionary directly to RunConfig.
     yaml_flat = {
         key: value
         for key, value in yaml_values.items()
-        if value is not None and key != "scoring"
+        if value is not None
+        and key not in {"scoring", "read_support"}
     }
 
     merged.update(yaml_flat)
     merged["scoring_weights"] = scoring_weights
 
     # CLI values override YAML values.
-    merged.update(
-        {
-            key: value
-            for key, value in cli_values.items()
-            if value is not None
-        }
+    read_support = ReadSupportConfig(
+        depth_dir=(
+            Path(cli_values["depth_dir"])
+            if cli_values.get("depth_dir") is not None
+            else read_support.depth_dir
+        ),
+        suffix=(
+            cli_values["depth_suffix"]
+            if cli_values.get("depth_suffix") is not None
+            else read_support.suffix
+        ),
+        minimum_depth=(
+            cli_values["minimum_depth"]
+            if cli_values.get("minimum_depth") is not None
+            else read_support.minimum_depth
+        ),
+        terminal_fraction=(
+            cli_values["terminal_fraction"]
+            if cli_values.get("terminal_fraction") is not None
+            else read_support.terminal_fraction
+        ),
+        minimum_terminal_bases=(
+            cli_values["minimum_terminal_bases"]
+            if cli_values.get("minimum_terminal_bases") is not None
+            else read_support.minimum_terminal_bases
+        ),
+        strict=(
+            cli_values["strict_depth"]
+            if cli_values.get("strict_depth") is not None
+            else read_support.strict
+        ),
     )
+
+    merged["read_support"] = read_support
+    merged.update({key: value for key, value in cli_values.items() if value is not None})
+    for key in (
+        "depth_dir",
+        "depth_suffix",
+        "minimum_depth",
+        "terminal_fraction",
+        "minimum_terminal_bases",
+        "strict_depth",
+    ):
+        merged.pop(key, None)
+
 
     return RunConfig(**merged)
