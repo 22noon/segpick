@@ -130,7 +130,7 @@ def render_gene_page(
 
     sequences = _sequence_payload(gene)
     rows = _table_rows(gene)
-    view = build_gene_page_view( gene, recommendation,)
+    view = build_gene_page_view(gene, recommendation)
 
     out = outdir / "genes" / f"{safe_name(gene.name)}.html"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -138,12 +138,11 @@ def render_gene_page(
         template.render(
             view=view,
             gene=gene,
-            recommendation=recommendation,
             dotplot=dot_html,
             containment=containment_html,
-            rows=rows,
             sequences=sequences,
             sequences_json=json.dumps(sequences),
+            package_version=__version__,
         )
     )
     return out
@@ -182,13 +181,22 @@ def write_html_dashboard(
 
         overviews.append(
             {
-                "gene": gene.name,
-                "segment": gene.segment,
-                "candidates": len(gene.candidates),
-                "references": len(gene.references),
-                "anchor": gene.anchor_id,
-                "recommended": (recommendation.recommended.candidate_id if recommendation is not None else None),
-                "score": (recommendation.recommended.score if recommendation is not None else None),
+            "gene": gene.name,
+            "segment": gene.segment,
+            "candidate_count": len(gene.candidates),
+            "reference_count": len(gene.references),
+            "anchor": gene.anchor_id,
+            "recommended_candidate": (
+                recommendation.recommended.candidate_id
+                if recommendation is not None
+                else None
+            ),
+            "recommendation_score": (
+                recommendation.recommended.score
+                if recommendation is not None
+                else None
+            ),
+            "page": f"genes/{safe_name(gene.name)}.html",
             }
         )
 

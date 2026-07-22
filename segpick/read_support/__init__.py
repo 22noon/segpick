@@ -1,3 +1,5 @@
+from .plotting import write_coverage_plot
+
 from .directory import (
     DepthAttachmentSummary,
     attach_depth_directory,
@@ -26,4 +28,5 @@ __all__ = [
     "attach_depth_directory",
     "attached_read_support",
     "candidate_depth_path",
+    "write_coverage_plot",
 ]

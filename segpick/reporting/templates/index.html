@@ -36,23 +36,50 @@
   <div class="sub">Interactive BTV candidate-contig curation dashboard</div>
   <div class="summary">
     <div class="metric"><strong>{{ genes|length }}</strong><span>Genes</span></div>
-    <div class="metric"><strong>{{ genes|selectattr('overall_status','equalto','COMPLETE')|list|length }}</strong><span>Genes with complete candidate</span></div>
-    <div class="metric"><strong>{{ genes|map(attribute='gene')|map(attribute='candidates')|map('length')|sum }}</strong><span>Total candidates</span></div>
+    <div class="metric"><strong>{{ genes|selectattr('recommended_candidate')|list|length }}</strong><span>Genes with recommendation</span></div>
+    <div class="metric"><strong>{{ genes|sum(attribute='candidate_count') }}</strong><span>Total candidates</span></div>
   </div>
   <div class="card">
   <table>
-    <thead><tr><th>Gene</th><th>Segment</th><th>Candidates</th><th>References</th><th>Anchor</th><th>Suggested candidate</th><th>Status</th></tr></thead>
+  <thead> <tr> <th>Gene</th> <th>Segment</th> <th>Candidates</th> <th>References</th> <th>Anchor</th> <th>Recommended candidate</th> <th>Score</th> </tr> </thead>
     <tbody>
       {% for item in genes %}
-      {% set gene = item.gene %}
       <tr>
-        <td><a href="{{ item.page }}">{{ gene.name }}</a></td>
-        <td>{{ gene.segment }}</td>
-        <td>{{ gene.candidates|length }}</td>
-        <td>{{ gene.references|length }}</td>
-        <td><span class="pill">{{ gene.anchor_id }}</span></td>
-        <td>{{ item.recommendation.id if item.recommendation else "—" }}</td>
-        <td><span class="badge status-{{ item.overall_status }}">{{ item.overall_status }}</span></td>
+        <td>
+          <a href="{{ item.page }}">
+            {{ item.gene }}
+          </a>
+        </td>
+
+        <td>{{ item.segment }}</td>
+
+        <td>{{ item.candidate_count }}</td>
+
+        <td>{{ item.reference_count }}</td>
+
+        <td>
+          {% if item.anchor %}
+            {{ item.anchor }}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+
+        <td>
+          {% if item.recommended_candidate %}
+            {{ item.recommended_candidate }}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+
+        <td>
+          {% if item.recommendation_score is not none %}
+            {{ "%.3f"|format(item.recommendation_score) }}
+          {% else %}
+            —
+          {% endif %}
+        </td>
       </tr>
       {% endfor %}
     </tbody>

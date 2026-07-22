@@ -125,6 +125,12 @@ def _cli_override_values(args: argparse.Namespace) -> dict[str, object]:
         "use_existing_paf",
         "preset",
         "html",
+        "depth_dir",
+        "depth_suffix",
+        "minimum_depth",
+        "terminal_fraction",
+        "minimum_terminal_bases",
+        "strict_depth",
     )
     return {key: getattr(args, key) for key in keys}
 
@@ -158,6 +164,22 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
     paf_dir = outdir / "paf"
     paf_dir.mkdir(parents=True, exist_ok=True)
 
+    if config.read_support.depth_dir is not None:
+        depth_summary = attach_depth_directory(
+            sample,
+            config.read_support.depth_dir,
+            suffix=config.read_support.suffix,
+            strict=config.read_support.strict,
+            minimum_depth=config.read_support.minimum_depth,
+            terminal_fraction=config.read_support.terminal_fraction,
+            minimum_terminal_bases=config.read_support.minimum_terminal_bases,
+        )
+        print(
+            "Read support: "
+            f"{depth_summary.metrics_attached}/"
+            f"{depth_summary.candidate_count} candidates attached"
+        )
+
     recommendations = {}
 
     for gene_name, gene in sample.genes.items():
@@ -177,26 +199,6 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
 
             attach_existing_paf(gene, paf_path)
 
-
-        depth_summary = None
-        if config.read_support.depth_dir is not None:
-            depth_summary = attach_depth_directory(
-                sample,
-                config.read_support.depth_dir,
-                suffix=config.read_support.suffix,
-                strict=config.read_support.strict,
-                minimum_depth=config.read_support.minimum_depth,
-                terminal_fraction=config.read_support.terminal_fraction,
-                minimum_terminal_bases=(
-                    config.read_support.minimum_terminal_bases
-                ),
-            )
-
-            print(
-                "Read support: "
-                f"{depth_summary.metrics_attached}/"
-                f"{depth_summary.candidate_count} candidates attached"
-            )
 
         analyse_gene(gene)
         recommendations[gene_name] = rank_gene(

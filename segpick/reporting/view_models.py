@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from segpick.models import Gene
+from segpick.models import CandidateContig, Gene
 from segpick.scoring import GeneRecommendation
-from segpick.models import CandidateContig
+
 
 @dataclass(frozen=True, slots=True)
 class ReadSupportView:
@@ -16,6 +16,7 @@ class ReadSupportView:
     left_terminal_support: float | None
     right_terminal_support: float | None
     overall_support: float | None
+
 
 @dataclass(frozen=True, slots=True)
 class EvidenceView:
@@ -69,7 +70,6 @@ def build_recommendation_view(
         return None
 
     selected = recommendation.recommended
-
     evidence = tuple(
         EvidenceView(
             name=name,
@@ -91,7 +91,6 @@ def build_recommendation_view(
         runner_up_strength = None
     else:
         score_gap = selected.score - runner_up.score
-
         if score_gap < 0.05:
             runner_up_strength = "close"
         elif score_gap <= 0.15:
@@ -108,6 +107,7 @@ def build_recommendation_view(
         score_gap=score_gap,
         runner_up_strength=runner_up_strength,
     )
+
 
 def build_gene_page_view(
     gene: Gene,
@@ -145,14 +145,12 @@ def build_gene_page_view(
         recommendation=build_recommendation_view(recommendation),
         candidates=candidates,
     )
- 
-def build_read_support_view(
-    gene_candidate,
-) -> ReadSupportView:
+
+
+def build_read_support_view(candidate: CandidateContig) -> ReadSupportView:
     """Build optional read-support data for dashboard presentation."""
 
-    metrics = gene_candidate.analysis.read_support
-
+    metrics = candidate.analysis.read_support
     if metrics is None:
         return ReadSupportView(
             available=False,

@@ -1,6 +1,31 @@
 from segpick.config import resolve_config
 from pathlib import Path
 
+import yaml
+
+from segpick.config import ReadSupportConfig, RunConfig
+
+
+def test_run_config_to_dict_is_yaml_safe() -> None:
+    config = RunConfig(
+        hits=Path("hits.tsv"),
+        contigs=Path("contigs.fa"),
+        refs=Path("refs.fa"),
+        outdir=Path("results"),
+        read_support=ReadSupportConfig(
+            depth_dir=Path("depth"),
+        ),
+    )
+
+    payload = config.to_dict()
+
+    assert payload["hits"] == "hits.tsv"
+    assert payload["outdir"] == "results"
+    assert payload["read_support"]["depth_dir"] == "depth"
+
+    # Must not raise a RepresenterError.
+    yaml.safe_dump(payload)
+
 
 def test_cli_overrides_yaml_and_yaml_overrides_defaults():
     cfg = resolve_config(

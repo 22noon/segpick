@@ -38,7 +38,23 @@ class RunConfig:
         default_factory=ReadSupportConfig
     )
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        """Return a YAML/JSON-safe representation of the resolved config."""
+        def serialise(value: Any) -> Any:
+            if isinstance(value, Path):
+                return str(value)
+
+            if isinstance(value, dict):
+                return {
+                    key: serialise(item)
+                    for key, item in value.items()
+                }
+
+            if isinstance(value, (list, tuple)):
+                return [serialise(item) for item in value]
+
+            return value
+
+        return serialise(asdict(self))
 
 
 DEFAULTS = RunConfig()

@@ -253,7 +253,6 @@
     {% endif %}
 
       <div class="evidence-list">
-      <div class="evidence-list">
       {% for item in view.recommendation.evidence %}
       <div class="evidence-row">
         <div class="evidence-label">
@@ -451,14 +450,11 @@ function downloadOne(id){const item=sequences.find(x=>x.id===id);triggerDownload
 function copySequence(id){navigator.clipboard.writeText(sequences.find(x=>x.id===id).sequence);}
 function traceSequence(trace){return trace.meta&&trace.meta.sequence_id?trace.meta.sequence_id:null;}
 function highlightPlot(divId,id){const div=document.getElementById(divId);if(!div||!div.data)return;const op=div.data.map(t=>!id||traceSequence(t)===id?1:0.16);const widths=div.data.map(t=>{const w=(t.line&&t.line.width)||4;return !id||traceSequence(t)===id?Math.max(w,6):Math.max(2,w*.55);});Plotly.restyle(div,{opacity:op,"line.width":widths});}
-function selectSequence(id){document.querySelectorAll("#evidence-table tbody tr").forEach(r=>r.classList.toggle("selected",r.dataset.sequenceId===id));document.querySelectorAll("details.seq").forEach(d=>{const yes=d.dataset.sequenceId===id;d.classList.toggle("selected",yes);if(yes){d.open=true;d.scrollIntoView({behavior:"smooth",block:"nearest"});}});highlightPlot("dotplot",id);highlightPlot("containment-plot",id);}
-function clearSelection(){document.querySelectorAll(".selected").forEach(x=>x.classList.remove("selected"));highlightPlot("dotplot",null);highlightPlot("containment-plot",null);}
-function bindPlotClick(id){const div=document.getElementById(id);if(div&&div.on)div.on("plotly_click",e=>{const sid=e.points&&e.points[0]&&e.points[0].customdata;if(sid)selectSequence(sid);});}
+function clearSelection(){DashboardState.selectedCandidate=null;document.querySelectorAll(".selected,.candidate-detail.active").forEach(x=>x.classList.remove("selected","active"));highlightPlot("dotplot",null);highlightPlot("containment-plot",null);}
+function bindPlotClick(id){const div=document.getElementById(id);if(div&&div.on)div.on("plotly_click",e=>{const sid=e.points&&e.points[0]&&e.points[0].customdata;if(sid)selectCandidate(sid);});}
 window.addEventListener("load",()=>{bindPlotClick("dotplot");bindPlotClick("containment-plot");});
 function sortTable(col){const table=document.getElementById("evidence-table"),tbody=table.tBodies[0],rows=[...tbody.rows],asc=table.dataset.sortCol!=col||table.dataset.sortDir!="asc";rows.sort((a,b)=>{const av=a.cells[col].innerText.trim().replace("%",""),bv=b.cells[col].innerText.trim().replace("%","");const an=Number(av),bn=Number(bv),cmp=(!Number.isNaN(an)&&!Number.isNaN(bn))?an-bn:av.localeCompare(bv);return asc?cmp:-cmp;});rows.forEach(r=>tbody.appendChild(r));table.dataset.sortCol=col;table.dataset.sortDir=asc?"asc":"desc";}
 
-<script>
-const sequences = {{ sequences_json|safe }};
 
 const DashboardState = {
   selectedCandidate: {% if view.recommendation %}{{ view.recommendation.candidate_id|tojson }}{% else %}null{% endif %}
@@ -468,18 +464,15 @@ function selectCandidate(candidateId) {
   DashboardState.selectedCandidate = candidateId;
 
   document.querySelectorAll(".candidate-row").forEach((row) => {
-    row.classList.toggle(
-      "selected",
-      row.dataset.sequenceId === candidateId
-    );
+    row.classList.toggle("selected", row.dataset.sequenceId === candidateId);
   });
 
   document.querySelectorAll(".candidate-detail").forEach((detail) => {
-    detail.classList.toggle(
-      "active",
-      detail.dataset.sequenceId === candidateId
-    );
+    detail.classList.toggle("active", detail.dataset.sequenceId === candidateId);
   });
+
+  highlightPlot("dotplot", candidateId);
+  highlightPlot("containment-plot", candidateId);
 }
 
 if (DashboardState.selectedCandidate) {
