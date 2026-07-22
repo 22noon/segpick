@@ -1,7 +1,7 @@
 from __future__ import annotations
-from segpick.reporting.view_models import build_gene_page_view
 
 import json
+import os
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -11,6 +11,7 @@ from plotly.io import to_html
 from segpick import __version__
 from segpick.alignment.export import safe_name
 from segpick.models import Gene, Sample
+from segpick.reporting.view_models import build_gene_page_view
 from segpick.scoring import GeneRecommendation
 from segpick.visualization import make_containment_plot, make_dotplot
 
@@ -110,6 +111,7 @@ def render_gene_page(
     outdir: Path,
     env: Environment,
     recommendation: GeneRecommendation | None = None,
+    coverage_plot_paths: Mapping[str, str | Path] | None = None,
 ) -> Path:
     template = env.get_template("gene.html")
 
@@ -130,9 +132,19 @@ def render_gene_page(
 
     sequences = _sequence_payload(gene)
     rows = _table_rows(gene)
-    view = build_gene_page_view(gene, recommendation)
-
     out = outdir / "genes" / f"{safe_name(gene.name)}.html"
+    relative_coverage_paths = {
+        candidate_id: Path(
+            os.path.relpath(path, start=out.parent)
+        ).as_posix()
+        for candidate_id, path in (coverage_plot_paths or {}).items()
+    }
+    view = build_gene_page_view(
+        gene,
+        recommendation,
+        coverage_plot_paths=relative_coverage_paths,
+    )
+
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
         template.render(
@@ -152,6 +164,7 @@ def write_html_dashboard(
     sample: Sample,
     outdir: str | Path,
     recommendations: Mapping[str, GeneRecommendation] | None = None,
+    coverage_plot_paths: Mapping[str, str | Path] | None = None,
 ) -> Path:
     """Write static interactive HTML dashboard pages."""
 
@@ -177,6 +190,7 @@ def write_html_dashboard(
             outdir,
             env,
             recommendation=recommendation,
+            coverage_plot_paths=coverage_plot_paths,
         )
 
         overviews.append(

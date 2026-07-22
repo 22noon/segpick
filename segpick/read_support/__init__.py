@@ -1,4 +1,8 @@
-from .plotting import write_coverage_plot
+from .plotting import (
+    safe_coverage_filename,
+    write_coverage_plot,
+    write_sample_coverage_plots,
+)
 
 from .directory import (
     DepthAttachmentSummary,
@@ -29,4 +33,6 @@ __all__ = [
     "attached_read_support",
     "candidate_depth_path",
     "write_coverage_plot",
+    "write_sample_coverage_plots",
+    "safe_coverage_filename",
 ]

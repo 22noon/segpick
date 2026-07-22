@@ -52,6 +52,7 @@ class CandidateView:
     status: str
     recommended: bool
     read_support: ReadSupportView
+    coverage_plot: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,7 +113,11 @@ def build_recommendation_view(
 def build_gene_page_view(
     gene: Gene,
     recommendation: GeneRecommendation | None,
+    *,
+    coverage_plot_paths: dict[str, str] | None = None,
 ) -> GenePageView:
+    coverage_plot_paths = coverage_plot_paths or {}
+
     recommended_id = (
         recommendation.recommended.candidate_id
         if recommendation is not None
@@ -134,6 +139,7 @@ def build_gene_page_view(
             status=candidate.analysis.containment.status,
             recommended=candidate.id == recommended_id,
             read_support=build_read_support_view(candidate),
+            coverage_plot=coverage_plot_paths.get(candidate.id),
         )
         for candidate in gene.candidates
     )

@@ -196,6 +196,31 @@
       color: #64748b;
       font-size: 0.9rem;
     }
+
+    .coverage-panel figure {
+      margin: 0;
+    }
+
+    .coverage-panel img {
+      display: block;
+      width: 100%;
+      max-width: 1100px;
+      height: auto;
+    }
+
+    .coverage-placeholder {
+      padding: 1.5rem;
+      text-align: center;
+      color: #64748b;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+
+    #coverage-caption {
+      margin-top: 0.5rem;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
@@ -353,6 +378,7 @@
         <tr
           class="candidate-row{% if candidate.recommended %} selected{% endif %}"
           data-sequence-id="{{ candidate.candidate_id }}"
+          data-coverage-plot="{{ candidate.coverage_plot or '' }}"
           onclick="selectCandidate('{{ candidate.candidate_id }}')"
         >
 
@@ -402,6 +428,24 @@
     </table>
 
     </div>
+  </section>
+
+
+  <section class="card coverage-panel">
+    <h2>Read coverage</h2>
+
+    <div id="coverage-placeholder" class="coverage-placeholder">
+      Select a candidate to view its coverage profile.
+    </div>
+
+    <div id="coverage-unavailable" class="coverage-placeholder" hidden>
+      No depth profile is available for this candidate.
+    </div>
+
+    <figure id="coverage-figure" hidden>
+      <img id="coverage-image" src="" alt="Candidate read coverage profile">
+      <figcaption id="coverage-caption"></figcaption>
+    </figure>
   </section>
 
   <section class="card"><h2>Download selected sequences</h2>
@@ -473,6 +517,35 @@ function selectCandidate(candidateId) {
 
   highlightPlot("dotplot", candidateId);
   highlightPlot("containment-plot", candidateId);
+  updateCoveragePanel(candidateId);
+}
+
+function updateCoveragePanel(candidateId) {
+  const row = [...document.querySelectorAll(".candidate-row")].find(
+    (candidateRow) => candidateRow.dataset.sequenceId === candidateId
+  );
+  const coveragePlot = row ? row.dataset.coveragePlot : "";
+  const placeholder = document.getElementById("coverage-placeholder");
+  const unavailable = document.getElementById("coverage-unavailable");
+  const figure = document.getElementById("coverage-figure");
+  const image = document.getElementById("coverage-image");
+  const caption = document.getElementById("coverage-caption");
+
+  placeholder.hidden = true;
+
+  if (!coveragePlot) {
+    figure.hidden = true;
+    unavailable.hidden = false;
+    image.removeAttribute("src");
+    caption.textContent = "";
+    return;
+  }
+
+  unavailable.hidden = true;
+  figure.hidden = false;
+  image.src = coveragePlot;
+  image.alt = `Read coverage profile for ${candidateId}`;
+  caption.textContent = candidateId;
 }
 
 if (DashboardState.selectedCandidate) {

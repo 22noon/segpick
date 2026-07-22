@@ -10,6 +10,7 @@ from segpick import __version__
 from segpick.alignment.export import export_anchor_fastas, export_gene_fastas, safe_name
 from segpick.alignment.minimap import align_gene, attach_existing_paf
 from segpick.analysis.containment import analyse_gene
+from segpick.analysis.orf import attach_orf_metrics
 from segpick.config import RunConfig, load_config, resolve_config
 from segpick.io.builder import build_sample
 from segpick.provenance import write_provenance
@@ -21,7 +22,10 @@ from segpick.reporting import (
     write_summary_tsv,
 )
 from segpick.scoring import rank_gene
-from segpick.read_support import attach_depth_directory
+from segpick.read_support import (
+    attach_depth_directory,
+    write_sample_coverage_plots,
+)
 
 
 def run_doctor() -> int:
@@ -180,6 +184,18 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
             f"{depth_summary.candidate_count} candidates attached"
         )
 
+    coverage_plot_paths = {}
+    if config.html and config.read_support.depth_dir is not None:
+        coverage_plot_paths = write_sample_coverage_plots(
+            sample,
+            config.read_support.depth_dir,
+            outdir / "dashboard" / "coverage",
+            suffix=config.read_support.suffix,
+            minimum_depth=config.read_support.minimum_depth,
+        )
+
+    attach_orf_metrics(sample)
+
     recommendations = {}
 
     for gene_name, gene in sample.genes.items():
@@ -233,6 +249,7 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
             sample,
             outdir / "dashboard",
             recommendations=recommendations,
+            coverage_plot_paths=coverage_plot_paths,
         )
         print(f"Dashboard: {dashboard}")
 

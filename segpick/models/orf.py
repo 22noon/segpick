@@ -1,0 +1,62 @@
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+
+
+@dataclass(frozen=True, slots=True)
+class ORFHit:
+    """A translated open reading frame found on one contig strand."""
+
+    strand: str
+    frame: int
+    start: int
+    end: int
+    nucleotide_length: int
+    protein: str
+    has_start_codon: bool
+    has_stop_codon: bool
+
+    @property
+    def protein_length(self) -> int:
+        return len(self.protein)
+
+    @property
+    def complete(self) -> bool:
+        return self.has_start_codon and self.has_stop_codon
+
+    def to_dict(self) -> dict[str, object]:
+        payload = asdict(self)
+        payload["protein_length"] = self.protein_length
+        payload["complete"] = self.complete
+        return payload
+
+
+@dataclass(frozen=True, slots=True)
+class ORFMetrics:
+    """Summary of six-frame ORF discovery for one candidate contig."""
+
+    best_orf: ORFHit | None
+    orf_count: int
+    complete_orf_count: int
+
+    @property
+    def longest_orf_nt(self) -> int:
+        return self.best_orf.nucleotide_length if self.best_orf else 0
+
+    @property
+    def protein_length(self) -> int:
+        return self.best_orf.protein_length if self.best_orf else 0
+
+    @property
+    def complete(self) -> bool:
+        return self.best_orf.complete if self.best_orf else False
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "best_orf": self.best_orf.to_dict() if self.best_orf else None,
+            "orf_count": self.orf_count,
+            "complete_orf_count": self.complete_orf_count,
+            "longest_orf_nt": self.longest_orf_nt,
+            "protein_length": self.protein_length,
+            "complete": self.complete,
+        }
