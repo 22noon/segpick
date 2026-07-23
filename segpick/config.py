@@ -125,12 +125,38 @@ def resolve_config(
     scoring_data = yaml_values.get("scoring", {}) or {}
     weights_data = scoring_data.get("weights", {}) or {}
 
+    default_weights = ScoringWeights()
     scoring_weights = ScoringWeights(
-        protein_confidence=float(weights_data.get("protein_confidence", 0.30)),
-        length_plausibility=float(weights_data.get("length_plausibility", 0.15)),
-        containment=float(weights_data.get("containment", 0.25)),
-        identity=float(weights_data.get("identity", 0.15)),
-        fragmentation=float(weights_data.get("fragmentation", 0.15)),
+        protein_confidence=float(
+            weights_data.get(
+                "protein_confidence",
+                default_weights.protein_confidence,
+            )
+        ),
+        length_plausibility=float(
+            weights_data.get(
+                "length_plausibility",
+                default_weights.length_plausibility,
+            )
+        ),
+        containment=float(
+            weights_data.get("containment", default_weights.containment)
+        ),
+        identity=float(
+            weights_data.get("identity", default_weights.identity)
+        ),
+        fragmentation=float(
+            weights_data.get(
+                "fragmentation",
+                default_weights.fragmentation,
+            )
+        ),
+        read_support=float(
+            weights_data.get("read_support", default_weights.read_support)
+        ),
+        orf_quality=float(
+            weights_data.get("orf_quality", default_weights.orf_quality)
+        ),
     )
 
     # Do not pass the nested "scoring" dictionary directly to RunConfig.

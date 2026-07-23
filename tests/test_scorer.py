@@ -13,9 +13,25 @@ def test_score_uses_all_available_channels() -> None:
         read_support=0.75,
     )
 
-    result = score_evidence(evidence, ScoringWeights())
+    weights = ScoringWeights(
+        protein_confidence=0.25,
+        length_plausibility=0.10,
+        containment=0.20,
+        identity=0.15,
+        fragmentation=0.10,
+        read_support=0.20,
+        orf_quality=0.0,
+    )
+    result = score_evidence(evidence, weights)
 
-    expected = ( 1.0 * 0.25 + 0.5 * 0.10 + 0.8 * 0.20 + 0.9 * 0.15 + 1.0 * 0.10 + 0.75 * 0.20)
+    expected = (
+        1.0 * 0.25
+        + 0.5 * 0.10
+        + 0.8 * 0.20
+        + 0.9 * 0.15
+        + 1.0 * 0.10
+        + 0.75 * 0.20
+    )
 
     assert result.score == pytest.approx(expected)
     assert sum(result.effective_weights.values()) == pytest.approx(1.0)
@@ -31,7 +47,16 @@ def test_missing_channel_weight_is_redistributed() -> None:
         read_support=0.75,
     )
 
-    result = score_evidence(evidence, ScoringWeights())
+    weights = ScoringWeights(
+        protein_confidence=0.25,
+        length_plausibility=0.10,
+        containment=0.20,
+        identity=0.15,
+        fragmentation=0.10,
+        read_support=0.20,
+        orf_quality=0.0,
+    )
+    result = score_evidence(evidence, weights)
 
     assert "length_plausibility" not in result.effective_weights
     assert sum(result.effective_weights.values()) == pytest.approx(1.0)
@@ -58,7 +83,15 @@ def test_missing_evidence_does_not_count_as_zero() -> None:
         fragmentation=1.0,
         read_support=1.0,
     )
-    weights = ScoringWeights()
+    weights = ScoringWeights(
+        protein_confidence=0.25,
+        length_plausibility=0.10,
+        containment=0.20,
+        identity=0.15,
+        fragmentation=0.10,
+        read_support=0.20,
+        orf_quality=0.0,
+    )
     assert score_evidence(missing, weights).score == pytest.approx(1.0)
     assert score_evidence(zero, weights).score == pytest.approx(0.90)
 

@@ -50,6 +50,11 @@ def write_gene_json_reports(
                         if c.analysis.orf_alignment is not None
                         else None
                     ),
+                    "orf_quality": (
+                        c.analysis.orf_quality.to_dict()
+                        if c.analysis.orf_quality is not None
+                        else None
+                    ),
                 }
             )
         for r in g.references:

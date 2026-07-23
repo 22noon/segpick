@@ -18,6 +18,7 @@ class Evidence:
     identity: float | None
     fragmentation: float | None
     read_support: float | None = None
+    orf_quality: float | None = None
 
     def __post_init__(self) -> None:
         for name, value in asdict(self).items():

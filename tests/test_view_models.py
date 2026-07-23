@@ -86,6 +86,7 @@ def test_build_gene_page_view() -> None:
         "identity",
         "fragmentation",
         "read_support",
+        "orf_quality",
     }
 
     evidence_by_name = {

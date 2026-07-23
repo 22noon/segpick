@@ -113,6 +113,7 @@ def build_evidence(
         identity=identity_evidence(candidate),
         fragmentation=fragmentation_evidence(candidate),
         read_support=read_support_evidence(candidate),
+        orf_quality=orf_quality_evidence(candidate),
     )
 
 def build_gene_evidence(
@@ -135,3 +136,16 @@ def read_support_evidence(
         return None
 
     return clamp01(float(metrics.read_support))
+
+
+def orf_quality_evidence(
+    candidate: CandidateContig,
+) -> float | None:
+    """Return the attached explainable ORF-quality score when available."""
+
+    quality = candidate.analysis.orf_quality
+
+    if quality is None:
+        return None
+
+    return clamp01(float(quality.score))

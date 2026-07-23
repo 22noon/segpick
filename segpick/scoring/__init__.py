@@ -7,6 +7,7 @@ from .builder import (
     length_plausibility_evidence,
     protein_confidence_evidence,
     read_support_evidence,
+    orf_quality_evidence,
 )
 from .evidence import Evidence
 from .ranking import rank_gene
@@ -32,4 +33,6 @@ __all__ = [
     "containment_evidence",
     "identity_evidence",
     "fragmentation_evidence",
+    "read_support_evidence",
+    "orf_quality_evidence",
 ]

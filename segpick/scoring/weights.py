@@ -9,9 +9,10 @@ class ScoringWeights:
     protein_confidence: float = 0.25
     length_plausibility: float = 0.10
     containment: float = 0.20
-    identity: float = 0.15
+    identity: float = 0.10
     fragmentation: float = 0.10
-    read_support: float = 0.20
+    read_support: float = 0.10
+    orf_quality: float = 0.15
 
     def __post_init__(self) -> None:
         for name, value in asdict(self).items():
@@ -36,6 +37,7 @@ class ScoringWeights:
             identity=self.identity / total,
             fragmentation=self.fragmentation / total,
             read_support=self.read_support / total,
+            orf_quality=self.orf_quality / total,
         )
 
     def with_overrides(
