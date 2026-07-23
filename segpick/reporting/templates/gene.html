@@ -363,7 +363,8 @@
             "Fragmentation",
             "Structural",
             "Status",
-            "Read support"
+            "Read support",
+            "ORF quality"
           ] %}
             <th onclick="sortTable({{ loop.index0 }})">
               {{ h }}
@@ -421,6 +422,14 @@
             {% endif %}
           </td>
 
+          <td>
+            {% if candidate.orf.score is not none %}
+              {{ "%.3f"|format(candidate.orf.score) }}
+            {% else %}
+              <span class="unavailable">—</span>
+            {% endif %}
+          </td>
+
         </tr>
       {% endfor %}
 
@@ -430,6 +439,50 @@
     </div>
   </section>
 
+
+
+  <section class="card">
+    <h2>ORF structural evidence</h2>
+
+    {% for candidate in view.candidates %}
+      <div
+        class="candidate-detail{% if candidate.recommended %} active{% endif %}"
+        data-sequence-id="{{ candidate.candidate_id }}"
+      >
+        <h3>{{ candidate.candidate_id }}</h3>
+
+        {% if not candidate.orf.available %}
+          <p class="unavailable">No ORF evidence is available.</p>
+        {% else %}
+          <div class="mini-grid">
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.orf.score) if candidate.orf.score is not none else "—" }}</strong><span>ORF quality</span></div>
+            <div class="mini"><strong>{{ candidate.orf.protein_length }} aa</strong><span>Protein length</span></div>
+            <div class="mini"><strong>{{ candidate.orf.strand }} / frame {{ candidate.orf.frame }}</strong><span>Strand and frame</span></div>
+            <div class="mini"><strong>{{ candidate.orf.start }}–{{ candidate.orf.end }}</strong><span>Contig coordinates</span></div>
+            <div class="mini"><strong>{{ "Complete" if candidate.orf.complete else "Incomplete" }}</strong><span>ORF completeness</span></div>
+            <div class="mini"><strong>{{ candidate.orf.complete_orf_count }}</strong><span>Complete ORFs found</span></div>
+            <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.protein_identity * 100) if candidate.orf.protein_identity is not none else "—" }}</strong><span>Protein identity</span></div>
+            <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.reference_coverage * 100) if candidate.orf.reference_coverage is not none else "—" }}</strong><span>Reference coverage</span></div>
+          </div>
+
+          {% if candidate.orf.reference_id %}
+            <p class="muted">Reference protein source: {{ candidate.orf.reference_id }}</p>
+          {% endif %}
+
+          {% if candidate.orf.warnings %}
+            <h4>Review flags</h4>
+            <ul>
+              {% for warning in candidate.orf.warnings %}
+                <li>{{ warning }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p><span class="badge status-COMPLETE">No ORF structural warnings</span></p>
+          {% endif %}
+        {% endif %}
+      </div>
+    {% endfor %}
+  </section>
 
   <section class="card coverage-panel">
     <h2>Read coverage</h2>

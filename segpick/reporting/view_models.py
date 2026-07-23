@@ -19,6 +19,26 @@ class ReadSupportView:
 
 
 @dataclass(frozen=True, slots=True)
+class ORFView:
+    available: bool
+    score: float | None
+    strand: str | None
+    frame: int | None
+    start: int | None
+    end: int | None
+    protein_length: int | None
+    complete: bool | None
+    complete_orf_count: int
+    reference_id: str | None
+    protein_identity: float | None
+    reference_coverage: float | None
+    n_terminal_missing: int | None
+    c_terminal_missing: int | None
+    internal_gap_residues: int | None
+    warnings: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class EvidenceView:
     name: str
     value: float | None
@@ -52,6 +72,7 @@ class CandidateView:
     status: str
     recommended: bool
     read_support: ReadSupportView
+    orf: ORFView
     coverage_plot: str | None
 
 
@@ -139,6 +160,7 @@ def build_gene_page_view(
             status=candidate.analysis.containment.status,
             recommended=candidate.id == recommended_id,
             read_support=build_read_support_view(candidate),
+            orf=build_orf_view(candidate),
             coverage_plot=coverage_plot_paths.get(candidate.id),
         )
         for candidate in gene.candidates
@@ -178,4 +200,84 @@ def build_read_support_view(candidate: CandidateContig) -> ReadSupportView:
         left_terminal_support=metrics.left_terminal_support,
         right_terminal_support=metrics.right_terminal_support,
         overall_support=metrics.read_support,
+    )
+
+
+def build_orf_view(candidate: CandidateContig) -> ORFView:
+    """Build ORF structural details and conservative review warnings."""
+
+    metrics = candidate.analysis.orf
+    quality = candidate.analysis.orf_quality
+    alignment = candidate.analysis.orf_alignment
+
+    if metrics is None or metrics.best_orf is None:
+        return ORFView(
+            available=False,
+            score=None,
+            strand=None,
+            frame=None,
+            start=None,
+            end=None,
+            protein_length=None,
+            complete=None,
+            complete_orf_count=0,
+            reference_id=None,
+            protein_identity=None,
+            reference_coverage=None,
+            n_terminal_missing=None,
+            c_terminal_missing=None,
+            internal_gap_residues=None,
+            warnings=("No ORF was identified.",),
+        )
+
+    best = metrics.best_orf
+    warnings: list[str] = []
+    if not best.complete:
+        warnings.append("Best ORF is incomplete.")
+    if metrics.complete_orf_count > 1:
+        warnings.append(
+            f"Multiple complete ORFs detected ({metrics.complete_orf_count})."
+        )
+    if alignment is not None:
+        if alignment.reference_coverage < 0.90:
+            warnings.append("Reference protein coverage is below 90%.")
+        terminal_missing = (
+            alignment.n_terminal_missing + alignment.c_terminal_missing
+        )
+        if terminal_missing > 0:
+            warnings.append(
+                f"Reference alignment is missing {terminal_missing} terminal residues."
+            )
+        if alignment.internal_gap_residues > 0:
+            warnings.append(
+                f"Protein alignment contains {alignment.internal_gap_residues} internal gap residues."
+            )
+
+    return ORFView(
+        available=True,
+        score=quality.score if quality is not None else None,
+        strand=best.strand,
+        frame=best.frame,
+        start=best.start,
+        end=best.end,
+        protein_length=best.protein_length,
+        complete=best.complete,
+        complete_orf_count=metrics.complete_orf_count,
+        reference_id=alignment.reference_id if alignment is not None else None,
+        protein_identity=(
+            alignment.amino_acid_identity if alignment is not None else None
+        ),
+        reference_coverage=(
+            alignment.reference_coverage if alignment is not None else None
+        ),
+        n_terminal_missing=(
+            alignment.n_terminal_missing if alignment is not None else None
+        ),
+        c_terminal_missing=(
+            alignment.c_terminal_missing if alignment is not None else None
+        ),
+        internal_gap_residues=(
+            alignment.internal_gap_residues if alignment is not None else None
+        ),
+        warnings=tuple(warnings),
     )

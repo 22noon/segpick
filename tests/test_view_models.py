@@ -182,3 +182,71 @@ def test_runner_up_is_marked_weak_when_score_gap_is_large() -> None:
     assert view.recommendation is not None
     assert view.recommendation.runner_up_id == "weak"
     assert view.recommendation.runner_up_strength == "weak"
+
+
+def test_gene_page_view_contains_orf_structural_details() -> None:
+    from segpick.models import ORFAlignmentMetrics, ORFHit, ORFMetrics, ORFQuality
+
+    gene = Gene(name="VP2", segment="2")
+    candidate = make_candidate("contig_a", 100)
+    candidate.analysis.orf = ORFMetrics(
+        best_orf=ORFHit(
+            strand="+",
+            frame=0,
+            start=3,
+            end=303,
+            nucleotide_length=300,
+            protein="M" + "A" * 98,
+            has_start_codon=True,
+            has_stop_codon=True,
+        ),
+        orf_count=3,
+        complete_orf_count=2,
+    )
+    candidate.analysis.orf_alignment = ORFAlignmentMetrics(
+        reference_id="REF1",
+        candidate_protein_length=99,
+        reference_protein_length=110,
+        aligned_residues=99,
+        identical_residues=95,
+        amino_acid_identity=95 / 99,
+        candidate_coverage=1.0,
+        reference_coverage=0.90,
+        length_ratio=0.90,
+        n_terminal_missing=4,
+        c_terminal_missing=7,
+        internal_gap_residues=2,
+    )
+    candidate.analysis.orf_quality = ORFQuality(
+        score=0.91,
+        complete_orf=1.0,
+        start_codon=1.0,
+        stop_codon=1.0,
+        protein_identity=95 / 99,
+        reference_coverage=0.90,
+        length_agreement=0.90,
+        terminal_completeness=0.90,
+        gap_integrity=0.98,
+    )
+    gene.add_candidate(candidate)
+
+    view = build_gene_page_view(gene, rank_gene(gene, ScoringWeights()))
+    orf = view.candidates[0].orf
+
+    assert orf.available is True
+    assert orf.score == pytest.approx(0.91)
+    assert orf.reference_id == "REF1"
+    assert orf.complete_orf_count == 2
+    assert "Multiple complete ORFs detected (2)." in orf.warnings
+    assert "Reference alignment is missing 11 terminal residues." in orf.warnings
+    assert "Protein alignment contains 2 internal gap residues." in orf.warnings
+
+
+def test_gene_page_view_marks_missing_orf() -> None:
+    gene = Gene(name="VP2", segment="2")
+    gene.add_candidate(make_candidate("contig_a", 100))
+
+    view = build_gene_page_view(gene, rank_gene(gene, ScoringWeights()))
+
+    assert view.candidates[0].orf.available is False
+    assert view.candidates[0].orf.warnings == ("No ORF was identified.",)
