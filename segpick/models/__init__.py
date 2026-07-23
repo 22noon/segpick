@@ -5,6 +5,7 @@ from .contig import CandidateContig
 from .gene import Gene
 from .metadata import ContigMetadata
 from .orf import ORFHit, ORFMetrics
+from .orf_alignment import ORFAlignmentMetrics
 from .reference import ReferenceSequence
 from .sample import Sample
 from .read_support import ReadSupportMetrics
@@ -19,4 +20,5 @@ __all__ = [
     "Alignment",
     "ORFHit",
     "ORFMetrics",
+    "ORFAlignmentMetrics",
 ]

@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 
 from .containment import ContainmentMetrics
 from .orf import ORFMetrics
+from .orf_alignment import ORFAlignmentMetrics
 from .read_support import ReadSupportMetrics
 
 
@@ -16,4 +17,5 @@ class ContigAnalysis:
     )
     read_support: ReadSupportMetrics | None = None
     orf: ORFMetrics | None = None
+    orf_alignment: ORFAlignmentMetrics | None = None
     recommendation_reason: str | None = None

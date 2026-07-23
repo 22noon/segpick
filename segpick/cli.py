@@ -11,6 +11,7 @@ from segpick.alignment.export import export_anchor_fastas, export_gene_fastas, s
 from segpick.alignment.minimap import align_gene, attach_existing_paf
 from segpick.analysis.containment import analyse_gene
 from segpick.analysis.orf import attach_orf_metrics
+from segpick.analysis.orf_alignment import attach_orf_alignment_metrics
 from segpick.config import RunConfig, load_config, resolve_config
 from segpick.io.builder import build_sample
 from segpick.provenance import write_provenance
@@ -195,6 +196,7 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
         )
 
     attach_orf_metrics(sample)
+    attach_orf_alignment_metrics(sample)
 
     recommendations = {}
 
