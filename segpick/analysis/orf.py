@@ -199,10 +199,31 @@ def calculate_orf_metrics(
         minimum_protein_length=minimum_protein_length,
         include_partial=include_partial,
     )
+    selected = hits[0] if hits else None
+    longest = max(hits, key=lambda hit: hit.protein_length, default=None)
+    selection_method = (
+        "longest_complete_orf"
+        if selected and selected.complete
+        else "longest_partial_orf"
+        if selected
+        else "no_orf"
+    )
     return ORFMetrics(
-        best_orf=hits[0] if hits else None,
+        best_orf=selected,
         orf_count=len(hits),
         complete_orf_count=sum(hit.complete for hit in hits),
+        longest_orf=longest,
+        selection_method=selection_method,
+        selected_matches_longest=(
+            selected is None
+            or longest is None
+            or (
+                selected.strand, selected.frame, selected.start, selected.end
+            )
+            == (
+                longest.strand, longest.frame, longest.start, longest.end
+            )
+        ),
     )
 
 

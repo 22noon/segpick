@@ -38,6 +38,9 @@ class ORFMetrics:
     best_orf: ORFHit | None
     orf_count: int
     complete_orf_count: int
+    longest_orf: ORFHit | None = None
+    selection_method: str = "longest_complete_orf"
+    selected_matches_longest: bool = True
 
     @property
     def longest_orf_nt(self) -> int:
@@ -54,6 +57,11 @@ class ORFMetrics:
     def to_dict(self) -> dict[str, object]:
         return {
             "best_orf": self.best_orf.to_dict() if self.best_orf else None,
+            "longest_orf": (
+                self.longest_orf.to_dict() if self.longest_orf else None
+            ),
+            "selection_method": self.selection_method,
+            "selected_matches_longest": self.selected_matches_longest,
             "orf_count": self.orf_count,
             "complete_orf_count": self.complete_orf_count,
             "longest_orf_nt": self.longest_orf_nt,
