@@ -5,10 +5,26 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ sample.name }} — SegPick</title>
   <style>
-    :root { color-scheme: light; --bg:#f8fafc; --card:#fff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --blue:#2563eb; }
+    :root {
+      color-scheme: light;
+      --bg:#f8fafc;
+      --card:#fff;
+      --ink:#0f172a;
+      --muted:#64748b;
+      --line:#e2e8f0;
+      --blue:#2563eb;
+      --good-bg:#dcfce7;
+      --good-ink:#166534;
+      --warn-bg:#fef3c7;
+      --warn-ink:#92400e;
+      --bad-bg:#fee2e2;
+      --bad-ink:#991b1b;
+      --neutral-bg:#e2e8f0;
+      --neutral-ink:#334155;
+    }
     * { box-sizing: border-box; }
     body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--ink); }
-    main { max-width: 1250px; margin: auto; padding: 2rem; }
+    main { max-width: 1350px; margin: auto; padding: 2rem; }
     h1 { margin: 0 0 .25rem; }
     .sub { color: var(--muted); margin-bottom: 1.5rem; }
     .summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:.8rem; margin-bottom:1.2rem; }
@@ -16,74 +32,80 @@
     .metric strong { display:block; font-size:1.55rem; }
     .metric span { color:var(--muted); font-size:.9rem; }
     .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow:hidden; }
+    .table-wrap { overflow-x:auto; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { padding: .8rem; border-bottom: 1px solid var(--line); text-align: left; }
-    th { background: #f1f5f9; }
+    th, td { padding: .8rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: #f1f5f9; white-space: nowrap; }
     tr:hover td { background:#f8fafc; }
     a { color: var(--blue); text-decoration: none; font-weight: 650; }
-    .pill,.badge { display:inline-block; padding:.24rem .6rem; border-radius:999px; font-size:.78rem; font-weight:700; }
-    .pill { background:#e2e8f0; }
-    .status-COMPLETE,.status-ANCHOR { background:#dcfce7; color:#166534; }
-    .status-PARTIAL { background:#fef3c7; color:#92400e; }
-    .status-FRAGMENTED { background:#ffedd5; color:#9a3412; }
-    .status-POOR,.status-NO_ALIGNMENT,.status-NO_CANDIDATE { background:#fee2e2; color:#991b1b; }
+    .badge { display:inline-block; padding:.24rem .6rem; border-radius:999px; font-size:.78rem; font-weight:700; white-space:nowrap; }
+    .confidence-high,.review-no { background:var(--good-bg); color:var(--good-ink); }
+    .confidence-medium { background:var(--warn-bg); color:var(--warn-ink); }
+    .confidence-low,.review-yes { background:var(--bad-bg); color:var(--bad-ink); }
+    .confidence-unknown { background:var(--neutral-bg); color:var(--neutral-ink); }
+    .assessment { min-width: 280px; max-width: 520px; color:#334155; line-height:1.4; }
+    .muted { color:var(--muted); }
     footer { color:var(--muted); font-size:.8rem; margin-top:1rem; }
   </style>
 </head>
 <body>
 <main>
   <h1>{{ sample.name }}</h1>
-  <div class="sub">Interactive BTV candidate-contig curation dashboard</div>
+  <div class="sub">Segment-level assembly curation summary</div>
   <div class="summary">
     <div class="metric"><strong>{{ genes|length }}</strong><span>Genes</span></div>
     <div class="metric"><strong>{{ genes|selectattr('recommended_candidate')|list|length }}</strong><span>Genes with recommendation</span></div>
-    <div class="metric"><strong>{{ genes|sum(attribute='candidate_count') }}</strong><span>Total candidates</span></div>
+    <div class="metric"><strong>{{ genes|selectattr('manual_review')|list|length }}</strong><span>Manual review required</span></div>
+    <div class="metric"><strong>{{ genes|selectattr('confidence', 'equalto', 'high')|list|length }}</strong><span>High-confidence segments</span></div>
   </div>
-  <div class="card">
-  <table>
-  <thead> <tr> <th>Gene</th> <th>Segment</th> <th>Candidates</th> <th>References</th> <th>Anchor</th> <th>Recommended candidate</th> <th>Score</th> </tr> </thead>
-    <tbody>
-      {% for item in genes %}
-      <tr>
-        <td>
-          <a href="{{ item.page }}">
-            {{ item.gene }}
-          </a>
-        </td>
-
-        <td>{{ item.segment }}</td>
-
-        <td>{{ item.candidate_count }}</td>
-
-        <td>{{ item.reference_count }}</td>
-
-        <td>
-          {% if item.anchor %}
-            {{ item.anchor }}
-          {% else %}
-            —
-          {% endif %}
-        </td>
-
-        <td>
-          {% if item.recommended_candidate %}
-            {{ item.recommended_candidate }}
-          {% else %}
-            —
-          {% endif %}
-        </td>
-
-        <td>
-          {% if item.recommendation_score is not none %}
-            {{ "%.3f"|format(item.recommendation_score) }}
-          {% else %}
-            —
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="card table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Gene</th>
+          <th>Segment</th>
+          <th>Recommended candidate</th>
+          <th>Confidence</th>
+          <th>Manual review</th>
+          <th>Assessment</th>
+          <th>Candidates</th>
+          <th>References</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in genes %}
+        <tr>
+          <td><a href="{{ item.page }}">{{ item.gene }}</a></td>
+          <td>{{ item.segment }}</td>
+          <td>{{ item.recommended_candidate or '—' }}</td>
+          <td>
+            <span class="badge confidence-{{ item.confidence }}">
+              {{ item.confidence|upper }}
+            </span>
+          </td>
+          <td>
+            {% if item.manual_review %}
+              <span class="badge review-yes">Required</span>
+            {% else %}
+              <span class="badge review-no">Not required</span>
+            {% endif %}
+          </td>
+          <td class="assessment">
+            {% if item.summary %}
+              {{ item.summary }}
+              {% if item.conflict_count %}
+                <div class="muted">{{ item.conflict_count }} strong conflict{% if item.conflict_count != 1 %}s{% endif %} recorded.</div>
+              {% endif %}
+            {% else %}
+              <span class="muted">No recommendation reasoning available.</span>
+            {% endif %}
+          </td>
+          <td>{{ item.candidate_count }}</td>
+          <td>{{ item.reference_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
   <footer>Generated by SegPick {{ package_version }}</footer>
 </main>

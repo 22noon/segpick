@@ -147,5 +147,12 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "genes/VP2.html" in index_html
     assert "Candidates" in index_html
     assert "Recommended candidate" in index_html
+    assert "Segment-level assembly curation summary" in index_html
+    assert "Confidence" in index_html
+    assert "Manual review" in index_html
+    assert "Assessment" in index_html
+    assert "HIGH" in index_html
+    assert "Not required" in index_html
+    assert "supported by the available evidence" in index_html
 
 

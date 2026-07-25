@@ -205,24 +205,39 @@ def write_html_dashboard(
             coverage_plot_paths=coverage_plot_paths,
         )
 
+        report = recommendation.report if recommendation is not None else None
+        agreement = recommendation.agreement if recommendation is not None else None
+
         overviews.append(
             {
-            "gene": gene.name,
-            "segment": gene.segment,
-            "candidate_count": len(gene.candidates),
-            "reference_count": len(gene.references),
-            "anchor": gene.anchor_id,
-            "recommended_candidate": (
-                recommendation.recommended.candidate_id
-                if recommendation is not None
-                else None
-            ),
-            "recommendation_score": (
-                recommendation.recommended.score
-                if recommendation is not None
-                else None
-            ),
-            "page": f"genes/{safe_name(gene.name)}.html",
+                "gene": gene.name,
+                "segment": gene.segment,
+                "candidate_count": len(gene.candidates),
+                "reference_count": len(gene.references),
+                "anchor": gene.anchor_id,
+                "recommended_candidate": (
+                    recommendation.recommended.candidate_id
+                    if recommendation is not None
+                    else None
+                ),
+                "recommendation_score": (
+                    recommendation.recommended.score
+                    if recommendation is not None
+                    else None
+                ),
+                "confidence": (
+                    report.confidence
+                    if report is not None
+                    else agreement.confidence if agreement is not None else "unknown"
+                ),
+                "manual_review": report.manual_review if report is not None else False,
+                "summary": report.summary if report is not None else None,
+                "conflict_count": (
+                    len(report.evidence_conflicts)
+                    if report is not None
+                    else 0
+                ),
+                "page": f"genes/{safe_name(gene.name)}.html",
             }
         )
 
