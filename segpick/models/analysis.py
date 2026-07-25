@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .blastx import BlastXHit
+from .blastx_consistency import BlastXConsistency
 from .containment import ContainmentMetrics
 from .orf import ORFMetrics
 from .orf_alignment import ORFAlignmentMetrics
@@ -19,6 +20,7 @@ class ContigAnalysis:
     )
     read_support: ReadSupportMetrics | None = None
     blastx: BlastXHit | None = None
+    blastx_consistency: BlastXConsistency | None = None
     orf: ORFMetrics | None = None
     orf_alignment: ORFAlignmentMetrics | None = None
     orf_quality: ORFQuality | None = None

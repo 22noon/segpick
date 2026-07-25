@@ -44,6 +44,11 @@ def write_gene_json_reports(
                         if c.analysis.blastx is not None
                         else None
                     ),
+                    "blastx_consistency": (
+                        c.analysis.blastx_consistency.to_dict()
+                        if c.analysis.blastx_consistency is not None
+                        else None
+                    ),
                     "containment": c.analysis.containment.to_dict(),
                     "orf": (
                         c.analysis.orf.to_dict()

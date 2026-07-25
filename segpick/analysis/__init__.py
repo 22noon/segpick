@@ -7,3 +7,8 @@ from .orf_selection import (
     attach_blastx_guided_orf_metrics,
     calculate_blastx_guided_orf_metrics,
 )
+
+from .blastx_consistency import (
+    attach_blastx_consistency,
+    calculate_blastx_consistency,
+)
