@@ -13,6 +13,7 @@ from .builder import (
 from .agreement import EvidenceAgreement, assess_evidence_agreement
 from .evidence import Evidence
 from .ranking import rank_gene
+from .reasoning import RecommendationReport, build_recommendation_report
 from .recommendation import (
     CandidateRecommendation,
     GeneRecommendation,
@@ -26,6 +27,8 @@ __all__ = [
     "ScoredEvidence",
     "CandidateRecommendation",
     "GeneRecommendation",
+    "RecommendationReport",
+    "build_recommendation_report",
     "score_evidence",
     "rank_gene",
     "build_evidence",

@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from .evidence import Evidence
 from .scorer import ScoredEvidence
+
+if TYPE_CHECKING:
+    from .reasoning import RecommendationReport
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,6 +44,7 @@ class GeneRecommendation:
     recommended: CandidateRecommendation
     candidates: tuple[CandidateRecommendation, ...]
     agreement: object | None = None
+    report: RecommendationReport | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -49,6 +54,11 @@ class GeneRecommendation:
             "agreement": (
                 self.agreement.to_dict()
                 if self.agreement is not None
+                else None
+            ),
+            "report": (
+                self.report.to_dict()
+                if self.report is not None
                 else None
             ),
         }
