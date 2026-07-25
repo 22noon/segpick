@@ -65,6 +65,11 @@ def write_gene_json_reports(
                         if c.analysis.orf_quality is not None
                         else None
                     ),
+                    "protein_interpretation": (
+                        c.analysis.protein_interpretation.to_dict()
+                        if c.analysis.protein_interpretation is not None
+                        else None
+                    ),
                 }
             )
         for r in g.references:

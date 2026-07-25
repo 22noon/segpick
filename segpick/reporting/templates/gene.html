@@ -749,12 +749,18 @@
           {% endif %}
 
           {% if candidate.orf.difference_summary %}
-            <h4>Protein difference interpretation</h4>
+            <h4>Protein structural interpretation</h4>
+            {% if candidate.orf.interpretation_summary %}
+              <p><strong>{{ candidate.orf.interpretation_summary }}</strong></p>
+            {% endif %}
             <ul class="protein-difference-summary">
               {% for description in candidate.orf.difference_summary %}
                 <li>{{ description }}</li>
               {% endfor %}
             </ul>
+            {% if candidate.orf.possible_frameshift_pattern %}
+              <p class="warning-text">Possible frameshift pattern detected; inspect the alignment and read coverage.</p>
+            {% endif %}
           {% endif %}
 
           {% if candidate.orf.alignment_text %}

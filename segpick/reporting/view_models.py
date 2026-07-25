@@ -47,6 +47,9 @@ class ORFView:
     internal_deletion_events: int | None
     largest_internal_deletion: int | None
     difference_summary: tuple[str, ...]
+    interpretation_status: str | None
+    interpretation_summary: str | None
+    possible_frameshift_pattern: bool
     alignment_text: str | None
     predicted_protein: str | None
     reference_protein: str | None
@@ -341,6 +344,7 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
     metrics = candidate.analysis.orf
     quality = candidate.analysis.orf_quality
     alignment = candidate.analysis.orf_alignment
+    interpretation = candidate.analysis.protein_interpretation
 
     if metrics is None or metrics.best_orf is None:
         return ORFView(
@@ -371,6 +375,9 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
             internal_deletion_events=None,
             largest_internal_deletion=None,
             difference_summary=(),
+            interpretation_status=None,
+            interpretation_summary=None,
+            possible_frameshift_pattern=False,
             alignment_text=None,
             predicted_protein=None,
             reference_protein=None,
@@ -456,7 +463,22 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
         largest_internal_deletion=(
             alignment.largest_internal_deletion if alignment is not None else None
         ),
-        difference_summary=_describe_protein_differences(alignment),
+        difference_summary=(
+            interpretation.findings
+            if interpretation is not None
+            else _describe_protein_differences(alignment)
+        ),
+        interpretation_status=(
+            interpretation.structural_status if interpretation is not None else None
+        ),
+        interpretation_summary=(
+            interpretation.summary if interpretation is not None else None
+        ),
+        possible_frameshift_pattern=(
+            interpretation.possible_frameshift_pattern
+            if interpretation is not None
+            else False
+        ),
         alignment_text=_format_protein_alignment(alignment),
         predicted_protein=best.protein,
         reference_protein=(

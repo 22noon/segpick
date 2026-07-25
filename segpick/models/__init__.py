@@ -9,6 +9,7 @@ from .metadata import ContigMetadata
 from .orf import ORFHit, ORFMetrics
 from .orf_alignment import ORFAlignmentMetrics
 from .orf_quality import ORFQuality
+from .protein_interpretation import ProteinInterpretation
 from .reference import ReferenceSequence
 from .sample import Sample
 from .read_support import ReadSupportMetrics
@@ -27,4 +28,5 @@ __all__ = [
     "ORFMetrics",
     "ORFAlignmentMetrics",
     "ORFQuality",
+    "ProteinInterpretation",
 ]
