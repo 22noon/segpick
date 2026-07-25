@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from Bio.Seq import Seq
 
-from segpick.analysis.orf import find_orfs
+from segpick.analysis.orf import find_orfs, summarize_competing_orfs
 from segpick.analysis.orf_alignment import align_orf_proteins
 from segpick.models import BlastXHit, ORFHit, ORFMetrics, Sample
 
@@ -66,10 +66,16 @@ def calculate_blastx_guided_orf_metrics(
 
     if not hits or not hit.subject_protein:
         selected = hits[0] if hits else None
+        other_complete, major_competing, largest_competing = summarize_competing_orfs(
+            selected, hits
+        )
         return ORFMetrics(
             best_orf=selected,
             orf_count=len(hits),
             complete_orf_count=sum(orf.complete for orf in hits),
+            other_complete_orf_count=other_complete,
+            major_competing_orf_count=major_competing,
+            largest_competing_orf_length=largest_competing,
             longest_orf=longest,
             selection_method=(
                 "longest_complete_orf"
@@ -102,10 +108,16 @@ def calculate_blastx_guided_orf_metrics(
         ranked.append((rank, orf))
 
     selected = max(ranked, key=lambda item: item[0])[1]
+    other_complete, major_competing, largest_competing = summarize_competing_orfs(
+        selected, hits
+    )
     return ORFMetrics(
         best_orf=selected,
         orf_count=len(hits),
         complete_orf_count=sum(orf.complete for orf in hits),
+        other_complete_orf_count=other_complete,
+        major_competing_orf_count=major_competing,
+        largest_competing_orf_length=largest_competing,
         longest_orf=longest,
         selection_method="blastx_protein_match",
         selected_matches_longest=_same_orf(selected, longest),

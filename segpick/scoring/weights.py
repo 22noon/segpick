@@ -6,13 +6,14 @@ from dataclasses import asdict, dataclass, replace
 class ScoringWeights:
     """Relative weights applied to normalised evidence channels."""
 
-    protein_confidence: float = 0.25
-    length_plausibility: float = 0.10
-    containment: float = 0.20
-    identity: float = 0.10
-    fragmentation: float = 0.10
-    read_support: float = 0.10
-    orf_quality: float = 0.15
+    protein_confidence: float = 0.20
+    length_plausibility: float = 0.08
+    containment: float = 0.16
+    identity: float = 0.08
+    fragmentation: float = 0.08
+    read_support: float = 0.08
+    orf_quality: float = 0.12
+    blastx_consistency: float = 0.20
 
     def __post_init__(self) -> None:
         for name, value in asdict(self).items():
@@ -38,6 +39,7 @@ class ScoringWeights:
             fragmentation=self.fragmentation / total,
             read_support=self.read_support / total,
             orf_quality=self.orf_quality / total,
+            blastx_consistency=self.blastx_consistency / total,
         )
 
     def with_overrides(

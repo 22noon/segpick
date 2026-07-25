@@ -29,6 +29,9 @@ class ORFView:
     protein_length: int | None
     complete: bool | None
     complete_orf_count: int
+    other_complete_orf_count: int
+    major_competing_orf_count: int
+    largest_competing_orf_length: int
     reference_id: str | None
     protein_identity: float | None
     reference_coverage: float | None
@@ -55,6 +58,10 @@ class RecommendationView:
     runner_up_score: float | None
     score_gap: float | None
     runner_up_strength: str | None
+    confidence: str
+    supporting_channels: tuple[str, ...]
+    disagreeing_channels: tuple[str, ...]
+    strong_conflicts: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +135,26 @@ def build_recommendation_view(
         runner_up_score=runner_up.score if runner_up else None,
         score_gap=score_gap,
         runner_up_strength=runner_up_strength,
+        confidence=(
+            recommendation.agreement.confidence
+            if recommendation.agreement is not None
+            else "unknown"
+        ),
+        supporting_channels=(
+            recommendation.agreement.supporting_channels
+            if recommendation.agreement is not None
+            else ()
+        ),
+        disagreeing_channels=(
+            recommendation.agreement.disagreeing_channels
+            if recommendation.agreement is not None
+            else ()
+        ),
+        strong_conflicts=(
+            recommendation.agreement.strong_conflicts
+            if recommendation.agreement is not None
+            else ()
+        ),
     )
 
 
@@ -221,6 +248,9 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
             protein_length=None,
             complete=None,
             complete_orf_count=0,
+            other_complete_orf_count=0,
+            major_competing_orf_count=0,
+            largest_competing_orf_length=0,
             reference_id=None,
             protein_identity=None,
             reference_coverage=None,
@@ -234,9 +264,10 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
     warnings: list[str] = []
     if not best.complete:
         warnings.append("Best ORF is incomplete.")
-    if metrics.complete_orf_count > 1:
+    if metrics.major_competing_orf_count > 0:
         warnings.append(
-            f"Multiple complete ORFs detected ({metrics.complete_orf_count})."
+            f"Major competing complete ORFs detected "
+            f"({metrics.major_competing_orf_count})."
         )
     if alignment is not None:
         if alignment.reference_coverage < 0.90:
@@ -263,6 +294,9 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
         protein_length=best.protein_length,
         complete=best.complete,
         complete_orf_count=metrics.complete_orf_count,
+        other_complete_orf_count=metrics.other_complete_orf_count,
+        major_competing_orf_count=metrics.major_competing_orf_count,
+        largest_competing_orf_length=metrics.largest_competing_orf_length,
         reference_id=alignment.reference_id if alignment is not None else None,
         protein_identity=(
             alignment.amino_acid_identity if alignment is not None else None

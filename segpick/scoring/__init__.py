@@ -8,7 +8,9 @@ from .builder import (
     protein_confidence_evidence,
     read_support_evidence,
     orf_quality_evidence,
+    blastx_consistency_evidence,
 )
+from .agreement import EvidenceAgreement, assess_evidence_agreement
 from .evidence import Evidence
 from .ranking import rank_gene
 from .recommendation import (
@@ -35,4 +37,7 @@ __all__ = [
     "fragmentation_evidence",
     "read_support_evidence",
     "orf_quality_evidence",
+    "blastx_consistency_evidence",
+    "EvidenceAgreement",
+    "assess_evidence_agreement",
 ]

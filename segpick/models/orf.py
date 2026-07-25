@@ -38,6 +38,9 @@ class ORFMetrics:
     best_orf: ORFHit | None
     orf_count: int
     complete_orf_count: int
+    other_complete_orf_count: int = 0
+    major_competing_orf_count: int = 0
+    largest_competing_orf_length: int = 0
     longest_orf: ORFHit | None = None
     selection_method: str = "longest_complete_orf"
     selected_matches_longest: bool = True
@@ -64,6 +67,9 @@ class ORFMetrics:
             "selected_matches_longest": self.selected_matches_longest,
             "orf_count": self.orf_count,
             "complete_orf_count": self.complete_orf_count,
+            "other_complete_orf_count": self.other_complete_orf_count,
+            "major_competing_orf_count": self.major_competing_orf_count,
+            "largest_competing_orf_length": self.largest_competing_orf_length,
             "longest_orf_nt": self.longest_orf_nt,
             "protein_length": self.protein_length,
             "complete": self.complete,

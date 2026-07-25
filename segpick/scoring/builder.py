@@ -114,6 +114,7 @@ def build_evidence(
         fragmentation=fragmentation_evidence(candidate),
         read_support=read_support_evidence(candidate),
         orf_quality=orf_quality_evidence(candidate),
+        blastx_consistency=blastx_consistency_evidence(candidate),
     )
 
 def build_gene_evidence(
@@ -149,3 +150,34 @@ def orf_quality_evidence(
         return None
 
     return clamp01(float(quality.score))
+
+
+def blastx_consistency_evidence(
+    candidate: CandidateContig,
+) -> float | None:
+    """Summarise ORF–BLASTX agreement as a high-value evidence channel."""
+
+    consistency = candidate.analysis.blastx_consistency
+    if consistency is None:
+        return None
+
+    components: list[tuple[float, float]] = [
+        (1.0 if consistency.strand_agrees else 0.0, 0.20),
+        (1.0 if consistency.frame_agrees else 0.0, 0.20),
+        (clamp01(consistency.blastx_interval_coverage), 0.15),
+        (clamp01(consistency.orf_interval_coverage), 0.05),
+    ]
+
+    optional = (
+        (consistency.amino_acid_identity, 0.15),
+        (consistency.subject_coverage, 0.20),
+        (consistency.length_agreement, 0.05),
+    )
+    components.extend(
+        (clamp01(float(value)), weight)
+        for value, weight in optional
+        if value is not None
+    )
+
+    available_weight = sum(weight for _, weight in components)
+    return sum(value * weight for value, weight in components) / available_weight

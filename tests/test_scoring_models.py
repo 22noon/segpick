@@ -35,6 +35,7 @@ def test_weights_normalise_to_one() -> None:
         fragmentation=2,
         read_support=2,
         orf_quality=0,
+        blastx_consistency=0,
     ).normalised()
 
     assert weights.total == pytest.approx(1.0)
@@ -48,9 +49,10 @@ def test_weights_allow_partial_overrides() -> None:
     )
 
     assert weights.protein_confidence == 0.5
-    assert weights.containment == 0.20
-    assert weights.read_support == 0.10
-    assert weights.orf_quality == 0.15
+    assert weights.containment == 0.16
+    assert weights.read_support == 0.08
+    assert weights.orf_quality == 0.12
+    assert weights.blastx_consistency == 0.20
 
 
 def test_weights_reject_all_zero() -> None:
@@ -63,6 +65,7 @@ def test_weights_reject_all_zero() -> None:
             fragmentation=0,
             read_support=0,
             orf_quality=0,
+            blastx_consistency=0,
         )
 
 def test_evidence_accepts_missing_read_support() -> None:

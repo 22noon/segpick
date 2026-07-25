@@ -21,6 +21,7 @@ def test_score_uses_all_available_channels() -> None:
         fragmentation=0.10,
         read_support=0.20,
         orf_quality=0.0,
+        blastx_consistency=0.0,
     )
     result = score_evidence(evidence, weights)
 
@@ -55,6 +56,7 @@ def test_missing_channel_weight_is_redistributed() -> None:
         fragmentation=0.10,
         read_support=0.20,
         orf_quality=0.0,
+        blastx_consistency=0.0,
     )
     result = score_evidence(evidence, weights)
 
@@ -91,6 +93,7 @@ def test_missing_evidence_does_not_count_as_zero() -> None:
         fragmentation=0.10,
         read_support=0.20,
         orf_quality=0.0,
+        blastx_consistency=0.0,
     )
     assert score_evidence(missing, weights).score == pytest.approx(1.0)
     assert score_evidence(zero, weights).score == pytest.approx(0.90)

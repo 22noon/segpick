@@ -188,6 +188,31 @@ def find_orfs(
     )
 
 
+
+def summarize_competing_orfs(
+    selected: ORFHit | None,
+    hits: list[ORFHit],
+    *,
+    major_fraction: float = 0.70,
+) -> tuple[int, int, int]:
+    """Summarize complete ORFs other than the selected coding region.
+
+    A competing ORF is considered major when it is at least ``major_fraction``
+    of the selected ORF protein length. Small complete ORFs are retained in the
+    raw counts but do not automatically trigger a structural warning.
+    """
+
+    competing = [hit for hit in hits if hit.complete and hit != selected]
+    largest = max((hit.protein_length for hit in competing), default=0)
+
+    if selected is None or selected.protein_length == 0:
+        major_count = 0
+    else:
+        threshold = selected.protein_length * major_fraction
+        major_count = sum(hit.protein_length >= threshold for hit in competing)
+
+    return len(competing), major_count, largest
+
 def calculate_orf_metrics(
     sequence: str | Seq,
     *,
@@ -201,6 +226,9 @@ def calculate_orf_metrics(
     )
     selected = hits[0] if hits else None
     longest = max(hits, key=lambda hit: hit.protein_length, default=None)
+    other_complete, major_competing, largest_competing = summarize_competing_orfs(
+        selected, hits
+    )
     selection_method = (
         "longest_complete_orf"
         if selected and selected.complete
@@ -212,6 +240,9 @@ def calculate_orf_metrics(
         best_orf=selected,
         orf_count=len(hits),
         complete_orf_count=sum(hit.complete for hit in hits),
+        other_complete_orf_count=other_complete,
+        major_competing_orf_count=major_competing,
+        largest_competing_orf_length=largest_competing,
         longest_orf=longest,
         selection_method=selection_method,
         selected_matches_longest=(

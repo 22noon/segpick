@@ -87,6 +87,7 @@ def test_build_gene_page_view() -> None:
         "fragmentation",
         "read_support",
         "orf_quality",
+        "blastx_consistency",
     }
 
     evidence_by_name = {
@@ -202,6 +203,9 @@ def test_gene_page_view_contains_orf_structural_details() -> None:
         ),
         orf_count=3,
         complete_orf_count=2,
+        other_complete_orf_count=1,
+        major_competing_orf_count=1,
+        largest_competing_orf_length=90,
     )
     candidate.analysis.orf_alignment = ORFAlignmentMetrics(
         reference_id="REF1",
@@ -237,7 +241,10 @@ def test_gene_page_view_contains_orf_structural_details() -> None:
     assert orf.score == pytest.approx(0.91)
     assert orf.reference_id == "REF1"
     assert orf.complete_orf_count == 2
-    assert "Multiple complete ORFs detected (2)." in orf.warnings
+    assert orf.other_complete_orf_count == 1
+    assert orf.major_competing_orf_count == 1
+    assert orf.largest_competing_orf_length == 90
+    assert "Major competing complete ORFs detected (1)." in orf.warnings
     assert "Reference alignment is missing 11 terminal residues." in orf.warnings
     assert "Protein alignment contains 2 internal gap residues." in orf.warnings
 

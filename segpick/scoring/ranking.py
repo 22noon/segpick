@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from segpick.models import Gene
 
+from .agreement import assess_evidence_agreement
 from .builder import build_gene_evidence
 from .recommendation import (
     CandidateRecommendation,
@@ -60,4 +61,8 @@ def rank_gene(
         gene=gene.name,
         recommended=ranked[0],
         candidates=ranked,
+        agreement=assess_evidence_agreement(
+            ranked,
+            ranked[0].candidate_id,
+        ),
     )

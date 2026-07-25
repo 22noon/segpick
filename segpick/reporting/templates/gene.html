@@ -243,6 +243,26 @@
           {{ "%.3f"|format(view.recommendation.score) }}
         </strong>
       </div>
+      <div class="recommendation-score">
+        Evidence agreement:
+        <strong>{{ view.recommendation.confidence|upper }}</strong>
+      </div>
+
+      {% if view.recommendation.strong_conflicts %}
+        <p class="recommendation-note">
+          Strong structural evidence favours another candidate:
+          {{ view.recommendation.strong_conflicts|join(", ") }}.
+        </p>
+      {% elif view.recommendation.disagreeing_channels %}
+        <p class="recommendation-note">
+          Disagreeing evidence channels:
+          {{ view.recommendation.disagreeing_channels|join(", ") }}.
+        </p>
+      {% else %}
+        <p class="recommendation-note">
+          All available evidence channels support the recommendation.
+        </p>
+      {% endif %}
 
       {% if view.recommendation.runner_up_id %}
         <div class="runner-up runner-up-{{ view.recommendation.runner_up_strength }}">
@@ -460,7 +480,9 @@
             <div class="mini"><strong>{{ candidate.orf.strand }} / frame {{ candidate.orf.frame }}</strong><span>Strand and frame</span></div>
             <div class="mini"><strong>{{ candidate.orf.start }}–{{ candidate.orf.end }}</strong><span>Contig coordinates</span></div>
             <div class="mini"><strong>{{ "Complete" if candidate.orf.complete else "Incomplete" }}</strong><span>ORF completeness</span></div>
-            <div class="mini"><strong>{{ candidate.orf.complete_orf_count }}</strong><span>Complete ORFs found</span></div>
+            <div class="mini"><strong>{{ candidate.orf.other_complete_orf_count }}</strong><span>Other complete ORFs</span></div>
+            <div class="mini"><strong>{{ candidate.orf.major_competing_orf_count }}</strong><span>Major competing ORFs</span></div>
+            <div class="mini"><strong>{{ candidate.orf.largest_competing_orf_length ~ " aa" if candidate.orf.largest_competing_orf_length else "—" }}</strong><span>Largest competing ORF</span></div>
             <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.protein_identity * 100) if candidate.orf.protein_identity is not none else "—" }}</strong><span>Protein identity</span></div>
             <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.reference_coverage * 100) if candidate.orf.reference_coverage is not none else "—" }}</strong><span>Reference coverage</span></div>
           </div>

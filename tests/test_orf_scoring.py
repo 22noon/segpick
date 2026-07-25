@@ -29,10 +29,11 @@ def _quality(score: float) -> ORFQuality:
     )
 
 
-def test_default_orf_quality_weight_is_fifteen_percent():
+def test_default_orf_and_blastx_weights_prioritise_structural_evidence():
     weights = ScoringWeights()
 
-    assert weights.orf_quality == pytest.approx(0.15)
+    assert weights.orf_quality == pytest.approx(0.12)
+    assert weights.blastx_consistency == pytest.approx(0.20)
     assert weights.total == pytest.approx(1.0)
 
 
@@ -50,6 +51,7 @@ def test_missing_orf_quality_weight_is_redistributed():
         fragmentation=1.0,
         read_support=1.0,
         orf_quality=None,
+        blastx_consistency=None,
     )
 
     scored = score_evidence(evidence, ScoringWeights())
@@ -68,6 +70,7 @@ def test_orf_quality_contributes_to_weighted_score():
         fragmentation=1.0,
         read_support=1.0,
         orf_quality=0.0,
+        blastx_consistency=None,
     )
 
     scored = score_evidence(evidence, ScoringWeights())

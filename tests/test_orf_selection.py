@@ -91,3 +91,39 @@ def test_attachment_leaves_fallback_selection_without_resolved_protein() -> None
     attach_blastx_guided_orf_metrics(sample)
 
     assert candidate.analysis.orf is None
+
+
+def test_small_complete_orf_is_not_major_competitor() -> None:
+    selected_coding = "ATG" + ("GCT" * 30) + "TAA"
+    small_coding = "ATG" + ("GGT" * 8) + "TAA"
+    sequence = selected_coding + "CCC" + small_coding
+    expected_protein = str(Seq(selected_coding[:-3]).translate())
+
+    metrics = calculate_blastx_guided_orf_metrics(
+        sequence,
+        _hit(expected_protein),
+        minimum_protein_length=5,
+        include_partial=False,
+    )
+
+    assert metrics.other_complete_orf_count == 1
+    assert metrics.major_competing_orf_count == 0
+    assert metrics.largest_competing_orf_length == 9
+
+
+def test_similarly_sized_complete_orf_is_major_competitor() -> None:
+    selected_coding = "ATG" + ("GCT" * 30) + "TAA"
+    competing_coding = "ATG" + ("GGT" * 24) + "TAA"
+    sequence = selected_coding + "CCC" + competing_coding
+    expected_protein = str(Seq(selected_coding[:-3]).translate())
+
+    metrics = calculate_blastx_guided_orf_metrics(
+        sequence,
+        _hit(expected_protein),
+        minimum_protein_length=5,
+        include_partial=False,
+    )
+
+    assert metrics.other_complete_orf_count == 1
+    assert metrics.major_competing_orf_count == 1
+    assert metrics.largest_competing_orf_length == 25

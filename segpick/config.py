@@ -161,6 +161,12 @@ def resolve_config(
         orf_quality=float(
             weights_data.get("orf_quality", default_weights.orf_quality)
         ),
+        blastx_consistency=float(
+            weights_data.get(
+                "blastx_consistency",
+                default_weights.blastx_consistency,
+            )
+        ),
     )
 
     # Do not pass the nested "scoring" dictionary directly to RunConfig.
