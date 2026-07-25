@@ -41,7 +41,7 @@ def write_coverage_plot(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    figure, axis = plt.subplots(figsize=(10, 3.2))
+    figure, axis = plt.subplots(figsize=(10, 3.6))
 
     axis.fill_between(
         positions_list,
@@ -66,7 +66,7 @@ def write_coverage_plot(
 
     axis.set_xlim(positions_list[0], positions_list[-1])
     axis.set_ylim(bottom=0)
-    axis.set_xlabel("Contig position")
+    axis.set_xlabel("Contig position", labelpad=30)
     axis.set_ylabel("Read depth")
 
     if title:
@@ -82,8 +82,8 @@ def write_coverage_plot(
         )
         axis.annotate(
             orf_label,
-            xy=(arrow_end, -0.20),
-            xytext=(arrow_start, -0.20),
+            xy=(arrow_end, -0.16),
+            xytext=(arrow_start, -0.16),
             xycoords=("data", "axes fraction"),
             textcoords=("data", "axes fraction"),
             arrowprops={"arrowstyle": "->", "linewidth": 1.2},
@@ -96,7 +96,7 @@ def write_coverage_plot(
     axis.spines["top"].set_visible(False)
     axis.spines["right"].set_visible(False)
 
-    figure.tight_layout(rect=(0, 0.10, 1, 1))
+    figure.tight_layout(rect=(0, 0.18, 1, 1))
     figure.savefig(output_path, dpi=160, bbox_inches="tight")
     plt.close(figure)
 
