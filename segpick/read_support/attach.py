@@ -27,6 +27,7 @@ def attach_read_support(
     )
 
     candidate.analysis.read_support = metrics
+    candidate.analysis.depth_profile = dict(position_depths)
     return metrics
 
 

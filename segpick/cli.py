@@ -216,7 +216,10 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
     attach_blastx_consistency(sample)
     attach_orf_alignment_metrics(sample)
     attach_protein_interpretations(sample)
-    attach_observation_intervals(sample)
+    attach_observation_intervals(
+        sample,
+        minimum_depth=config.read_support.minimum_depth,
+    )
     attach_orf_quality(sample)
 
     coverage_plot_paths = {}

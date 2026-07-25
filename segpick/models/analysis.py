@@ -30,4 +30,5 @@ class ContigAnalysis:
     protein_interpretation: ProteinInterpretation | None = None
     protein_relatedness: ProteinRelatedness | None = None
     observations: tuple[ObservationInterval, ...] = ()
+    depth_profile: dict[int, int] = field(default_factory=dict)
     recommendation_reason: str | None = None
