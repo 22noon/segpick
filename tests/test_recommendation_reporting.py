@@ -123,8 +123,11 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "Overall evidence score" in html
     assert "Protein Confidence" in html
     assert "contig_a" in html
-    assert "Contribution" in html
+    assert "Evidence summary" in html
+    assert "Weighted contribution" in html
     assert "Effective weight" in html
+    assert "evidence-summary-row" in html
+    assert "evidence-bar" not in html
     assert "Protein Confidence" in html
     assert "Read support" in html
 

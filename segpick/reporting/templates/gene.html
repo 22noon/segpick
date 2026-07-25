@@ -72,71 +72,104 @@
 
     .evidence-list {
       margin-top: 1.25rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
     }
 
-    .evidence-row {
-      display: grid;
-      grid-template-columns: 180px minmax(280px, 1fr) 150px;
-      gap: 1rem;
-      align-items: center;
-      padding: 0.75rem 0;
+    .evidence-summary-row + .evidence-summary-row {
       border-top: 1px solid #e2e8f0;
     }
+
+    .evidence-summary-row summary {
+      display: grid;
+      grid-template-columns: 1.1rem minmax(180px, 1fr) minmax(130px, auto) 5rem;
+      gap: 0.7rem;
+      align-items: center;
+      padding: 0.72rem 0.85rem;
+      cursor: pointer;
+      list-style: none;
+      background: #fff;
+    }
+
+    .evidence-summary-row summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .evidence-summary-row summary:hover {
+      background: #f8fafc;
+    }
+
+    .evidence-summary-row[open] summary {
+      background: #f8fafc;
+    }
+
+    .evidence-status-dot {
+      width: 0.7rem;
+      height: 0.7rem;
+      border-radius: 999px;
+      background: #94a3b8;
+    }
+
+    .evidence-status-good .evidence-status-dot { background: #16a34a; }
+    .evidence-status-warning .evidence-status-dot { background: #f59e0b; }
+    .evidence-status-danger .evidence-status-dot { background: #dc2626; }
+    .evidence-status-unavailable .evidence-status-dot { background: #94a3b8; }
 
     .evidence-label {
       font-weight: 650;
     }
 
-    .evidence-bars {
-      display: grid;
-      gap: 0.55rem;
-    }
-
-    .evidence-bar-group {
-      display: grid;
-      grid-template-columns: 85px minmax(120px, 1fr) 55px;
-      gap: 0.6rem;
-      align-items: center;
-    }
-
-    .bar-caption {
-      color: #64748b;
-      font-size: 0.85rem;
-    }
-
-    .evidence-bar {
-      height: 11px;
-      background: #e2e8f0;
-      border-radius: 999px;
-      overflow: hidden;
-    }
-
-    .evidence-fill {
-      height: 100%;
-      background: #2563eb;
-      border-radius: 999px;
-    }
-
-    .contribution-fill {
-      height: 100%;
-      background: #0f766e;
-      border-radius: 999px;
-    }
-
-    .bar-value {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-      font-size: 0.9rem;
-    }
-
-    .evidence-weight {
+    .evidence-result {
       color: #475569;
       font-size: 0.88rem;
     }
 
-    .evidence-unavailable {
+    .evidence-score {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 650;
+    }
+
+    .evidence-detail {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(110px, 1fr));
+      gap: 0.75rem;
+      padding: 0.75rem 0.85rem 0.9rem 2.65rem;
+      background: #f8fafc;
+    }
+
+    .evidence-detail-item {
+      color: #475569;
+      font-size: 0.86rem;
+    }
+
+    .evidence-detail-item strong {
+      display: block;
+      margin-top: 0.12rem;
+      color: #0f172a;
+      font-size: 0.95rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .evidence-unavailable-note {
+      grid-column: 1 / -1;
       color: #64748b;
       font-style: italic;
+    }
+
+    @media (max-width: 680px) {
+      .evidence-summary-row summary {
+        grid-template-columns: 1.1rem 1fr auto;
+      }
+
+      .evidence-result {
+        grid-column: 2 / -1;
+      }
+
+      .evidence-detail {
+        grid-template-columns: 1fr;
+      }
     }
     .candidate-row {
       cursor: pointer;
@@ -521,62 +554,59 @@
         </div>
     {% endif %}
 
+      <h3>Evidence summary</h3>
       <div class="evidence-list">
-      {% for item in view.recommendation.evidence %}
-      <div class="evidence-row">
-        <div class="evidence-label">
-          {{ item.name|replace("_", " ")|title }}
-        </div>
+        {% for item in view.recommendation.evidence %}
+          {% if item.value is none %}
+            {% set status_class = "evidence-status-unavailable" %}
+            {% set result_label = "Unavailable" %}
+          {% elif item.value >= 0.85 %}
+            {% set status_class = "evidence-status-good" %}
+            {% set result_label = "Strong support" %}
+          {% elif item.value >= 0.65 %}
+            {% set status_class = "evidence-status-good" %}
+            {% set result_label = "Supportive" %}
+          {% elif item.value >= 0.40 %}
+            {% set status_class = "evidence-status-warning" %}
+            {% set result_label = "Mixed" %}
+          {% else %}
+            {% set status_class = "evidence-status-danger" %}
+            {% set result_label = "Weak" %}
+          {% endif %}
 
-        {% if item.value is none %}
-          <div class="evidence-unavailable">
-            Unavailable
-          </div>
-
-          <div class="evidence-weight">
-            Weight redistributed
-          </div>
-        {% else %}
-          <div class="evidence-bars">
-            <div class="evidence-bar-group">
-              <span class="bar-caption">Evidence</span>
-
-              <div class="evidence-bar">
-                <div
-                  class="evidence-fill"
-                  style="width: {{ item.value * 100 }}%">
-                </div>
-              </div>
-
-              <span class="bar-value">
-                {{ "%.3f"|format(item.value) }}
+          <details class="evidence-summary-row {{ status_class }}">
+            <summary>
+              <span class="evidence-status-dot" aria-hidden="true"></span>
+              <span class="evidence-label">{{ item.name|replace("_", " ")|title }}</span>
+              <span class="evidence-result">{{ result_label }}</span>
+              <span class="evidence-score">
+                {% if item.value is none %}—{% else %}{{ "%.3f"|format(item.value) }}{% endif %}
               </span>
-            </div>
+            </summary>
 
-            <div class="evidence-bar-group">
-              <span class="bar-caption">Contribution</span>
-
-              <div class="evidence-bar contribution-bar">
-                <div
-                  class="contribution-fill"
-                  style="width: {{ item.contribution * 100 }}%">
+            <div class="evidence-detail">
+              {% if item.value is none %}
+                <div class="evidence-unavailable-note">
+                  This evidence was unavailable, so its weight was redistributed across the available channels.
                 </div>
-              </div>
-
-              <span class="bar-value">
-                {{ "%.3f"|format(item.contribution) }}
-              </span>
+              {% else %}
+                <div class="evidence-detail-item">
+                  Evidence score
+                  <strong>{{ "%.3f"|format(item.value) }}</strong>
+                </div>
+                <div class="evidence-detail-item">
+                  Weighted contribution
+                  <strong>{{ "%.3f"|format(item.contribution) }}</strong>
+                </div>
+                <div class="evidence-detail-item">
+                  Effective weight
+                  <strong>{{ "%.1f%%"|format(item.effective_weight * 100) }}</strong>
+                </div>
+              {% endif %}
             </div>
-          </div>
-
-          <div class="evidence-weight">
-            Effective weight:
-            {{ "%.1f%%"|format(item.effective_weight * 100) }}
-          </div>
-        {% endif %}
+          </details>
+        {% endfor %}
       </div>
-      {% endfor %}
-    </div>
   </div>
 
   <p class="recommendation-note">
