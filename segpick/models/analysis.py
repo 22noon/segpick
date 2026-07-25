@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .blastx import BlastXHit
+from .finding import BiologicalFinding
 from .blastx_consistency import BlastXConsistency
 from .containment import ContainmentMetrics
 from .orf import ORFMetrics
@@ -30,5 +31,6 @@ class ContigAnalysis:
     protein_interpretation: ProteinInterpretation | None = None
     protein_relatedness: ProteinRelatedness | None = None
     observations: tuple[ObservationInterval, ...] = ()
+    findings: tuple[BiologicalFinding, ...] = ()
     depth_profile: dict[int, int] = field(default_factory=dict)
     recommendation_reason: str | None = None

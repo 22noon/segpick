@@ -16,3 +16,9 @@ from .blastx_consistency import (
 from .protein_continuity import analyse_protein_continuity
 
 from .observations import attach_observation_intervals, protein_alignment_observations
+
+from .findings import (
+    attach_biological_findings,
+    candidate_biological_findings,
+    gene_biological_findings,
+)

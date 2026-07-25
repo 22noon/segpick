@@ -5,6 +5,7 @@ from .blastx_consistency import BlastXConsistency
 from .containment import ContainmentMetrics
 from .contig import CandidateContig
 from .gene import Gene
+from .finding import BiologicalFinding
 from .metadata import ContigMetadata
 from .orf import ORFHit, ORFMetrics
 from .orf_alignment import ORFAlignmentMetrics
@@ -20,6 +21,7 @@ from .read_support import ReadSupportMetrics
 __all__ = [
     "Sample",
     "Gene",
+    "BiologicalFinding",
     "CandidateContig",
     "ReferenceSequence",
     "ContigMetadata",

@@ -25,6 +25,9 @@ def write_gene_json_reports(
             "candidates": [],
             "references": [],
             "protein_continuity": analyse_protein_continuity(g).to_dict(),
+            "biological_findings": [
+                finding.to_dict() for finding in g.findings
+            ],
         }
         if recommendations and g.name in recommendations:
             payload["recommendation"] = recommendations[g.name].to_dict()
@@ -77,6 +80,9 @@ def write_gene_json_reports(
                         if c.analysis.protein_interpretation is not None
                         else None
                     ),
+                    "biological_findings": [
+                        finding.to_dict() for finding in c.analysis.findings
+                    ],
                     "observations": [
                         observation.to_dict()
                         for observation in c.analysis.observations
