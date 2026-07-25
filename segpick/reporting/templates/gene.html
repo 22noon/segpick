@@ -162,6 +162,39 @@
       display: block;
     }
 
+
+    .protein-alignment {
+      overflow-x: auto;
+      padding: 0.9rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 0.82rem;
+      line-height: 1.45;
+      white-space: pre;
+    }
+
+    details.alignment-viewer {
+      margin-top: 1rem;
+    }
+
+    details.alignment-viewer summary {
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .protein-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .protein-actions button {
+      margin: 0;
+    }
+
     .runner-up {
       margin-top: 1rem;
       padding: 0.85rem 1rem;
@@ -485,10 +518,29 @@
             <div class="mini"><strong>{{ candidate.orf.largest_competing_orf_length ~ " aa" if candidate.orf.largest_competing_orf_length else "—" }}</strong><span>Largest competing ORF</span></div>
             <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.protein_identity * 100) if candidate.orf.protein_identity is not none else "—" }}</strong><span>Protein identity</span></div>
             <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.reference_coverage * 100) if candidate.orf.reference_coverage is not none else "—" }}</strong><span>Reference coverage</span></div>
+            <div class="mini"><strong>{{ candidate.orf.internal_gap_events if candidate.orf.internal_gap_events is not none else "—" }}</strong><span>Internal gap events</span></div>
+            <div class="mini"><strong>{{ candidate.orf.largest_internal_gap ~ " aa" if candidate.orf.largest_internal_gap else "—" }}</strong><span>Largest internal gap</span></div>
           </div>
 
           {% if candidate.orf.reference_id %}
             <p class="muted">Reference protein source: {{ candidate.orf.reference_id }}</p>
+          {% endif %}
+
+          {% if candidate.orf.alignment_text %}
+            <details class="alignment-viewer">
+              <summary>Show protein alignment</summary>
+              <p class="muted">| identical residue · . substitution · blank gap</p>
+              <pre class="protein-alignment">{{ candidate.orf.alignment_text }}</pre>
+              <div class="protein-actions">
+                <button type="button" data-protein-action="copy-predicted" data-candidate-id="{{ candidate.candidate_id }}">Copy predicted protein</button>
+                <button type="button" data-protein-action="download-predicted" data-candidate-id="{{ candidate.candidate_id }}">Download predicted FASTA</button>
+                {% if candidate.orf.reference_protein %}
+                  <button type="button" data-protein-action="download-reference" data-candidate-id="{{ candidate.candidate_id }}">Download reference FASTA</button>
+                  <button type="button" data-protein-action="download-both" data-candidate-id="{{ candidate.candidate_id }}">Download both FASTA</button>
+                {% endif %}
+                <button type="button" data-protein-action="copy-alignment" data-candidate-id="{{ candidate.candidate_id }}">Copy alignment</button>
+              </div>
+            </details>
           {% endif %}
 
           {% if candidate.orf.warnings %}
@@ -562,16 +614,40 @@
 </main>
 <script>
 const sequences={{ sequences_json|safe }};
+const proteinSequences={{ protein_sequences_json|safe }};
 function fastaText(items){return items.map(x=>`>${x.id}\n${(x.sequence.match(/.{1,80}/g)||[x.sequence]).join("\n")}`).join("\n")+"\n";}
 function triggerDownload(text,filename){const blob=new Blob([text],{type:"text/plain"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);}
 function downloadSelected(){const ids=[...document.querySelectorAll(".seq-check:checked")].map(x=>x.value);triggerDownload(fastaText(sequences.filter(x=>ids.includes(x.id))),"{{ gene.name }}_selected.fa");}
 function downloadOne(id){const item=sequences.find(x=>x.id===id);triggerDownload(fastaText([item]),`${id}.fa`);}
 function copySequence(id){navigator.clipboard.writeText(sequences.find(x=>x.id===id).sequence);}
+function wrapSequence(sequence,width=80){return (sequence.match(new RegExp(`.{1,${width}}`,"g"))||[sequence]).join("\n");}
+function proteinFasta(header,sequence){return `>${header}\n${wrapSequence(sequence)}\n`;}
+function safeFilename(value){return value.replace(/[^A-Za-z0-9._-]+/g,"_");}
+function proteinEntry(candidateId){return proteinSequences[candidateId]||null;}
+function handleProteinAction(button){
+  const candidateId=button.dataset.candidateId;
+  const action=button.dataset.proteinAction;
+  const item=proteinEntry(candidateId);
+  if(!item)return;
+  const predicted=proteinFasta(item.predicted_header,item.predicted_sequence);
+  const reference=item.reference_sequence?proteinFasta(item.reference_header,item.reference_sequence):"";
+  if(action==="copy-predicted")navigator.clipboard.writeText(predicted);
+  if(action==="copy-alignment")navigator.clipboard.writeText(item.alignment||"");
+  if(action==="download-predicted")triggerDownload(predicted,`${safeFilename(candidateId)}.predicted.faa`);
+  if(action==="download-reference"&&reference)triggerDownload(reference,`${safeFilename(candidateId)}.reference.faa`);
+  if(action==="download-both"&&reference)triggerDownload(predicted+reference,`${safeFilename(candidateId)}.predicted_with_reference.faa`);
+}
 function traceSequence(trace){return trace.meta&&trace.meta.sequence_id?trace.meta.sequence_id:null;}
 function highlightPlot(divId,id){const div=document.getElementById(divId);if(!div||!div.data)return;const op=div.data.map(t=>!id||traceSequence(t)===id?1:0.16);const widths=div.data.map(t=>{const w=(t.line&&t.line.width)||4;return !id||traceSequence(t)===id?Math.max(w,6):Math.max(2,w*.55);});Plotly.restyle(div,{opacity:op,"line.width":widths});}
 function clearSelection(){DashboardState.selectedCandidate=null;document.querySelectorAll(".selected,.candidate-detail.active").forEach(x=>x.classList.remove("selected","active"));highlightPlot("dotplot",null);highlightPlot("containment-plot",null);}
 function bindPlotClick(id){const div=document.getElementById(id);if(div&&div.on)div.on("plotly_click",e=>{const sid=e.points&&e.points[0]&&e.points[0].customdata;if(sid)selectCandidate(sid);});}
-window.addEventListener("load",()=>{bindPlotClick("dotplot");bindPlotClick("containment-plot");});
+window.addEventListener("load",()=>{
+  bindPlotClick("dotplot");
+  bindPlotClick("containment-plot");
+  document.querySelectorAll("[data-protein-action]").forEach((button)=>{
+    button.addEventListener("click",()=>handleProteinAction(button));
+  });
+});
 function sortTable(col){const table=document.getElementById("evidence-table"),tbody=table.tBodies[0],rows=[...tbody.rows],asc=table.dataset.sortCol!=col||table.dataset.sortDir!="asc";rows.sort((a,b)=>{const av=a.cells[col].innerText.trim().replace("%",""),bv=b.cells[col].innerText.trim().replace("%","");const an=Number(av),bn=Number(bv),cmp=(!Number.isNaN(an)&&!Number.isNaN(bn))?an-bn:av.localeCompare(bv);return asc?cmp:-cmp;});rows.forEach(r=>tbody.appendChild(r));table.dataset.sortCol=col;table.dataset.sortDir=asc?"asc":"desc";}
 
 

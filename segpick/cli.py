@@ -209,6 +209,12 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
             f"{depth_summary.candidate_count} candidates attached"
         )
 
+    attach_orf_metrics(sample)
+    attach_blastx_guided_orf_metrics(sample)
+    attach_blastx_consistency(sample)
+    attach_orf_alignment_metrics(sample)
+    attach_orf_quality(sample)
+
     coverage_plot_paths = {}
     if config.html and config.read_support.depth_dir is not None:
         coverage_plot_paths = write_sample_coverage_plots(
@@ -218,12 +224,6 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
             suffix=config.read_support.suffix,
             minimum_depth=config.read_support.minimum_depth,
         )
-
-    attach_orf_metrics(sample)
-    attach_blastx_guided_orf_metrics(sample)
-    attach_blastx_consistency(sample)
-    attach_orf_alignment_metrics(sample)
-    attach_orf_quality(sample)
 
     recommendations = {}
 

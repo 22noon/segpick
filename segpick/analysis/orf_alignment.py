@@ -15,6 +15,48 @@ def _protein_aligner() -> PairwiseAligner:
     return aligner
 
 
+
+def _render_alignment(candidate_protein: str, reference_protein: str, alignment):
+    candidate_blocks, reference_blocks = alignment.aligned
+    candidate_parts: list[str] = []
+    reference_parts: list[str] = []
+    gap_lengths: list[int] = []
+    candidate_pos = 0
+    reference_pos = 0
+
+    for candidate_block, reference_block in zip(candidate_blocks, reference_blocks, strict=True):
+        candidate_start, candidate_end = map(int, candidate_block)
+        reference_start, reference_end = map(int, reference_block)
+
+        candidate_gap = candidate_start - candidate_pos
+        reference_gap = reference_start - reference_pos
+        width = max(candidate_gap, reference_gap)
+        if width:
+            candidate_parts.append(candidate_protein[candidate_pos:candidate_start].ljust(width, "-"))
+            reference_parts.append(reference_protein[reference_pos:reference_start].ljust(width, "-"))
+            if candidate_pos and reference_pos:
+                gap_lengths.append(width)
+
+        candidate_parts.append(candidate_protein[candidate_start:candidate_end])
+        reference_parts.append(reference_protein[reference_start:reference_end])
+        candidate_pos = candidate_end
+        reference_pos = reference_end
+
+    candidate_tail = candidate_protein[candidate_pos:]
+    reference_tail = reference_protein[reference_pos:]
+    width = max(len(candidate_tail), len(reference_tail))
+    if width:
+        candidate_parts.append(candidate_tail.ljust(width, "-"))
+        reference_parts.append(reference_tail.ljust(width, "-"))
+
+    aligned_candidate = "".join(candidate_parts)
+    aligned_reference = "".join(reference_parts)
+    match_line = "".join(
+        "|" if candidate == reference else " " if "-" in (candidate, reference) else "."
+        for candidate, reference in zip(aligned_candidate, aligned_reference, strict=True)
+    )
+    return aligned_candidate, aligned_reference, match_line, gap_lengths
+
 def align_orf_proteins(
     candidate_protein: str,
     reference_protein: str,
@@ -33,6 +75,9 @@ def align_orf_proteins(
         reference_protein,
     )[0]
     candidate_blocks, reference_blocks = alignment.aligned
+    aligned_candidate, aligned_reference, match_line, gap_lengths = _render_alignment(
+        candidate_protein, reference_protein, alignment
+    )
 
     aligned_residues = 0
     identical_residues = 0
@@ -81,6 +126,11 @@ def align_orf_proteins(
         n_terminal_missing=first_reference_start,
         c_terminal_missing=reference_length - last_reference_end,
         internal_gap_residues=internal_gap_residues,
+        internal_gap_events=len(gap_lengths),
+        largest_internal_gap=max(gap_lengths, default=0),
+        aligned_candidate=aligned_candidate,
+        aligned_reference=aligned_reference,
+        match_line=match_line,
     )
 
 
@@ -94,23 +144,27 @@ def attach_orf_alignment_metrics(sample: Sample) -> None:
         for candidate in gene.candidates:
             candidate.analysis.orf_alignment = None
             candidate_orf = candidate.analysis.orf
-            reference_id = candidate.blast_reference
-            reference = references.get(reference_id) if reference_id else None
-            if candidate_orf is None or candidate_orf.best_orf is None or reference is None:
-                continue
+            blastx = candidate.analysis.blastx
+            if blastx is not None and blastx.subject_protein:
+                reference_id = blastx.subject_id
+                reference_protein = blastx.subject_protein
+            else:
+                reference_id = candidate.blast_reference
+                reference = references.get(reference_id) if reference_id else None
+                if reference is None:
+                    continue
+                if reference.accession not in reference_orfs:
+                    metrics = calculate_orf_metrics(reference.record.seq)
+                    reference_orfs[reference.accession] = (
+                        metrics.best_orf.protein if metrics.best_orf else None
+                    )
+                reference_protein = reference_orfs[reference.accession]
 
-            if reference.accession not in reference_orfs:
-                metrics = calculate_orf_metrics(reference.record.seq)
-                reference_orfs[reference.accession] = (
-                    metrics.best_orf.protein if metrics.best_orf else None
-                )
-
-            reference_protein = reference_orfs[reference.accession]
-            if reference_protein is None:
+            if candidate_orf is None or candidate_orf.best_orf is None or not reference_protein:
                 continue
 
             candidate.analysis.orf_alignment = align_orf_proteins(
                 candidate_orf.best_orf.protein,
                 reference_protein,
-                reference_id=reference.accession,
+                reference_id=reference_id,
             )

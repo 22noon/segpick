@@ -257,3 +257,52 @@ def test_gene_page_view_marks_missing_orf() -> None:
 
     assert view.candidates[0].orf.available is False
     assert view.candidates[0].orf.warnings == ("No ORF was identified.",)
+
+
+def test_orf_view_exposes_predicted_and_reference_proteins() -> None:
+    from segpick.models import BlastXHit, ORFHit, ORFMetrics
+
+    gene = Gene(name="VP2", segment="2")
+    candidate = make_candidate("contig_a", 100)
+    selected = ORFHit(
+        strand="+",
+        frame=1,
+        start=1,
+        end=12,
+        nucleotide_length=12,
+        protein="MKT",
+        has_start_codon=True,
+        has_stop_codon=True,
+    )
+    candidate.analysis.orf = ORFMetrics(
+        best_orf=selected,
+        longest_orf=selected,
+        orf_count=1,
+        complete_orf_count=1,
+    )
+    candidate.analysis.blastx = BlastXHit(
+        query_id="contig_a",
+        subject_id="protein_ref",
+        subject_title="reference protein",
+        percent_identity=100.0,
+        alignment_length=3,
+        evalue=1e-20,
+        bitscore=50.0,
+        query_start=1,
+        query_end=9,
+        subject_start=1,
+        subject_end=3,
+        query_length=100,
+        subject_length=3,
+        query_frame=1,
+        subject_protein="MKT",
+    )
+    gene.add_candidate(candidate)
+
+    view = build_gene_page_view(gene, rank_gene(gene, ScoringWeights()))
+    orf = view.candidates[0].orf
+
+    assert orf.predicted_protein == "MKT"
+    assert orf.reference_protein == "MKT"
+    assert orf.predicted_header.startswith("contig_a|selected_orf")
+    assert orf.reference_header == "protein_ref"

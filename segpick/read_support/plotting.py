@@ -22,6 +22,10 @@ def write_coverage_plot(
     *,
     title: str | None = None,
     minimum_depth: int | None = None,
+    orf_start: int | None = None,
+    orf_end: int | None = None,
+    orf_strand: str | None = None,
+    orf_label: str = "Selected ORF",
 ) -> Path:
     """Write a per-base coverage plot and return its output path."""
 
@@ -68,10 +72,31 @@ def write_coverage_plot(
     if title:
         axis.set_title(title)
 
+    if orf_start is not None and orf_end is not None:
+        interval_start = min(orf_start, orf_end)
+        interval_end = max(orf_start, orf_end)
+        arrow_start, arrow_end = (
+            (interval_end, interval_start)
+            if orf_strand == "-"
+            else (interval_start, interval_end)
+        )
+        axis.annotate(
+            orf_label,
+            xy=(arrow_end, -0.20),
+            xytext=(arrow_start, -0.20),
+            xycoords=("data", "axes fraction"),
+            textcoords=("data", "axes fraction"),
+            arrowprops={"arrowstyle": "->", "linewidth": 1.2},
+            annotation_clip=False,
+            ha="center",
+            va="center",
+            fontsize=8,
+        )
+
     axis.spines["top"].set_visible(False)
     axis.spines["right"].set_visible(False)
 
-    figure.tight_layout()
+    figure.tight_layout(rect=(0, 0.10, 1, 1))
     figure.savefig(output_path, dpi=160, bbox_inches="tight")
     plt.close(figure)
 
@@ -121,12 +146,21 @@ def write_sample_coverage_plots(
             depths = [position_depths.get(position, 0) for position in positions]
             output_path = output_dir / safe_coverage_filename(candidate.id)
 
+            selected_orf = (
+                candidate.analysis.orf.best_orf
+                if candidate.analysis.orf is not None
+                else None
+            )
             write_coverage_plot(
                 positions,
                 depths,
                 output_path,
                 title=f"{gene.name}: {candidate.id}",
                 minimum_depth=minimum_depth,
+                orf_start=selected_orf.start if selected_orf else None,
+                orf_end=selected_orf.end if selected_orf else None,
+                orf_strand=selected_orf.strand if selected_orf else None,
+                orf_label=f"Selected ORF ({selected_orf.strand})" if selected_orf else "Selected ORF",
             )
             plot_paths[candidate.id] = output_path
 

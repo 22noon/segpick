@@ -38,6 +38,13 @@ class ORFView:
     n_terminal_missing: int | None
     c_terminal_missing: int | None
     internal_gap_residues: int | None
+    internal_gap_events: int | None
+    largest_internal_gap: int | None
+    alignment_text: str | None
+    predicted_protein: str | None
+    reference_protein: str | None
+    predicted_header: str | None
+    reference_header: str | None
     warnings: tuple[str, ...]
 
 
@@ -230,6 +237,32 @@ def build_read_support_view(candidate: CandidateContig) -> ReadSupportView:
     )
 
 
+
+def _format_protein_alignment(alignment, width: int = 60) -> str | None:
+    if alignment is None or not alignment.aligned_reference:
+        return None
+
+    lines: list[str] = []
+    reference_position = 0
+    candidate_position = 0
+    for offset in range(0, len(alignment.aligned_reference), width):
+        reference = alignment.aligned_reference[offset : offset + width]
+        matches = alignment.match_line[offset : offset + width]
+        candidate = alignment.aligned_candidate[offset : offset + width]
+        reference_start = reference_position + 1
+        candidate_start = candidate_position + 1
+        reference_position += sum(residue != "-" for residue in reference)
+        candidate_position += sum(residue != "-" for residue in candidate)
+        lines.extend(
+            [
+                f"Reference {reference_start:>5}  {reference}  {reference_position}",
+                f"                {matches}",
+                f"Candidate {candidate_start:>5}  {candidate}  {candidate_position}",
+                "",
+            ]
+        )
+    return "\n".join(lines).rstrip()
+
 def build_orf_view(candidate: CandidateContig) -> ORFView:
     """Build ORF structural details and conservative review warnings."""
 
@@ -257,6 +290,13 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
             n_terminal_missing=None,
             c_terminal_missing=None,
             internal_gap_residues=None,
+            internal_gap_events=None,
+            largest_internal_gap=None,
+            alignment_text=None,
+            predicted_protein=None,
+            reference_protein=None,
+            predicted_header=None,
+            reference_header=None,
             warnings=("No ORF was identified.",),
         )
 
@@ -312,6 +352,30 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
         ),
         internal_gap_residues=(
             alignment.internal_gap_residues if alignment is not None else None
+        ),
+        internal_gap_events=(
+            alignment.internal_gap_events if alignment is not None else None
+        ),
+        largest_internal_gap=(
+            alignment.largest_internal_gap if alignment is not None else None
+        ),
+        alignment_text=_format_protein_alignment(alignment),
+        predicted_protein=best.protein,
+        reference_protein=(
+            candidate.analysis.blastx.subject_protein
+            if candidate.analysis.blastx is not None
+            else None
+        ),
+        predicted_header=(
+            f"{candidate.id}|selected_orf|strand={best.strand}|"
+            f"frame={best.frame}|nt={best.start}-{best.end}|"
+            f"length={best.protein_length}aa"
+        ),
+        reference_header=(
+            candidate.analysis.blastx.subject_id
+            if candidate.analysis.blastx is not None
+            and candidate.analysis.blastx.subject_protein is not None
+            else None
         ),
         warnings=tuple(warnings),
     )

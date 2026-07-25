@@ -19,6 +19,11 @@ class ORFAlignmentMetrics:
     n_terminal_missing: int
     c_terminal_missing: int
     internal_gap_residues: int
+    internal_gap_events: int = 0
+    largest_internal_gap: int = 0
+    aligned_candidate: str = ""
+    aligned_reference: str = ""
+    match_line: str = ""
 
     def to_dict(self) -> dict[str, str | int | float]:
         return asdict(self)

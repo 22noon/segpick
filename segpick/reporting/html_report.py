@@ -144,6 +144,17 @@ def render_gene_page(
         recommendation,
         coverage_plot_paths=relative_coverage_paths,
     )
+    protein_sequences = {
+        candidate.candidate_id: {
+            "predicted_header": candidate.orf.predicted_header,
+            "predicted_sequence": candidate.orf.predicted_protein,
+            "reference_header": candidate.orf.reference_header,
+            "reference_sequence": candidate.orf.reference_protein,
+            "alignment": candidate.orf.alignment_text,
+        }
+        for candidate in view.candidates
+        if candidate.orf.predicted_protein is not None
+    }
 
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
@@ -154,6 +165,7 @@ def render_gene_page(
             containment=containment_html,
             sequences=sequences,
             sequences_json=json.dumps(sequences),
+            protein_sequences_json=json.dumps(protein_sequences),
             package_version=__version__,
         )
     )
