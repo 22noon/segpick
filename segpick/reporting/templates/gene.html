@@ -739,12 +739,22 @@
             <div class="mini"><strong>{{ candidate.orf.largest_competing_orf_length ~ " aa" if candidate.orf.largest_competing_orf_length else "—" }}</strong><span>Largest competing ORF</span></div>
             <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.protein_identity * 100) if candidate.orf.protein_identity is not none else "—" }}</strong><span>Protein identity</span></div>
             <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.reference_coverage * 100) if candidate.orf.reference_coverage is not none else "—" }}</strong><span>Reference coverage</span></div>
-            <div class="mini"><strong>{{ candidate.orf.internal_gap_events if candidate.orf.internal_gap_events is not none else "—" }}</strong><span>Internal gap events</span></div>
-            <div class="mini"><strong>{{ candidate.orf.largest_internal_gap ~ " aa" if candidate.orf.largest_internal_gap else "—" }}</strong><span>Largest internal gap</span></div>
+            <div class="mini"><strong>{{ candidate.orf.internal_deletion_events if candidate.orf.internal_deletion_events is not none else "—" }}</strong><span>Internal deletion events</span></div>
+            <div class="mini"><strong>{{ candidate.orf.internal_insertion_events if candidate.orf.internal_insertion_events is not none else "—" }}</strong><span>Internal insertion events</span></div>
+            <div class="mini"><strong>{{ candidate.orf.largest_internal_gap ~ " aa" if candidate.orf.largest_internal_gap else "—" }}</strong><span>Largest internal indel</span></div>
           </div>
 
           {% if candidate.orf.reference_id %}
             <p class="muted">Reference protein source: {{ candidate.orf.reference_id }}</p>
+          {% endif %}
+
+          {% if candidate.orf.difference_summary %}
+            <h4>Protein difference interpretation</h4>
+            <ul class="protein-difference-summary">
+              {% for description in candidate.orf.difference_summary %}
+                <li>{{ description }}</li>
+              {% endfor %}
+            </ul>
           {% endif %}
 
           {% if candidate.orf.alignment_text %}

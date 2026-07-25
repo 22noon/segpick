@@ -40,6 +40,13 @@ class ORFView:
     internal_gap_residues: int | None
     internal_gap_events: int | None
     largest_internal_gap: int | None
+    internal_insertion_residues: int | None
+    internal_insertion_events: int | None
+    largest_internal_insertion: int | None
+    internal_deletion_residues: int | None
+    internal_deletion_events: int | None
+    largest_internal_deletion: int | None
+    difference_summary: tuple[str, ...]
     alignment_text: str | None
     predicted_protein: str | None
     reference_protein: str | None
@@ -293,6 +300,41 @@ def _format_protein_alignment(alignment, width: int = 60) -> str | None:
         )
     return "\n".join(lines).rstrip()
 
+
+def _describe_protein_differences(alignment) -> tuple[str, ...]:
+    if alignment is None:
+        return ()
+
+    descriptions: list[str] = []
+    if alignment.n_terminal_missing:
+        descriptions.append(
+            f"N-terminal truncation: {alignment.n_terminal_missing} reference residues missing."
+        )
+    if alignment.c_terminal_missing:
+        descriptions.append(
+            f"C-terminal truncation: {alignment.c_terminal_missing} reference residues missing."
+        )
+    if alignment.internal_deletion_events:
+        descriptions.append(
+            f"Internal deletion: {alignment.internal_deletion_residues} residues "
+            f"across {alignment.internal_deletion_events} event(s); largest "
+            f"{alignment.largest_internal_deletion} aa."
+        )
+    if alignment.internal_insertion_events:
+        descriptions.append(
+            f"Internal insertion: {alignment.internal_insertion_residues} residues "
+            f"across {alignment.internal_insertion_events} event(s); largest "
+            f"{alignment.largest_internal_insertion} aa."
+        )
+    if alignment.internal_gap_events > 1:
+        descriptions.append(
+            "Multiple internal indel events are present; inspect for scattered "
+            "differences or possible assembly error."
+        )
+    if not descriptions:
+        descriptions.append("No terminal truncations or internal indels detected.")
+    return tuple(descriptions)
+
 def build_orf_view(candidate: CandidateContig) -> ORFView:
     """Build ORF structural details and conservative review warnings."""
 
@@ -322,6 +364,13 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
             internal_gap_residues=None,
             internal_gap_events=None,
             largest_internal_gap=None,
+            internal_insertion_residues=None,
+            internal_insertion_events=None,
+            largest_internal_insertion=None,
+            internal_deletion_residues=None,
+            internal_deletion_events=None,
+            largest_internal_deletion=None,
+            difference_summary=(),
             alignment_text=None,
             predicted_protein=None,
             reference_protein=None,
@@ -389,6 +438,25 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
         largest_internal_gap=(
             alignment.largest_internal_gap if alignment is not None else None
         ),
+        internal_insertion_residues=(
+            alignment.internal_insertion_residues if alignment is not None else None
+        ),
+        internal_insertion_events=(
+            alignment.internal_insertion_events if alignment is not None else None
+        ),
+        largest_internal_insertion=(
+            alignment.largest_internal_insertion if alignment is not None else None
+        ),
+        internal_deletion_residues=(
+            alignment.internal_deletion_residues if alignment is not None else None
+        ),
+        internal_deletion_events=(
+            alignment.internal_deletion_events if alignment is not None else None
+        ),
+        largest_internal_deletion=(
+            alignment.largest_internal_deletion if alignment is not None else None
+        ),
+        difference_summary=_describe_protein_differences(alignment),
         alignment_text=_format_protein_alignment(alignment),
         predicted_protein=best.protein,
         reference_protein=(

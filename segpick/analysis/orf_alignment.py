@@ -20,7 +20,8 @@ def _render_alignment(candidate_protein: str, reference_protein: str, alignment)
     candidate_blocks, reference_blocks = alignment.aligned
     candidate_parts: list[str] = []
     reference_parts: list[str] = []
-    gap_lengths: list[int] = []
+    insertion_lengths: list[int] = []
+    deletion_lengths: list[int] = []
     candidate_pos = 0
     reference_pos = 0
 
@@ -35,7 +36,10 @@ def _render_alignment(candidate_protein: str, reference_protein: str, alignment)
             candidate_parts.append(candidate_protein[candidate_pos:candidate_start].ljust(width, "-"))
             reference_parts.append(reference_protein[reference_pos:reference_start].ljust(width, "-"))
             if candidate_pos and reference_pos:
-                gap_lengths.append(width)
+                if candidate_gap:
+                    insertion_lengths.append(candidate_gap)
+                if reference_gap:
+                    deletion_lengths.append(reference_gap)
 
         candidate_parts.append(candidate_protein[candidate_start:candidate_end])
         reference_parts.append(reference_protein[reference_start:reference_end])
@@ -55,7 +59,13 @@ def _render_alignment(candidate_protein: str, reference_protein: str, alignment)
         "|" if candidate == reference else " " if "-" in (candidate, reference) else "."
         for candidate, reference in zip(aligned_candidate, aligned_reference, strict=True)
     )
-    return aligned_candidate, aligned_reference, match_line, gap_lengths
+    return (
+        aligned_candidate,
+        aligned_reference,
+        match_line,
+        insertion_lengths,
+        deletion_lengths,
+    )
 
 def align_orf_proteins(
     candidate_protein: str,
@@ -75,9 +85,13 @@ def align_orf_proteins(
         reference_protein,
     )[0]
     candidate_blocks, reference_blocks = alignment.aligned
-    aligned_candidate, aligned_reference, match_line, gap_lengths = _render_alignment(
-        candidate_protein, reference_protein, alignment
-    )
+    (
+        aligned_candidate,
+        aligned_reference,
+        match_line,
+        insertion_lengths,
+        deletion_lengths,
+    ) = _render_alignment(candidate_protein, reference_protein, alignment)
 
     aligned_residues = 0
     identical_residues = 0
@@ -126,8 +140,14 @@ def align_orf_proteins(
         n_terminal_missing=first_reference_start,
         c_terminal_missing=reference_length - last_reference_end,
         internal_gap_residues=internal_gap_residues,
-        internal_gap_events=len(gap_lengths),
-        largest_internal_gap=max(gap_lengths, default=0),
+        internal_gap_events=len(insertion_lengths) + len(deletion_lengths),
+        largest_internal_gap=max(insertion_lengths + deletion_lengths, default=0),
+        internal_insertion_residues=sum(insertion_lengths),
+        internal_insertion_events=len(insertion_lengths),
+        largest_internal_insertion=max(insertion_lengths, default=0),
+        internal_deletion_residues=sum(deletion_lengths),
+        internal_deletion_events=len(deletion_lengths),
+        largest_internal_deletion=max(deletion_lengths, default=0),
         aligned_candidate=aligned_candidate,
         aligned_reference=aligned_reference,
         match_line=match_line,

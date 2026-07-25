@@ -21,6 +21,12 @@ class ORFAlignmentMetrics:
     internal_gap_residues: int
     internal_gap_events: int = 0
     largest_internal_gap: int = 0
+    internal_insertion_residues: int = 0
+    internal_insertion_events: int = 0
+    largest_internal_insertion: int = 0
+    internal_deletion_residues: int = 0
+    internal_deletion_events: int = 0
+    largest_internal_deletion: int = 0
     aligned_candidate: str = ""
     aligned_reference: str = ""
     match_line: str = ""

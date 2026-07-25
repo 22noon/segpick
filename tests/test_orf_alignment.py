@@ -91,3 +91,29 @@ def test_attach_orf_alignment_is_missing_without_matching_reference():
     attach_orf_alignment_metrics(sample)
 
     assert gene.candidates[0].analysis.orf_alignment is None
+
+
+def test_align_orf_proteins_classifies_internal_insertion():
+    metrics = align_orf_proteins(
+        "MABQQQCDE",
+        "MABCDE",
+        reference_id="reference",
+    )
+
+    assert metrics.internal_insertion_events == 1
+    assert metrics.internal_insertion_residues == 3
+    assert metrics.largest_internal_insertion == 3
+    assert metrics.internal_deletion_events == 0
+
+
+def test_align_orf_proteins_classifies_internal_deletion():
+    metrics = align_orf_proteins(
+        "MABCDE",
+        "MABQQQCDE",
+        reference_id="reference",
+    )
+
+    assert metrics.internal_deletion_events == 1
+    assert metrics.internal_deletion_residues == 3
+    assert metrics.largest_internal_deletion == 3
+    assert metrics.internal_insertion_events == 0
