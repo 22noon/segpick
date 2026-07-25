@@ -77,6 +77,10 @@ def write_gene_json_reports(
                         if c.analysis.protein_interpretation is not None
                         else None
                     ),
+                    "observations": [
+                        observation.to_dict()
+                        for observation in c.analysis.observations
+                    ],
                 }
             )
         for r in g.references:

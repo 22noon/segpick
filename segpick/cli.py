@@ -17,6 +17,7 @@ from segpick.analysis.orf_selection import attach_blastx_guided_orf_metrics
 from segpick.analysis.orf_alignment import attach_orf_alignment_metrics
 from segpick.analysis.orf_quality import attach_orf_quality
 from segpick.analysis.protein_interpretation import attach_protein_interpretations
+from segpick.analysis.observations import attach_observation_intervals
 from segpick.config import RunConfig, load_config, resolve_config
 from segpick.io.builder import build_sample
 from segpick.provenance import write_provenance
@@ -215,6 +216,7 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
     attach_blastx_consistency(sample)
     attach_orf_alignment_metrics(sample)
     attach_protein_interpretations(sample)
+    attach_observation_intervals(sample)
     attach_orf_quality(sample)
 
     coverage_plot_paths = {}
