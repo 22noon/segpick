@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from segpick.analysis import analyse_protein_continuity
 from segpick.models import Gene
 
 from .agreement import assess_evidence_agreement
@@ -62,6 +63,7 @@ def rank_gene(
         ranked,
         ranked[0].candidate_id,
     )
+    protein_continuity = analyse_protein_continuity(gene)
 
     return GeneRecommendation(
         gene=gene.name,
@@ -71,6 +73,7 @@ def rank_gene(
         report=build_recommendation_report(
             ranked[0].candidate_id,
             agreement,
+            protein_continuity,
         ),
         comparisons=build_candidate_comparisons(ranked),
     )

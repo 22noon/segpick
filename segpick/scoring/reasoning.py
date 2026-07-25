@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from .agreement import EvidenceAgreement
 from .recommendation import CandidateRecommendation
+
+if TYPE_CHECKING:
+    from segpick.models import ProteinContinuity
 
 
 CHANNEL_LABELS = {
@@ -52,6 +56,8 @@ class RecommendationReport:
     opposing_evidence: tuple[str, ...]
     evidence_conflicts: tuple[str, ...]
     manual_review: bool
+    assembly_review_required: bool
+    assembly_level_evidence: tuple[str, ...]
     summary: str
 
     def to_dict(self) -> dict[str, object]:
@@ -62,6 +68,8 @@ class RecommendationReport:
             "opposing_evidence": list(self.opposing_evidence),
             "evidence_conflicts": list(self.evidence_conflicts),
             "manual_review": self.manual_review,
+            "assembly_review_required": self.assembly_review_required,
+            "assembly_level_evidence": list(self.assembly_level_evidence),
             "summary": self.summary,
         }
 
@@ -69,6 +77,7 @@ class RecommendationReport:
 def build_recommendation_report(
     recommended_candidate: str,
     agreement: EvidenceAgreement,
+    protein_continuity: "ProteinContinuity | None" = None,
 ) -> RecommendationReport:
     """Convert evidence agreement into an initial explanation report."""
 
@@ -88,14 +97,52 @@ def build_recommendation_report(
         for channel in agreement.strong_conflicts
     )
 
-    manual_review = bool(agreement.strong_conflicts) or agreement.confidence == "low"
+    assembly_level_evidence: list[str] = []
+    assembly_review_required = False
 
-    if manual_review:
+    if protein_continuity is not None:
+        if protein_continuity.classification == "complementary_fragments":
+            assembly_review_required = True
+            assembly_level_evidence.append(
+                "Multiple contigs collectively recover most of the expected protein; "
+                "selecting one contig may not recover the complete gene."
+            )
+        elif protein_continuity.classification == "incomplete_recovery":
+            assembly_review_required = True
+            assembly_level_evidence.append(
+                "The available candidate set does not collectively recover the complete "
+                "expected protein."
+            )
+
+        if protein_continuity.redundant_overlap:
+            assembly_level_evidence.append(
+                "Multiple candidates cover substantially overlapping protein regions; "
+                "review for redundant or alternative assemblies."
+            )
+
+    manual_review = (
+        bool(agreement.strong_conflicts)
+        or agreement.confidence == "low"
+        or assembly_review_required
+    )
+    confidence = "low" if assembly_review_required else agreement.confidence
+
+    if protein_continuity is not None and protein_continuity.classification == "complementary_fragments":
+        summary = (
+            f"{recommended_candidate} is the best single candidate, but the expected "
+            "protein appears distributed across multiple contigs; manual review is required."
+        )
+    elif protein_continuity is not None and protein_continuity.classification == "incomplete_recovery":
+        summary = (
+            f"{recommended_candidate} is the best available candidate, but the candidate "
+            "set does not recover the complete expected protein; manual review is required."
+        )
+    elif manual_review:
         summary = (
             f"{recommended_candidate} is the weighted recommendation, but conflicting "
             "evidence warrants manual review."
         )
-    elif agreement.confidence == "medium":
+    elif confidence == "medium":
         summary = (
             f"{recommended_candidate} is recommended, although some evidence favours "
             "an alternative candidate."
@@ -108,11 +155,13 @@ def build_recommendation_report(
 
     return RecommendationReport(
         recommended_candidate=recommended_candidate,
-        confidence=agreement.confidence,
+        confidence=confidence,
         supporting_evidence=supporting,
         opposing_evidence=opposing,
         evidence_conflicts=conflicts,
         manual_review=manual_review,
+        assembly_review_required=assembly_review_required,
+        assembly_level_evidence=tuple(assembly_level_evidence),
         summary=summary,
     )
 

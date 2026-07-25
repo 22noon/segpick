@@ -597,6 +597,20 @@
         </div>
       </div>
 
+      {% if view.recommendation.assembly_level_evidence %}
+        <div class="reasoning-panel assembly-level-review">
+          <h3>Assembly-level review</h3>
+          <ul class="traffic-list">
+            {% for message in view.recommendation.assembly_level_evidence %}
+              <li class="{% if view.recommendation.assembly_review_required %}traffic-danger{% else %}traffic-warning{% endif %}">
+                <span class="traffic-icon">{% if view.recommendation.assembly_review_required %}✕{% else %}⚠{% endif %}</span>
+                <span>{{ message }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
       {% if view.recommendation.manual_review %}
         <div class="manual-review-status manual-review-required">
           Manual review recommended.

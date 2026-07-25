@@ -68,6 +68,7 @@
           <th>Confidence</th>
           <th>Manual review</th>
           <th>Assessment</th>
+          <th>Protein continuity</th>
           <th>Candidates</th>
           <th>References</th>
         </tr>
@@ -99,6 +100,18 @@
             {% else %}
               <span class="muted">No recommendation reasoning available.</span>
             {% endif %}
+          </td>
+          <td>
+            {% if item.protein_continuity == "complete_single_candidate" %}
+              <span class="badge review-no">Single-contig recovery</span>
+            {% elif item.protein_continuity == "complementary_fragments" %}
+              <span class="badge review-yes">Possible split assembly</span>
+            {% elif item.protein_continuity == "incomplete_recovery" %}
+              <span class="badge confidence-medium">Incomplete recovery</span>
+            {% else %}
+              <span class="badge confidence-unknown">Unavailable</span>
+            {% endif %}
+            <div class="muted">{{ item.protein_continuity_summary }}</div>
           </td>
           <td>{{ item.candidate_count }}</td>
           <td>{{ item.reference_count }}</td>

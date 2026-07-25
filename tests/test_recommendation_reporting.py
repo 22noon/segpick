@@ -153,7 +153,7 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "Overall assessment" in html
     assert "Status" in html
     assert "Confidence" in html
-    assert "Manual review not currently required." in html
+    assert "Manual review recommended." in html
     assert 'class="traffic-good"' in html
     assert "contig_a" in html
     assert "Recommended candidate" in html
@@ -171,6 +171,7 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "Expected protein position" in html
     assert "contig_a ★" in html
     assert "ref|VP2|B" in html
+    assert "Assembly-level review" in html
 
     assert "selectCandidate" in html
     assert "DashboardState" in html
@@ -194,8 +195,10 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "Confidence" in index_html
     assert "Manual review" in index_html
     assert "Assessment" in index_html
-    assert "HIGH" in index_html
-    assert "Not required" in index_html
-    assert "supported by the available evidence" in index_html
+    assert "LOW" in index_html
+    assert "Required" in index_html
+    assert "distributed across multiple contigs" in index_html
+    assert "Protein continuity" in index_html
+    assert "Possible split assembly" in index_html
 
 

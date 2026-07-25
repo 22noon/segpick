@@ -124,6 +124,8 @@ class RecommendationView:
     opposing_evidence: tuple[str, ...]
     evidence_conflicts: tuple[str, ...]
     manual_review: bool
+    assembly_review_required: bool
+    assembly_level_evidence: tuple[str, ...]
     summary: str | None
     runner_up_reasons: tuple[str, ...]
     runner_up_advantages: tuple[str, ...]
@@ -242,6 +244,16 @@ def build_recommendation_view(
             recommendation.report.manual_review
             if recommendation.report is not None
             else False
+        ),
+        assembly_review_required=(
+            recommendation.report.assembly_review_required
+            if recommendation.report is not None
+            else False
+        ),
+        assembly_level_evidence=(
+            recommendation.report.assembly_level_evidence
+            if recommendation.report is not None
+            else ()
         ),
         summary=(
             recommendation.report.summary

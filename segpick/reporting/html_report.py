@@ -10,6 +10,7 @@ from plotly.io import to_html
 
 from segpick import __version__
 from segpick.alignment.export import safe_name
+from segpick.analysis import analyse_protein_continuity
 from segpick.models import Gene, Sample
 from segpick.reporting.view_models import build_gene_page_view
 from segpick.scoring import GeneRecommendation
@@ -207,6 +208,7 @@ def write_html_dashboard(
 
         report = recommendation.report if recommendation is not None else None
         agreement = recommendation.agreement if recommendation is not None else None
+        continuity = analyse_protein_continuity(gene)
 
         overviews.append(
             {
@@ -237,6 +239,8 @@ def write_html_dashboard(
                     if report is not None
                     else 0
                 ),
+                "protein_continuity": continuity.classification,
+                "protein_continuity_summary": continuity.summary,
                 "page": f"genes/{safe_name(gene.name)}.html",
             }
         )

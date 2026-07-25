@@ -1,3 +1,4 @@
+from segpick.models import ProteinContinuity
 from segpick.scoring import (
     EvidenceAgreement,
     build_recommendation_report,
@@ -66,3 +67,61 @@ def test_report_serialises_as_plain_data():
     assert report.to_dict()["supporting_evidence"] == [
         "Containment supports the recommended candidate."
     ]
+
+
+def test_report_requests_review_for_complementary_fragments():
+    agreement = EvidenceAgreement(
+        channel_winners={"protein_confidence": ("contig_a",)},
+        supporting_channels=("protein_confidence",),
+        disagreeing_channels=(),
+        strong_conflicts=(),
+        agreement_fraction=1.0,
+        confidence="high",
+    )
+    continuity = ProteinContinuity(
+        classification="complementary_fragments",
+        candidate_count=2,
+        combined_coverage=0.98,
+        best_single_coverage=0.55,
+        complementary_candidate_ids=("contig_a", "contig_b"),
+        redundant_overlap=False,
+        uncovered_regions=(),
+        summary="Multiple candidates collectively span most of the expected protein.",
+        findings=(),
+    )
+
+    report = build_recommendation_report("contig_a", agreement, continuity)
+
+    assert report.manual_review is True
+    assert report.assembly_review_required is True
+    assert report.confidence == "low"
+    assert "selecting one contig" in report.assembly_level_evidence[0]
+    assert "distributed across multiple contigs" in report.summary
+
+
+def test_report_notes_redundant_overlap_without_forcing_review():
+    agreement = EvidenceAgreement(
+        channel_winners={"protein_confidence": ("contig_a",)},
+        supporting_channels=("protein_confidence",),
+        disagreeing_channels=(),
+        strong_conflicts=(),
+        agreement_fraction=1.0,
+        confidence="high",
+    )
+    continuity = ProteinContinuity(
+        classification="complete_single_candidate",
+        candidate_count=2,
+        combined_coverage=1.0,
+        best_single_coverage=0.95,
+        complementary_candidate_ids=(),
+        redundant_overlap=True,
+        uncovered_regions=(),
+        summary="At least one candidate spans most of the expected protein length.",
+        findings=(),
+    )
+
+    report = build_recommendation_report("contig_a", agreement, continuity)
+
+    assert report.manual_review is False
+    assert report.assembly_review_required is False
+    assert "overlapping protein regions" in report.assembly_level_evidence[0]
