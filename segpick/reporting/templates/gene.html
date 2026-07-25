@@ -552,6 +552,28 @@
             </div>
           {% endif %}
         </div>
+
+        <div class="reasoning-panel runner-up-reasoning">
+          <h3>Why not the runner-up?</h3>
+          {% if view.recommendation.runner_up_reasons %}
+            <ul class="traffic-list">
+              {% for message in view.recommendation.runner_up_reasons %}
+                <li class="traffic-good"><span class="traffic-icon">✓</span><span>{{ message }}</span></li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="recommendation-note">No clear evidence difference was identified.</p>
+          {% endif %}
+
+          {% if view.recommendation.runner_up_advantages %}
+            <p class="runner-up-note"><strong>Evidence favouring the runner-up</strong></p>
+            <ul class="traffic-list">
+              {% for message in view.recommendation.runner_up_advantages %}
+                <li class="traffic-warning"><span class="traffic-icon">⚠</span><span>{{ message }}</span></li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
     {% endif %}
 
       <h3>Evidence summary</h3>

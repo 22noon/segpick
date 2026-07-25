@@ -4,7 +4,7 @@ from segpick.models import Gene
 
 from .agreement import assess_evidence_agreement
 from .builder import build_gene_evidence
-from .reasoning import build_recommendation_report
+from .reasoning import build_candidate_comparisons, build_recommendation_report
 from .recommendation import (
     CandidateRecommendation,
     GeneRecommendation,
@@ -72,4 +72,5 @@ def rank_gene(
             ranked[0].candidate_id,
             agreement,
         ),
+        comparisons=build_candidate_comparisons(ranked),
     )

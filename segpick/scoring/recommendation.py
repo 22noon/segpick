@@ -7,7 +7,7 @@ from .evidence import Evidence
 from .scorer import ScoredEvidence
 
 if TYPE_CHECKING:
-    from .reasoning import RecommendationReport
+    from .reasoning import CandidateComparison, RecommendationReport
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +45,7 @@ class GeneRecommendation:
     candidates: tuple[CandidateRecommendation, ...]
     agreement: object | None = None
     report: RecommendationReport | None = None
+    comparisons: tuple[CandidateComparison, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -61,4 +62,8 @@ class GeneRecommendation:
                 if self.report is not None
                 else None
             ),
+            "comparisons": [
+                comparison.to_dict()
+                for comparison in self.comparisons
+            ],
         }

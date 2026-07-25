@@ -84,6 +84,9 @@ class RecommendationView:
     evidence_conflicts: tuple[str, ...]
     manual_review: bool
     summary: str | None
+    runner_up_reasons: tuple[str, ...]
+    runner_up_advantages: tuple[str, ...]
+    runner_up_strongest_difference: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -200,6 +203,21 @@ def build_recommendation_view(
         summary=(
             recommendation.report.summary
             if recommendation.report is not None
+            else None
+        ),
+        runner_up_reasons=(
+            recommendation.comparisons[0].reasons_not_selected
+            if recommendation.comparisons
+            else ()
+        ),
+        runner_up_advantages=(
+            recommendation.comparisons[0].alternative_advantages
+            if recommendation.comparisons
+            else ()
+        ),
+        runner_up_strongest_difference=(
+            recommendation.comparisons[0].strongest_difference
+            if recommendation.comparisons
             else None
         ),
     )

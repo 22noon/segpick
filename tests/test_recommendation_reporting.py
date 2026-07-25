@@ -97,6 +97,8 @@ def test_gene_json_contains_recommendation(tmp_path) -> None:
     assert payload["recommendation"] is not None
     assert payload["recommendation"]["recommended"]["candidate_id"] == "contig_a"
     assert len(payload["recommendation"]["candidates"]) == 2
+    assert payload["recommendation"]["comparisons"][0]["candidate_id"] == "contig_b"
+    assert payload["recommendation"]["comparisons"][0]["reasons_not_selected"]
 
 
 def test_dashboard_contains_recommendation(tmp_path) -> None:
@@ -139,6 +141,8 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
 
     assert "Runner-up" in html
     assert "Score gap" in html
+    assert "Why not the runner-up?" in html
+    assert "Evidence favouring the runner-up" in html or "Why not the runner-up?" in html
 
     index_html = (tmp_path / "index.html").read_text()
 
