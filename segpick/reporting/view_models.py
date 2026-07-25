@@ -19,6 +19,19 @@ class ReadSupportView:
 
 
 @dataclass(frozen=True, slots=True)
+class ProteinRelatednessView:
+    available: bool
+    subject_id: str | None
+    subject_title: str | None
+    percent_identity: float | None
+    query_coverage: float | None
+    subject_coverage: float | None
+    top_hit_gene_agreement: float | None
+    classification: str | None
+    summary: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class ORFView:
     available: bool
     score: float | None
@@ -56,6 +69,7 @@ class ORFView:
     predicted_header: str | None
     reference_header: str | None
     warnings: tuple[str, ...]
+    relatedness: ProteinRelatednessView
 
 
 @dataclass(frozen=True, slots=True)
@@ -356,6 +370,35 @@ def _describe_protein_differences(alignment) -> tuple[str, ...]:
         descriptions.append("No terminal truncations or internal indels detected.")
     return tuple(descriptions)
 
+def build_protein_relatedness_view(
+    candidate: CandidateContig,
+) -> ProteinRelatednessView:
+    relatedness = candidate.analysis.protein_relatedness
+    if relatedness is None:
+        return ProteinRelatednessView(
+            available=False,
+            subject_id=None,
+            subject_title=None,
+            percent_identity=None,
+            query_coverage=None,
+            subject_coverage=None,
+            top_hit_gene_agreement=None,
+            classification=None,
+            summary=None,
+        )
+    return ProteinRelatednessView(
+        available=True,
+        subject_id=relatedness.subject_id,
+        subject_title=relatedness.subject_title,
+        percent_identity=relatedness.percent_identity,
+        query_coverage=relatedness.query_coverage,
+        subject_coverage=relatedness.subject_coverage,
+        top_hit_gene_agreement=relatedness.top_hit_gene_agreement,
+        classification=relatedness.classification,
+        summary=relatedness.summary,
+    )
+
+
 def build_orf_view(candidate: CandidateContig) -> ORFView:
     """Build ORF structural details and conservative review warnings."""
 
@@ -402,6 +445,7 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
             predicted_header=None,
             reference_header=None,
             warnings=("No ORF was identified.",),
+            relatedness=build_protein_relatedness_view(candidate),
         )
 
     best = metrics.best_orf
@@ -516,4 +560,5 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
             else None
         ),
         warnings=tuple(warnings),
+        relatedness=build_protein_relatedness_view(candidate),
     )

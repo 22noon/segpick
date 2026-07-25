@@ -770,6 +770,18 @@
             <p class="muted">Reference protein source: {{ candidate.orf.reference_id }}</p>
           {% endif %}
 
+          {% if candidate.orf.relatedness.available %}
+            <h4>Protein relatedness</h4>
+            <p><strong>{{ candidate.orf.relatedness.summary }}</strong></p>
+            <div class="mini-grid">
+              <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.percent_identity) }}</strong><span>DIAMOND identity</span></div>
+              <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.subject_coverage * 100) }}</strong><span>Subject coverage</span></div>
+              <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.query_coverage * 100) }}</strong><span>Query coverage</span></div>
+              <div class="mini"><strong>{{ "%.1f%%"|format(candidate.orf.relatedness.top_hit_gene_agreement * 100) if candidate.orf.relatedness.top_hit_gene_agreement is not none else "—" }}</strong><span>Top-hit gene agreement</span></div>
+            </div>
+            <p class="muted">Closest protein: {{ candidate.orf.relatedness.subject_id }} — {{ candidate.orf.relatedness.subject_title }}</p>
+          {% endif %}
+
           {% if candidate.orf.difference_summary %}
             <h4>Protein structural interpretation</h4>
             {% if candidate.orf.interpretation_summary %}

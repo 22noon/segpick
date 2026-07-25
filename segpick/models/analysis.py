@@ -9,6 +9,7 @@ from .orf import ORFMetrics
 from .orf_alignment import ORFAlignmentMetrics
 from .orf_quality import ORFQuality
 from .protein_interpretation import ProteinInterpretation
+from .protein_relatedness import ProteinRelatedness
 from .read_support import ReadSupportMetrics
 
 
@@ -26,4 +27,5 @@ class ContigAnalysis:
     orf_alignment: ORFAlignmentMetrics | None = None
     orf_quality: ORFQuality | None = None
     protein_interpretation: ProteinInterpretation | None = None
+    protein_relatedness: ProteinRelatedness | None = None
     recommendation_reason: str | None = None
