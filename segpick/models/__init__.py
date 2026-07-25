@@ -1,5 +1,6 @@
 from .alignment import Alignment
 from .analysis import ContigAnalysis
+from .blastx import BlastXHit
 from .containment import ContainmentMetrics
 from .contig import CandidateContig
 from .gene import Gene
@@ -19,6 +20,7 @@ __all__ = [
     "ContigMetadata",
     "ContigAnalysis",
     "Alignment",
+    "BlastXHit",
     "ORFHit",
     "ORFMetrics",
     "ORFAlignmentMetrics",

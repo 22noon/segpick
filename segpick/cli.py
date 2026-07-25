@@ -9,6 +9,7 @@ from pathlib import Path
 from segpick import __version__
 from segpick.alignment.export import export_anchor_fastas, export_gene_fastas, safe_name
 from segpick.alignment.minimap import align_gene, attach_existing_paf
+from segpick.analysis.blastx import attach_blastx_hits
 from segpick.analysis.containment import analyse_gene
 from segpick.analysis.orf import attach_orf_metrics
 from segpick.analysis.orf_alignment import attach_orf_alignment_metrics
@@ -54,6 +55,8 @@ def _add_run_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--hits", default=None)
     parser.add_argument("--contigs", default=None)
     parser.add_argument("--refs", default=None)
+    parser.add_argument("--blastx-results", default=None)
+    parser.add_argument("--protein-refs", default=None)
     parser.add_argument("--outdir", default=None)
     parser.add_argument("--sample-name", default=None)
     parser.add_argument("--preset", default=None)
@@ -124,6 +127,8 @@ def _cli_override_values(args: argparse.Namespace) -> dict[str, object]:
         "hits",
         "contigs",
         "refs",
+        "blastx_results",
+        "protein_refs",
         "outdir",
         "sample_name",
         "strict",
@@ -160,6 +165,22 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
         sample_name=config.sample_name,
         strict=config.strict,
     )
+
+    if (config.blastx_results is None) != (config.protein_refs is None):
+        raise ValueError("blastx_results and protein_refs must be provided together")
+    if config.blastx_results is not None:
+        blastx_summary = attach_blastx_hits(
+            sample,
+            config.blastx_results,
+            config.protein_refs,
+            strict=config.strict,
+        )
+        print(
+            "BLASTX: "
+            f"{blastx_summary.hits_attached}/"
+            f"{blastx_summary.candidate_count} candidates attached; "
+            f"{blastx_summary.subjects_resolved} proteins resolved"
+        )
 
     outdir = Path(config.outdir)
     analysis_dir = outdir / "analysis"

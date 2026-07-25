@@ -39,6 +39,11 @@ def write_gene_json_reports(
                     "z": c.metadata.z,
                     "cluster": c.metadata.cluster,
                     "blast_reference": c.metadata.sseqid,
+                    "blastx": (
+                        c.analysis.blastx.to_dict()
+                        if c.analysis.blastx is not None
+                        else None
+                    ),
                     "containment": c.analysis.containment.to_dict(),
                     "orf": (
                         c.analysis.orf.to_dict()

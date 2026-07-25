@@ -26,6 +26,8 @@ class RunConfig:
     hits: Path | None = None
     contigs: Path | None = None
     refs: Path | None = None
+    blastx_results: Path | None = None
+    protein_refs: Path | None = None
     outdir: Path = Path("results")
     sample_name: str = "sample"
     align: bool = False
@@ -71,6 +73,8 @@ def _flatten_yaml(data: dict[str, Any]) -> dict[str, Any]:
     result["hits"] = input_cfg.get("hits", data.get("hits"))
     result["contigs"] = input_cfg.get("contigs", data.get("contigs"))
     result["refs"] = input_cfg.get("references", input_cfg.get("refs", data.get("refs")))
+    result["blastx_results"] = input_cfg.get("blastx_results", data.get("blastx_results"))
+    result["protein_refs"] = input_cfg.get("protein_refs", data.get("protein_refs"))
     result["outdir"] = data.get("outdir")
     result["sample_name"] = data.get("sample", data.get("sample_name"))
     result["strict"] = data.get("strict")
