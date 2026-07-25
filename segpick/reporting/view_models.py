@@ -69,6 +69,11 @@ class RecommendationView:
     supporting_channels: tuple[str, ...]
     disagreeing_channels: tuple[str, ...]
     strong_conflicts: tuple[str, ...]
+    supporting_evidence: tuple[str, ...]
+    opposing_evidence: tuple[str, ...]
+    evidence_conflicts: tuple[str, ...]
+    manual_review: bool
+    summary: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,6 +166,31 @@ def build_recommendation_view(
             recommendation.agreement.strong_conflicts
             if recommendation.agreement is not None
             else ()
+        ),
+        supporting_evidence=(
+            recommendation.report.supporting_evidence
+            if recommendation.report is not None
+            else ()
+        ),
+        opposing_evidence=(
+            recommendation.report.opposing_evidence
+            if recommendation.report is not None
+            else ()
+        ),
+        evidence_conflicts=(
+            recommendation.report.evidence_conflicts
+            if recommendation.report is not None
+            else ()
+        ),
+        manual_review=(
+            recommendation.report.manual_review
+            if recommendation.report is not None
+            else False
+        ),
+        summary=(
+            recommendation.report.summary
+            if recommendation.report is not None
+            else None
         ),
     )
 

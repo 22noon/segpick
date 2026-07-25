@@ -230,6 +230,53 @@
       font-size: 0.9rem;
     }
 
+
+    .reasoning-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .reasoning-panel {
+      padding: 1rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .reasoning-panel h3 {
+      margin-top: 0;
+    }
+
+    .reasoning-list {
+      margin: 0;
+      padding-left: 1.2rem;
+    }
+
+    .reasoning-list li + li {
+      margin-top: 0.45rem;
+    }
+
+    .manual-review-status {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    .manual-review-required {
+      border-left: 5px solid #dc2626;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .manual-review-not-required {
+      border-left: 5px solid #16a34a;
+      background: #f0fdf4;
+      color: #166534;
+    }
+
     .coverage-panel figure {
       margin: 0;
     }
@@ -281,20 +328,57 @@
         <strong>{{ view.recommendation.confidence|upper }}</strong>
       </div>
 
-      {% if view.recommendation.strong_conflicts %}
+      {% if view.recommendation.summary %}
         <p class="recommendation-note">
-          Strong structural evidence favours another candidate:
-          {{ view.recommendation.strong_conflicts|join(", ") }}.
+          {{ view.recommendation.summary }}
         </p>
-      {% elif view.recommendation.disagreeing_channels %}
-        <p class="recommendation-note">
-          Disagreeing evidence channels:
-          {{ view.recommendation.disagreeing_channels|join(", ") }}.
-        </p>
+      {% endif %}
+
+      <div class="reasoning-grid">
+        <div class="reasoning-panel">
+          <h3>Why this candidate?</h3>
+          {% if view.recommendation.supporting_evidence %}
+            <ul class="reasoning-list">
+              {% for message in view.recommendation.supporting_evidence %}
+                <li>{{ message }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="recommendation-note">
+              No individual evidence channel uniquely favours this candidate.
+            </p>
+          {% endif %}
+        </div>
+
+        <div class="reasoning-panel">
+          <h3>Evidence requiring review</h3>
+          {% if view.recommendation.opposing_evidence or view.recommendation.evidence_conflicts %}
+            <ul class="reasoning-list">
+              {% for message in view.recommendation.opposing_evidence %}
+                <li>{{ message }}</li>
+              {% endfor %}
+              {% for message in view.recommendation.evidence_conflicts %}
+                {% if message not in view.recommendation.opposing_evidence %}
+                  <li>{{ message }}</li>
+                {% endif %}
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="recommendation-note">
+              No major evidence conflicts detected.
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if view.recommendation.manual_review %}
+        <div class="manual-review-status manual-review-required">
+          Manual review recommended.
+        </div>
       {% else %}
-        <p class="recommendation-note">
-          All available evidence channels support the recommendation.
-        </p>
+        <div class="manual-review-status manual-review-not-required">
+          Manual review not currently required.
+        </div>
       {% endif %}
 
       {% if view.recommendation.runner_up_id %}

@@ -73,6 +73,11 @@ def test_build_gene_page_view() -> None:
     assert view.gene == "VP2"
     assert view.recommendation is not None
     assert view.recommendation.candidate_id == "contig_a"
+    assert view.recommendation.supporting_evidence
+    assert view.recommendation.opposing_evidence == ()
+    assert view.recommendation.evidence_conflicts == ()
+    assert view.recommendation.manual_review is False
+    assert view.recommendation.summary is not None
     assert len(view.candidates) == 2
     assert view.candidates[0].recommended is True
     assert view.recommendation.evidence
