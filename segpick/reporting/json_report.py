@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from segpick.alignment.export import safe_name
+from segpick.analysis import analyse_protein_continuity
 from segpick.models import Sample
 from segpick.scoring import GeneRecommendation
 
@@ -23,6 +24,7 @@ def write_gene_json_reports(
             "anchor": g.anchor_id,
             "candidates": [],
             "references": [],
+            "protein_continuity": analyse_protein_continuity(g).to_dict(),
         }
         if recommendations and g.name in recommendations:
             payload["recommendation"] = recommendations[g.name].to_dict()

@@ -750,7 +750,23 @@
         </div>
       {% endfor %}
     </div>
-    <p class="protein-coordinate-note">The blue bar is the recommended candidate. Complementary bars can reveal candidate fragments covering different portions of the expected protein; this map is descriptive and does not yet infer a split assembly.</p>
+    <div class="protein-continuity-summary">
+      <h3>Assembly-level protein continuity</h3>
+      <p><strong>{{ view.protein_continuity.summary }}</strong></p>
+      <div class="protein-continuity-metrics">
+        <span>Combined coverage: {{ "%.1f%%"|format(view.protein_continuity.combined_coverage * 100) }}</span>
+        <span>Best single candidate: {{ "%.1f%%"|format(view.protein_continuity.best_single_coverage * 100) }}</span>
+      </div>
+      {% if view.protein_continuity.findings %}
+        <ul>
+        {% for finding in view.protein_continuity.findings %}
+          <li>{{ finding }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+      <p class="muted">This interpretation is based on normalised protein coordinates and is intended as a review aid rather than proof of a split or redundant assembly.</p>
+    </div>
+    <p class="protein-coordinate-note">The blue bar is the recommended candidate. Complementary bars can reveal candidate fragments covering different portions of the expected protein.</p>
   </section>
   {% endif %}
 

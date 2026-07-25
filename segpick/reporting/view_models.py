@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from segpick.analysis import analyse_protein_continuity
 from segpick.models import CandidateContig, Gene
 from segpick.scoring import GeneRecommendation
 
@@ -86,6 +87,19 @@ class ProteinCoordinateView:
 
 
 @dataclass(frozen=True, slots=True)
+class ProteinContinuityView:
+    classification: str
+    candidate_count: int
+    combined_coverage: float
+    best_single_coverage: float
+    complementary_candidate_ids: tuple[str, ...]
+    redundant_overlap: bool
+    uncovered_regions: tuple[tuple[float, float], ...]
+    summary: str
+    findings: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class EvidenceView:
     name: str
     value: float | None
@@ -143,6 +157,7 @@ class GenePageView:
     recommendation: RecommendationView | None
     candidates: tuple[CandidateView, ...]
     protein_coordinates: tuple[ProteinCoordinateView, ...]
+    protein_continuity: ProteinContinuityView
 
 
 def build_recommendation_view(
@@ -320,6 +335,8 @@ def build_gene_page_view(
         and candidate.analysis.blastx.subject_length > 0
     )
 
+    continuity = analyse_protein_continuity(gene)
+
     return GenePageView(
         gene=gene.name,
         segment=gene.segment,
@@ -327,6 +344,17 @@ def build_gene_page_view(
         recommendation=build_recommendation_view(recommendation),
         candidates=candidates,
         protein_coordinates=protein_coordinates,
+        protein_continuity=ProteinContinuityView(
+            classification=continuity.classification,
+            candidate_count=continuity.candidate_count,
+            combined_coverage=continuity.combined_coverage,
+            best_single_coverage=continuity.best_single_coverage,
+            complementary_candidate_ids=continuity.complementary_candidate_ids,
+            redundant_overlap=continuity.redundant_overlap,
+            uncovered_regions=continuity.uncovered_regions,
+            summary=continuity.summary,
+            findings=continuity.findings,
+        ),
     )
 
 

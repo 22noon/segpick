@@ -12,3 +12,5 @@ from .blastx_consistency import (
     attach_blastx_consistency,
     calculate_blastx_consistency,
 )
+
+from .protein_continuity import analyse_protein_continuity
