@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from segpick.analysis.convergence import detect_evidence_convergence
 from segpick.findings import (
     generate_continuity_findings,
+    generate_convergence_findings,
     generate_homology_findings,
     generate_protein_findings,
 )
@@ -12,9 +14,14 @@ def candidate_biological_findings(
     candidate: CandidateContig,
 ) -> tuple[BiologicalFinding, ...]:
     """Collect candidate-level findings from dedicated generators."""
+    candidate.analysis.convergences = detect_evidence_convergence(
+        candidate.analysis.observations,
+        candidate.id,
+    )
     return (
         *generate_protein_findings(candidate),
         *generate_homology_findings(candidate),
+        *generate_convergence_findings(candidate),
     )
 
 

@@ -3,6 +3,7 @@ from .analysis import ContigAnalysis
 from .blastx import BlastXHit
 from .blastx_consistency import BlastXConsistency
 from .containment import ContainmentMetrics
+from .convergence import EvidenceConvergence
 from .contig import CandidateContig
 from .gene import Gene
 from .finding import BiologicalFinding
@@ -29,6 +30,7 @@ __all__ = [
     "Alignment",
     "BlastXHit",
     "BlastXConsistency",
+    "EvidenceConvergence",
     "ORFHit",
     "ORFMetrics",
     "ORFAlignmentMetrics",

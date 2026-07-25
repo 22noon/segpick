@@ -6,6 +6,7 @@ from .blastx import BlastXHit
 from .finding import BiologicalFinding
 from .blastx_consistency import BlastXConsistency
 from .containment import ContainmentMetrics
+from .convergence import EvidenceConvergence
 from .orf import ORFMetrics
 from .orf_alignment import ORFAlignmentMetrics
 from .orf_quality import ORFQuality
@@ -31,6 +32,7 @@ class ContigAnalysis:
     protein_interpretation: ProteinInterpretation | None = None
     protein_relatedness: ProteinRelatedness | None = None
     observations: tuple[ObservationInterval, ...] = ()
+    convergences: tuple[EvidenceConvergence, ...] = ()
     findings: tuple[BiologicalFinding, ...] = ()
     depth_profile: dict[int, int] = field(default_factory=dict)
     recommendation_reason: str | None = None

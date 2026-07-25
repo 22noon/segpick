@@ -83,6 +83,10 @@ def write_gene_json_reports(
                     "biological_findings": [
                         finding.to_dict() for finding in c.analysis.findings
                     ],
+                    "evidence_convergence": [
+                        convergence.to_dict()
+                        for convergence in c.analysis.convergences
+                    ],
                     "observations": [
                         observation.to_dict()
                         for observation in c.analysis.observations
