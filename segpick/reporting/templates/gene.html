@@ -277,6 +277,99 @@
       color: #166534;
     }
 
+
+
+    .candidate-summary {
+      display: grid;
+      grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(120px, 0.7fr));
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+
+    .summary-item {
+      padding: 0.85rem 1rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .summary-label {
+      display: block;
+      margin-bottom: 0.3rem;
+      color: #64748b;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .summary-value {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .summary-good {
+      border-left: 5px solid #16a34a;
+      background: #f0fdf4;
+    }
+
+    .summary-warning {
+      border-left: 5px solid #f59e0b;
+      background: #fffbeb;
+    }
+
+    .overall-assessment {
+      margin: 1rem 0;
+      padding: 1rem;
+      border-left: 5px solid #2563eb;
+      border-radius: 8px;
+      background: #eff6ff;
+    }
+
+    .overall-assessment h3 {
+      margin: 0 0 0.4rem;
+    }
+
+    .traffic-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .traffic-list li {
+      display: grid;
+      grid-template-columns: 1.25rem 1fr;
+      gap: 0.55rem;
+      align-items: start;
+    }
+
+    .traffic-list li + li {
+      margin-top: 0.55rem;
+    }
+
+    .traffic-icon {
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .traffic-good .traffic-icon {
+      color: #16a34a;
+    }
+
+    .traffic-warning .traffic-icon {
+      color: #d97706;
+    }
+
+    .traffic-danger .traffic-icon {
+      color: #dc2626;
+    }
+
+    @media (max-width: 760px) {
+      .candidate-summary {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
     .coverage-panel figure {
       margin: 0;
     }
@@ -313,34 +406,48 @@
     <section class="card recommendation-card">
       <h2>Recommended candidate</h2>
 
-      <div class="recommended-id">
-        {{ view.recommendation.candidate_id }}
+      <div class="candidate-summary">
+        <div class="summary-item summary-good">
+          <span class="summary-label">Candidate</span>
+          <span class="summary-value">{{ view.recommendation.candidate_id }}</span>
+        </div>
+        <div class="summary-item summary-good">
+          <span class="summary-label">Status</span>
+          <span class="summary-value">Recommended</span>
+        </div>
+        <div class="summary-item {% if view.recommendation.confidence == 'low' %}summary-warning{% else %}summary-good{% endif %}">
+          <span class="summary-label">Confidence</span>
+          <span class="summary-value">{{ view.recommendation.confidence|upper }}</span>
+        </div>
+        <div class="summary-item {% if view.recommendation.manual_review %}summary-warning{% else %}summary-good{% endif %}">
+          <span class="summary-label">Manual review</span>
+          <span class="summary-value">{% if view.recommendation.manual_review %}Recommended{% else %}Not required{% endif %}</span>
+        </div>
       </div>
 
       <div class="recommendation-score">
         Overall evidence score:
-        <strong>
-          {{ "%.3f"|format(view.recommendation.score) }}
-        </strong>
-      </div>
-      <div class="recommendation-score">
-        Evidence agreement:
-        <strong>{{ view.recommendation.confidence|upper }}</strong>
+        <strong>{{ "%.3f"|format(view.recommendation.score) }}</strong>
       </div>
 
-      {% if view.recommendation.summary %}
-        <p class="recommendation-note">
-          {{ view.recommendation.summary }}
-        </p>
-      {% endif %}
+      <div class="overall-assessment">
+        <h3>Overall assessment</h3>
+        {% if view.recommendation.summary %}
+          <p>{{ view.recommendation.summary }}</p>
+        {% elif view.recommendation.manual_review %}
+          <p>The available evidence contains conflicts that should be reviewed manually.</p>
+        {% else %}
+          <p>The available evidence supports this candidate without a major conflict.</p>
+        {% endif %}
+      </div>
 
       <div class="reasoning-grid">
         <div class="reasoning-panel">
           <h3>Why this candidate?</h3>
           {% if view.recommendation.supporting_evidence %}
-            <ul class="reasoning-list">
+            <ul class="traffic-list">
               {% for message in view.recommendation.supporting_evidence %}
-                <li>{{ message }}</li>
+                <li class="traffic-good"><span class="traffic-icon">✓</span><span>{{ message }}</span></li>
               {% endfor %}
             </ul>
           {% else %}
@@ -353,13 +460,13 @@
         <div class="reasoning-panel">
           <h3>Evidence requiring review</h3>
           {% if view.recommendation.opposing_evidence or view.recommendation.evidence_conflicts %}
-            <ul class="reasoning-list">
+            <ul class="traffic-list">
               {% for message in view.recommendation.opposing_evidence %}
-                <li>{{ message }}</li>
+                <li class="traffic-warning"><span class="traffic-icon">⚠</span><span>{{ message }}</span></li>
               {% endfor %}
               {% for message in view.recommendation.evidence_conflicts %}
                 {% if message not in view.recommendation.opposing_evidence %}
-                  <li>{{ message }}</li>
+                  <li class="traffic-danger"><span class="traffic-icon">✕</span><span>{{ message }}</span></li>
                 {% endif %}
               {% endfor %}
             </ul>

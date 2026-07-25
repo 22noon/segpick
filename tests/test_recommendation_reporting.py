@@ -113,7 +113,11 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "Recommended candidate" in html
     assert "Why this candidate?" in html
     assert "Evidence requiring review" in html
+    assert "Overall assessment" in html
+    assert "Status" in html
+    assert "Confidence" in html
     assert "Manual review not currently required." in html
+    assert 'class="traffic-good"' in html
     assert "contig_a" in html
     assert "Recommended candidate" in html
     assert "Overall evidence score" in html
