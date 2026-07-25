@@ -73,6 +73,19 @@ class ORFView:
 
 
 @dataclass(frozen=True, slots=True)
+class ProteinCoordinateView:
+    candidate_id: str
+    subject_id: str
+    subject_title: str
+    subject_start: int
+    subject_end: int
+    subject_length: int
+    start_fraction: float
+    end_fraction: float
+    recommended: bool
+
+
+@dataclass(frozen=True, slots=True)
 class EvidenceView:
     name: str
     value: float | None
@@ -129,6 +142,7 @@ class GenePageView:
     anchor: str | None
     recommendation: RecommendationView | None
     candidates: tuple[CandidateView, ...]
+    protein_coordinates: tuple[ProteinCoordinateView, ...]
 
 
 def build_recommendation_view(
@@ -272,12 +286,47 @@ def build_gene_page_view(
         for candidate in gene.candidates
     )
 
+    protein_coordinates = tuple(
+        ProteinCoordinateView(
+            candidate_id=candidate.id,
+            subject_id=candidate.analysis.blastx.subject_id,
+            subject_title=candidate.analysis.blastx.subject_title,
+            subject_start=min(
+                candidate.analysis.blastx.subject_start,
+                candidate.analysis.blastx.subject_end,
+            ),
+            subject_end=max(
+                candidate.analysis.blastx.subject_start,
+                candidate.analysis.blastx.subject_end,
+            ),
+            subject_length=candidate.analysis.blastx.subject_length,
+            start_fraction=(
+                min(
+                    candidate.analysis.blastx.subject_start,
+                    candidate.analysis.blastx.subject_end,
+                )
+                - 1
+            )
+            / candidate.analysis.blastx.subject_length,
+            end_fraction=max(
+                candidate.analysis.blastx.subject_start,
+                candidate.analysis.blastx.subject_end,
+            )
+            / candidate.analysis.blastx.subject_length,
+            recommended=candidate.id == recommended_id,
+        )
+        for candidate in gene.candidates
+        if candidate.analysis.blastx is not None
+        and candidate.analysis.blastx.subject_length > 0
+    )
+
     return GenePageView(
         gene=gene.name,
         segment=gene.segment,
         anchor=gene.anchor_id,
         recommendation=build_recommendation_view(recommendation),
         candidates=candidates,
+        protein_coordinates=protein_coordinates,
     )
 
 

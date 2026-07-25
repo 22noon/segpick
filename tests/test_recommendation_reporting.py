@@ -4,6 +4,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from segpick.models import (
+    BlastXHit,
     CandidateContig,
     ContainmentMetrics,
     ContigMetadata,
@@ -51,8 +52,42 @@ def make_candidate(
 
 def make_sample() -> tuple[Sample, dict]:
     gene = Gene(name="VP2", segment="2")
-    gene.add_candidate(make_candidate("contig_a", 100))
-    gene.add_candidate(make_candidate("contig_b", 50))
+    contig_a = make_candidate("contig_a", 100)
+    contig_b = make_candidate("contig_b", 50)
+    contig_a.analysis.blastx = BlastXHit(
+        query_id="contig_a",
+        subject_id="ref|VP2|A",
+        subject_title="VP2 reference A",
+        percent_identity=95.0,
+        alignment_length=180,
+        evalue=1e-40,
+        bitscore=300.0,
+        query_start=1,
+        query_end=540,
+        subject_start=1,
+        subject_end=180,
+        query_length=600,
+        subject_length=300,
+        query_frame=1,
+    )
+    contig_b.analysis.blastx = BlastXHit(
+        query_id="contig_b",
+        subject_id="ref|VP2|B",
+        subject_title="VP2 reference B",
+        percent_identity=92.0,
+        alignment_length=135,
+        evalue=1e-30,
+        bitscore=250.0,
+        query_start=1,
+        query_end=405,
+        subject_start=151,
+        subject_end=285,
+        query_length=450,
+        subject_length=300,
+        query_frame=1,
+    )
+    gene.add_candidate(contig_a)
+    gene.add_candidate(contig_b)
 
     sample = Sample(name="example")
     sample.add_gene(gene)
@@ -132,6 +167,10 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "evidence-bar" not in html
     assert "Protein Confidence" in html
     assert "Read support" in html
+    assert "Protein coordinate map" in html
+    assert "Expected protein position" in html
+    assert "contig_a ★" in html
+    assert "ref|VP2|B" in html
 
     assert "selectCandidate" in html
     assert "DashboardState" in html

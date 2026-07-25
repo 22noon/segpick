@@ -403,6 +403,92 @@
       }
     }
 
+
+    .protein-coordinate-map {
+      margin-top: 1rem;
+    }
+
+    .protein-coordinate-scale {
+      display: grid;
+      grid-template-columns: 0 minmax(0, 1fr) 0;
+      align-items: end;
+      margin-left: min(18rem, 38%);
+      color: #64748b;
+      font-size: 0.78rem;
+    }
+
+    .protein-coordinate-scale span:nth-child(2) {
+      text-align: center;
+    }
+
+    .protein-coordinate-scale span:last-child {
+      text-align: right;
+    }
+
+    .protein-coordinate-row {
+      display: grid;
+      grid-template-columns: minmax(11rem, 18rem) minmax(0, 1fr);
+      gap: 0.8rem;
+      align-items: center;
+      margin-top: 0.65rem;
+    }
+
+    .protein-coordinate-label {
+      min-width: 0;
+    }
+
+    .protein-coordinate-label strong,
+    .protein-coordinate-label span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .protein-coordinate-label span {
+      color: #64748b;
+      font-size: 0.78rem;
+    }
+
+    .protein-coordinate-track {
+      position: relative;
+      height: 1.15rem;
+      overflow: hidden;
+      border: 1px solid #cbd5e1;
+      border-radius: 999px;
+      background: #f1f5f9;
+    }
+
+    .protein-coordinate-segment {
+      position: absolute;
+      top: 0.12rem;
+      bottom: 0.12rem;
+      min-width: 0.25rem;
+      border-radius: 999px;
+      background: #94a3b8;
+    }
+
+    .protein-coordinate-segment.recommended {
+      background: #2563eb;
+    }
+
+    .protein-coordinate-note {
+      margin-top: 0.9rem;
+      color: #64748b;
+      font-size: 0.84rem;
+    }
+
+    @media (max-width: 700px) {
+      .protein-coordinate-row {
+        grid-template-columns: 1fr;
+        gap: 0.35rem;
+      }
+
+      .protein-coordinate-scale {
+        margin-left: 0;
+      }
+    }
+
     .coverage-panel figure {
       margin: 0;
     }
@@ -639,6 +725,34 @@
 
   <section class="card">{{ dotplot|safe }}</section>
   <section class="card">{{ containment|safe }}</section>
+
+
+  {% if view.protein_coordinates %}
+  <section class="card">
+    <h2>Protein coordinate map</h2>
+    <p class="muted">Each bar shows where a candidate's best DIAMOND alignment falls along its matched protein, normalised from 0% to 100% so homologous proteins of different lengths can be compared.</p>
+    <div class="protein-coordinate-map">
+      <div class="protein-coordinate-scale" aria-hidden="true">
+        <span>0%</span><span>Expected protein position</span><span>100%</span>
+      </div>
+      {% for coordinate in view.protein_coordinates %}
+        <div class="protein-coordinate-row">
+          <div class="protein-coordinate-label" title="{{ coordinate.subject_id }} — {{ coordinate.subject_title }}">
+            <strong>{{ coordinate.candidate_id }}{% if coordinate.recommended %} ★{% endif %}</strong>
+            <span>{{ coordinate.subject_start }}–{{ coordinate.subject_end }} / {{ coordinate.subject_length }} aa · {{ coordinate.subject_id }}</span>
+          </div>
+          <div class="protein-coordinate-track" title="{{ coordinate.candidate_id }} covers {{ '%.1f'|format(coordinate.start_fraction * 100) }}–{{ '%.1f'|format(coordinate.end_fraction * 100) }}% of {{ coordinate.subject_id }}">
+            <span
+              class="protein-coordinate-segment{% if coordinate.recommended %} recommended{% endif %}"
+              style="left: {{ '%.4f'|format(coordinate.start_fraction * 100) }}%; width: {{ '%.4f'|format((coordinate.end_fraction - coordinate.start_fraction) * 100) }}%;"
+            ></span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    <p class="protein-coordinate-note">The blue bar is the recommended candidate. Complementary bars can reveal candidate fragments covering different portions of the expected protein; this map is descriptive and does not yet infer a split assembly.</p>
+  </section>
+  {% endif %}
 
   <section class="card">
     <h2>Evidence table</h2>
