@@ -7,6 +7,7 @@ from .contig import CandidateContig
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
 from .reference import ReferenceSequence
+from .rule_evaluation import RuleEvaluation
 
 
 @dataclass(slots=True)
@@ -22,6 +23,7 @@ class Gene:
     recommendation: CandidateContig | None = None
     findings: tuple[BiologicalFinding, ...] = ()
     hypotheses: tuple[BiologicalHypothesis, ...] = ()
+    rule_evaluations: tuple[RuleEvaluation, ...] = ()
 
     def add_candidate(self, contig: CandidateContig) -> None:
         self.candidates.append(contig)

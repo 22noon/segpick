@@ -3,11 +3,32 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from segpick.analysis import analyse_protein_continuity
-from segpick.models import BiologicalHypothesis, CandidateContig, Gene
+from segpick.models import BiologicalHypothesis, CandidateContig, Gene, RuleEvaluation
 from segpick.scoring import GeneRecommendation
 
 
 
+
+
+@dataclass(frozen=True, slots=True)
+class RuleEvaluationView:
+    rule_id: str
+    title: str
+    scope: str
+    triggered: bool
+    confidence: str | None
+    severity: str
+    rule_source: str
+    rule_description: str
+    rule_references: tuple[str, ...]
+    matched_required: tuple[str, ...]
+    missing_required: tuple[str, ...]
+    matched_supporting: tuple[str, ...]
+    missing_supporting: tuple[str, ...]
+    matched_conflicting: tuple[str, ...]
+
+def build_rule_evaluation_view(item: RuleEvaluation) -> RuleEvaluationView:
+    return RuleEvaluationView(**{name: getattr(item, name) for name in RuleEvaluationView.__dataclass_fields__})
 
 @dataclass(frozen=True, slots=True)
 class HypothesisView:
@@ -217,6 +238,7 @@ class GenePageView:
     protein_coordinates: tuple[ProteinCoordinateView, ...]
     protein_continuity: ProteinContinuityView
     hypotheses: tuple[HypothesisView, ...]
+    rule_evaluations: tuple[RuleEvaluationView, ...]
 
 
 def build_recommendation_view(
@@ -459,6 +481,7 @@ def build_gene_page_view(
         candidates=candidates,
         protein_coordinates=protein_coordinates,
         hypotheses=hypotheses,
+        rule_evaluations=tuple(build_rule_evaluation_view(item) for item in gene.rule_evaluations),
         protein_continuity=ProteinContinuityView(
             classification=continuity.classification,
             candidate_count=continuity.candidate_count,

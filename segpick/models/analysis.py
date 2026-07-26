@@ -15,6 +15,7 @@ from .observation import EvidenceObservation
 from .protein_interpretation import ProteinInterpretation
 from .protein_relatedness import ProteinRelatedness
 from .read_support import ReadSupportMetrics
+from .rule_evaluation import RuleEvaluation
 
 
 @dataclass(slots=True)
@@ -36,5 +37,6 @@ class ContigAnalysis:
     convergences: tuple[EvidenceConvergence, ...] = ()
     findings: tuple[BiologicalFinding, ...] = ()
     hypotheses: tuple[BiologicalHypothesis, ...] = ()
+    rule_evaluations: tuple[RuleEvaluation, ...] = ()
     depth_profile: dict[int, int] = field(default_factory=dict)
     recommendation_reason: str | None = None

@@ -30,9 +30,8 @@ def write_gene_json_reports(
             "biological_findings": [
                 finding.to_dict() for finding in g.findings
             ],
-            "biological_hypotheses": [
-                hypothesis.to_dict() for hypothesis in g.hypotheses
-            ],
+            "biological_hypotheses": [hypothesis.to_dict() for hypothesis in g.hypotheses],
+            "rule_evaluations": [item.to_dict() for item in g.rule_evaluations],
         }
         if recommendations and g.name in recommendations:
             payload["recommendation"] = recommendations[g.name].to_dict()
@@ -88,10 +87,8 @@ def write_gene_json_reports(
                     "biological_findings": [
                         finding.to_dict() for finding in c.analysis.findings
                     ],
-                    "biological_hypotheses": [
-                        hypothesis.to_dict()
-                        for hypothesis in c.analysis.hypotheses
-                    ],
+                    "biological_hypotheses": [hypothesis.to_dict() for hypothesis in c.analysis.hypotheses],
+                    "rule_evaluations": [item.to_dict() for item in c.analysis.rule_evaluations],
                     "evidence_convergence": [
                         convergence.to_dict()
                         for convergence in c.analysis.convergences

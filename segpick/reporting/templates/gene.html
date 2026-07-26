@@ -642,6 +642,11 @@
       color: #64748b;
       font-size: 0.9rem;
     }
+
+    .rule-explorer table { width:100%; border-collapse:collapse; }
+    .rule-explorer th,.rule-explorer td { padding:.55rem; border-bottom:1px solid #e2e8f0; text-align:left; vertical-align:top; }
+    .rule-status { font-weight:750; } .rule-status.triggered { color:#166534; } .rule-status.not-triggered { color:#64748b; }
+    .condition-ok { color:#166534; } .condition-missing { color:#991b1b; }
   </style>
 </head>
 <body>
@@ -698,6 +703,39 @@
       <p><strong>No rule-based biological hypotheses were generated.</strong></p>
       <p class="muted">No current hypothesis rule matched the available observations and findings.</p>
     {% endif %}
+  </section>
+
+  <section class="card rule-explorer">
+    <h2>Rule explorer</h2>
+    <p class="muted">Diagnostic evaluation of every active gene-level rule. Rules that did not trigger show their missing required conditions.</p>
+    {% if view.rule_evaluations %}
+      {% for rule in view.rule_evaluations %}
+      <details class="hypothesis-item">
+        <summary>
+          <span class="hypothesis-title">{{ rule.title }}</span>
+          <span class="rule-status {% if rule.triggered %}triggered{% else %}not-triggered{% endif %}">{% if rule.triggered %}Triggered{% else %}Not triggered{% endif %}</span>
+          <span class="hypothesis-scope muted">{{ rule.scope|title }}</span>
+        </summary>
+        <div class="hypothesis-detail">
+          {% if rule.rule_description %}<p>{{ rule.rule_description }}</p>{% endif %}
+          <div class="hypothesis-trace">
+            <div><h4>Required</h4><ul>
+              {% for item in rule.matched_required %}<li class="condition-ok">✓ {{ item }}</li>{% endfor %}
+              {% for item in rule.missing_required %}<li class="condition-missing">✕ {{ item }}</li>{% endfor %}
+            </ul></div>
+            <div><h4>Supporting</h4><ul>
+              {% for item in rule.matched_supporting %}<li class="condition-ok">✓ {{ item }}</li>{% endfor %}
+              {% for item in rule.missing_supporting %}<li class="muted">○ {{ item }}</li>{% endfor %}
+            </ul></div>
+            <div><h4>Conflicting matches</h4>
+              {% if rule.matched_conflicting %}<ul>{% for item in rule.matched_conflicting %}<li class="condition-missing">⚠ {{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">None.</p>{% endif %}
+            </div>
+          </div>
+          <p class="hypothesis-meta">Rule: {{ rule.rule_id }} · Source: {{ rule.rule_source }}{% if rule.confidence %} · Resulting confidence: {{ rule.confidence|upper }}{% endif %}</p>
+        </div>
+      </details>
+      {% endfor %}
+    {% else %}<p class="muted">No gene-level rules were loaded.</p>{% endif %}
   </section>
 
     {% if view.recommendation is not none %}

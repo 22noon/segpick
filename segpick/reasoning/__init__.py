@@ -1,7 +1,7 @@
 """Rule-based biological reasoning."""
 
 from .builtin_rules import CANDIDATE_RULES, GENE_RULES
-from .engine import evaluate_rules
+from .engine import evaluate_rule_set, evaluate_rules
 from .loader import (
     load_active_rules,
     load_rule_file,
@@ -16,6 +16,7 @@ __all__ = [
     "HypothesisRule",
     "RuleCondition",
     "evaluate_rules",
+    "evaluate_rule_set",
     "load_active_rules",
     "load_rule_file",
     "merge_rules",

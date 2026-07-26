@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from segpick.models import BiologicalFinding, BiologicalHypothesis, EvidenceObservation
+from segpick.models import BiologicalFinding, BiologicalHypothesis, EvidenceObservation, RuleEvaluation
 
 from .rules import HypothesisRule, RuleCondition
 
@@ -76,3 +76,30 @@ def evaluate_rules(
             )
         )
     return tuple(hypotheses)
+
+
+def evaluate_rule_set(
+    rules: tuple[HypothesisRule, ...],
+    observations: tuple[EvidenceObservation, ...],
+    findings: tuple[BiologicalFinding, ...],
+) -> tuple[RuleEvaluation, ...]:
+    evaluations = []
+    for rule in rules:
+        matched_required = _matched(rule.requires, observations, findings)
+        missing_required = tuple(c.label for c in rule.requires if c.label not in matched_required)
+        matched_supporting = _matched(rule.supports, observations, findings)
+        missing_supporting = tuple(c.label for c in rule.supports if c.label not in matched_supporting)
+        matched_conflicting = _matched(rule.conflicts, observations, findings)
+        triggered = not missing_required
+        confidence = None
+        if triggered:
+            confidence = _adjust_confidence(rule.base_confidence, len(matched_supporting), len(matched_conflicting))
+        evaluations.append(RuleEvaluation(
+            rule_id=rule.rule_id, title=rule.title, scope=rule.scope, triggered=triggered,
+            confidence=confidence, severity=rule.severity, rule_source=rule.source,
+            rule_description=rule.description, rule_references=rule.references,
+            matched_required=matched_required, missing_required=missing_required,
+            matched_supporting=matched_supporting, missing_supporting=missing_supporting,
+            matched_conflicting=matched_conflicting,
+        ))
+    return tuple(evaluations)
