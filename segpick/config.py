@@ -21,6 +21,16 @@ class ReadSupportConfig:
     minimum_terminal_bases: int = 50
     strict: bool = False
 
+
+
+@dataclass(frozen=True, slots=True)
+class ReferenceDotplotConfig:
+    enabled: bool = False
+    task: str = "megablast"
+    evalue: float = 1e-5
+    word_size: int | None = None
+    force: bool = False
+
 @dataclass(slots=True)
 class RunConfig:
     hits: Path | None = None
@@ -39,6 +49,9 @@ class RunConfig:
     scoring_weights: ScoringWeights = field(default_factory=ScoringWeights)
     read_support: ReadSupportConfig = field(
         default_factory=ReadSupportConfig
+    )
+    reference_dotplots: ReferenceDotplotConfig = field(
+        default_factory=ReferenceDotplotConfig
     )
     def to_dict(self) -> dict[str, Any]:
         """Return a YAML/JSON-safe representation of the resolved config."""
@@ -71,6 +84,7 @@ def _flatten_yaml(data: dict[str, Any]) -> dict[str, Any]:
     alignment_cfg = data.get("alignment", {}) or {}
     dashboard_cfg = data.get("dashboard", {}) or {}
     reasoning_cfg = data.get("reasoning", {}) or {}
+    reference_dotplot_cfg = data.get("reference_dotplots", {}) or {}
 
     result["hits"] = input_cfg.get("hits", data.get("hits"))
     result["contigs"] = input_cfg.get("contigs", data.get("contigs"))
@@ -85,6 +99,8 @@ def _flatten_yaml(data: dict[str, Any]) -> dict[str, Any]:
     result["use_existing_paf"] = alignment_cfg.get("use_existing_paf", data.get("use_existing_paf"))
     result["preset"] = alignment_cfg.get("preset", data.get("preset"))
     result["html"] = dashboard_cfg.get("html", data.get("html"))
+    if reference_dotplot_cfg:
+        result["reference_dotplots"] = reference_dotplot_cfg
     return {key: value for key, value in result.items() if value is not None}
 
 
@@ -124,6 +140,19 @@ def resolve_config(
             read_data.get("minimum_terminal_bases", 50)
         ),
         strict=bool(read_data.get("strict", False)),
+    )
+
+    dotplot_data = yaml_values.get("reference_dotplots", {}) or {}
+    reference_dotplots = ReferenceDotplotConfig(
+        enabled=bool(dotplot_data.get("enabled", False)),
+        task=str(dotplot_data.get("task", "megablast")),
+        evalue=float(dotplot_data.get("evalue", 1e-5)),
+        word_size=(
+            int(dotplot_data["word_size"])
+            if dotplot_data.get("word_size") is not None
+            else None
+        ),
+        force=bool(dotplot_data.get("force", False)),
     )
 
     merged = DEFAULTS.to_dict()
@@ -177,7 +206,7 @@ def resolve_config(
         key: value
         for key, value in yaml_values.items()
         if value is not None
-        and key not in {"scoring", "read_support"}
+        and key not in {"scoring", "read_support", "reference_dotplots"}
     }
 
     merged.update(yaml_flat)
@@ -219,7 +248,36 @@ def resolve_config(
         ),
     )
 
+    reference_dotplots = ReferenceDotplotConfig(
+        enabled=(
+            bool(cli_values["reference_dotplots_enabled"])
+            if cli_values.get("reference_dotplots_enabled") is not None
+            else reference_dotplots.enabled
+        ),
+        task=(
+            str(cli_values["reference_dotplot_task"])
+            if cli_values.get("reference_dotplot_task") is not None
+            else reference_dotplots.task
+        ),
+        evalue=(
+            float(cli_values["reference_dotplot_evalue"])
+            if cli_values.get("reference_dotplot_evalue") is not None
+            else reference_dotplots.evalue
+        ),
+        word_size=(
+            int(cli_values["reference_dotplot_word_size"])
+            if cli_values.get("reference_dotplot_word_size") is not None
+            else reference_dotplots.word_size
+        ),
+        force=(
+            bool(cli_values["force_reference_dotplots"])
+            if cli_values.get("force_reference_dotplots") is not None
+            else reference_dotplots.force
+        ),
+    )
+
     merged["read_support"] = read_support
+    merged["reference_dotplots"] = reference_dotplots
     cli_clean = {key: value for key, value in cli_values.items() if value is not None}
     if "rule_files" in cli_clean:
         cli_clean["rule_files"] = tuple(Path(path) for path in cli_clean["rule_files"])
@@ -231,6 +289,11 @@ def resolve_config(
         "terminal_fraction",
         "minimum_terminal_bases",
         "strict_depth",
+        "reference_dotplots_enabled",
+        "reference_dotplot_task",
+        "reference_dotplot_evalue",
+        "reference_dotplot_word_size",
+        "force_reference_dotplots",
     ):
         merged.pop(key, None)
 

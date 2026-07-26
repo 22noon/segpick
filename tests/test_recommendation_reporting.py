@@ -300,3 +300,14 @@ def test_dashboard_shows_empty_hypothesis_state(tmp_path) -> None:
     assert "Biological interpretation" in html
     assert "No rule-based biological hypotheses were generated." in html
     assert "No current hypothesis rule matched" in html
+
+
+def test_gene_template_contains_reference_dotplot_panel():
+    from pathlib import Path
+    from segpick.reporting import html_report
+
+    template = Path(html_report.__file__).resolve().parent / "templates" / "gene.html"
+    content = template.read_text()
+    assert "Candidate versus closest nucleotide reference" in content
+    assert "reference_dotplots_json" in content
+    assert "updateReferenceDotplot" in content

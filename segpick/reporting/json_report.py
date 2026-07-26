@@ -69,6 +69,11 @@ def write_gene_json_reports(
                         else None
                     ),
                     "containment": c.analysis.containment.to_dict(),
+                    "reference_dotplot": (
+                        c.analysis.reference_dotplot.to_dict()
+                        if c.analysis.reference_dotplot is not None
+                        else None
+                    ),
                     "orf": (
                         c.analysis.orf.to_dict()
                         if c.analysis.orf is not None

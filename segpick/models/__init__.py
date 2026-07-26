@@ -19,6 +19,7 @@ from .protein_interpretation import ProteinInterpretation
 from .protein_continuity import ProteinContinuity
 from .protein_relatedness import ProteinRelatedness
 from .reference import ReferenceSequence
+from .reference_dotplot import BlastNHSP, ReferenceDotplot
 from .rule_evaluation import RuleEvaluation
 from .sample import Sample
 from .read_support import ReadSupportMetrics
@@ -30,6 +31,8 @@ __all__ = [
     "BiologicalHypothesis",
     "CandidateContig",
     "ReferenceSequence",
+    "BlastNHSP",
+    "ReferenceDotplot",
     "RuleEvaluation",
     "ContigMetadata",
     "AnalysisManifest",

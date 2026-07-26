@@ -654,7 +654,28 @@
     .rule-explorer th,.rule-explorer td { padding:.55rem; border-bottom:1px solid #e2e8f0; text-align:left; vertical-align:top; }
     .rule-status { font-weight:750; } .rule-status.triggered { color:#166534; } .rule-status.not-triggered { color:#64748b; }
     .condition-ok { color:#166534; } .condition-missing { color:#991b1b; }
-  </style>
+  
+    .reference-dotplot-panel { min-height: 620px; }
+    .reference-dotplot-placeholder {
+      border: 1px dashed #cbd5e1;
+      border-radius: 10px;
+      padding: 2rem;
+      text-align: center;
+      color: #64748b;
+      background: #f8fafc;
+    }
+    .reference-dotplot-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .6rem 1.25rem;
+      margin: .8rem 0 1rem;
+      color: #475569;
+      font-size: .92rem;
+    }
+    .reference-dotplot-summary strong { color: #0f172a; }
+    #reference-dotplot { width: 100%; min-height: 560px; }
+
+</style>
 </head>
 <body>
 <main>
@@ -979,6 +1000,21 @@
 
   <section class="card">{{ dotplot|safe }}</section>
   <section class="card">{{ containment|safe }}</section>
+
+  <section class="card reference-dotplot-panel">
+    <h2>Candidate versus closest nucleotide reference</h2>
+    <p class="muted">MegaBLAST alignment blocks are drawn as diagonal segments. Upward slopes indicate forward orientation; downward slopes indicate reverse-complement alignment.</p>
+    <div id="reference-dotplot-placeholder" class="reference-dotplot-placeholder">
+      Select a candidate to view its structural alignment to the closest nucleotide reference.
+    </div>
+    <div id="reference-dotplot-unavailable" class="reference-dotplot-placeholder" hidden>
+      No nucleotide-reference dot plot is available for this candidate.
+    </div>
+    <div id="reference-dotplot-content" hidden>
+      <div id="reference-dotplot-summary" class="reference-dotplot-summary"></div>
+      <div id="reference-dotplot"></div>
+    </div>
+  </section>
 
 
   {% if view.protein_coordinates %}
@@ -1401,6 +1437,55 @@ window.addEventListener("load",()=>{
 function sortTable(col){const table=document.getElementById("evidence-table"),tbody=table.tBodies[0],rows=[...tbody.rows],asc=table.dataset.sortCol!=col||table.dataset.sortDir!="asc";rows.sort((a,b)=>{const av=a.cells[col].innerText.trim().replace("%",""),bv=b.cells[col].innerText.trim().replace("%","");const an=Number(av),bn=Number(bv),cmp=(!Number.isNaN(an)&&!Number.isNaN(bn))?an-bn:av.localeCompare(bv);return asc?cmp:-cmp;});rows.forEach(r=>tbody.appendChild(r));table.dataset.sortCol=col;table.dataset.sortDir=asc?"asc":"desc";}
 
 
+const ReferenceDotplots = {{ reference_dotplots_json|safe }};
+
+function formatPercent(value) {
+  return value === null || value === undefined ? "—" : `${(value * 100).toFixed(1)}%`;
+}
+
+function updateReferenceDotplot(candidateId) {
+  const item = ReferenceDotplots[candidateId];
+  const placeholder = document.getElementById("reference-dotplot-placeholder");
+  const unavailable = document.getElementById("reference-dotplot-unavailable");
+  const content = document.getElementById("reference-dotplot-content");
+  const summary = document.getElementById("reference-dotplot-summary");
+  const plot = document.getElementById("reference-dotplot");
+
+  placeholder.hidden = true;
+  if (!item) {
+    unavailable.hidden = false;
+    content.hidden = true;
+    if (plot && plot.data) Plotly.purge(plot);
+    summary.innerHTML = "";
+    return;
+  }
+
+  unavailable.hidden = false;
+  if (!item.figure || !item.figure.data || item.figure.data.length === 0) {
+    unavailable.textContent = `No MegaBLAST HSPs were detected for ${candidateId} versus ${item.reference_id}.`;
+    content.hidden = true;
+    if (plot && plot.data) Plotly.purge(plot);
+    summary.innerHTML = "";
+    return;
+  }
+
+  unavailable.hidden = true;
+  content.hidden = false;
+  const identity = item.identity_min === null
+    ? "—"
+    : `${item.identity_min.toFixed(1)}–${item.identity_max.toFixed(1)}%`;
+  summary.innerHTML = [
+    `<span><strong>Reference:</strong> ${item.reference_id}</span>`,
+    `<span><strong>Blocks:</strong> ${item.block_count}</span>`,
+    `<span><strong>Candidate covered:</strong> ${formatPercent(item.query_coverage)}</span>`,
+    `<span><strong>Reference covered:</strong> ${formatPercent(item.reference_coverage)}</span>`,
+    `<span><strong>Identity:</strong> ${identity}</span>`,
+    `<span><strong>Orientation:</strong> ${item.orientation}</span>`,
+    `<span><strong>Alignment:</strong> ${item.reused_existing ? "cached" : "new"}</span>`
+  ].join("");
+  Plotly.react(plot, item.figure.data, item.figure.layout, {responsive: true, displaylogo: false});
+}
+
 const DashboardState = {
   selectedCandidate: {% if view.recommendation %}{{ view.recommendation.candidate_id|tojson }}{% else %}null{% endif %}
 };
@@ -1419,6 +1504,7 @@ function selectCandidate(candidateId) {
   highlightPlot("dotplot", candidateId);
   highlightPlot("containment-plot", candidateId);
   updateCoveragePanel(candidateId);
+  updateReferenceDotplot(candidateId);
 }
 
 function updateCoveragePanel(candidateId) {

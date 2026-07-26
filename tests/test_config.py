@@ -75,3 +75,30 @@ def test_cli_depth_directory_overrides_yaml() -> None:
 
     assert config.read_support.depth_dir == Path("cli_depth")
     assert config.read_support.minimum_depth == 10
+
+
+def test_reference_dotplot_cli_overrides_yaml():
+    from segpick.config import resolve_config
+
+    config = resolve_config(
+        {
+            "reference_dotplots": {
+                "enabled": False,
+                "task": "blastn",
+                "evalue": 0.01,
+                "word_size": 7,
+            }
+        },
+        {
+            "reference_dotplots_enabled": True,
+            "reference_dotplot_task": "megablast",
+            "reference_dotplot_evalue": 1e-5,
+            "reference_dotplot_word_size": None,
+            "force_reference_dotplots": True,
+        },
+    )
+    assert config.reference_dotplots.enabled is True
+    assert config.reference_dotplots.task == "megablast"
+    assert config.reference_dotplots.evalue == 1e-5
+    assert config.reference_dotplots.word_size == 7
+    assert config.reference_dotplots.force is True

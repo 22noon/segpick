@@ -7,6 +7,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from plotly.io import to_html
+from plotly.utils import PlotlyJSONEncoder
 
 from segpick import __version__
 from segpick.alignment.export import safe_name
@@ -14,7 +15,11 @@ from segpick.analysis import analyse_protein_continuity
 from segpick.models import AnalysisManifest, Gene, Sample
 from segpick.reporting.view_models import build_gene_page_view
 from segpick.scoring import GeneRecommendation
-from segpick.visualization import make_containment_plot, make_dotplot
+from segpick.visualization import (
+    make_containment_plot,
+    make_dotplot,
+    make_reference_dotplot,
+)
 
 
 def _sequence_payload(gene: Gene) -> list[dict[str, object]]:
@@ -145,6 +150,25 @@ def render_gene_page(
         recommendation,
         coverage_plot_paths=relative_coverage_paths,
     )
+    reference_dotplots = {}
+    for candidate in gene.candidates:
+        result = candidate.analysis.reference_dotplot
+        if result is None:
+            continue
+        figure = make_reference_dotplot(result)
+        reference_dotplots[candidate.id] = {
+            "figure": figure.to_plotly_json(),
+            "reference_id": result.reference_id,
+            "block_count": result.block_count,
+            "query_coverage": result.query_coverage,
+            "reference_coverage": result.reference_coverage,
+            "identity_min": result.identity_min,
+            "identity_max": result.identity_max,
+            "orientation": result.orientation,
+            "reused_existing": result.reused_existing,
+            "output_path": result.output_path,
+        }
+
     protein_sequences = {
         candidate.candidate_id: {
             "predicted_header": candidate.orf.predicted_header,
@@ -173,6 +197,9 @@ def render_gene_page(
             sequences=sequences,
             sequences_json=json.dumps(sequences),
             protein_sequences_json=json.dumps(protein_sequences),
+            reference_dotplots_json=json.dumps(
+                reference_dotplots, cls=PlotlyJSONEncoder
+            ),
             package_version=__version__,
         )
     )

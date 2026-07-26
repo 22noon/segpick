@@ -21,6 +21,7 @@ from segpick.analysis.protein_interpretation import attach_protein_interpretatio
 from segpick.analysis.observations import attach_observation_intervals
 from segpick.analysis.findings import attach_biological_findings
 from segpick.analysis.manifest import build_analysis_manifest
+from segpick.analysis.reference_dotplot import attach_reference_dotplots
 from segpick.analysis.hypotheses import attach_biological_hypotheses
 from segpick.config import RunConfig, load_config, resolve_config
 from segpick.reasoning import load_active_rules
@@ -50,13 +51,17 @@ def run_doctor() -> int:
         "Jinja2": importlib.util.find_spec("jinja2") is not None,
         "PyYAML": importlib.util.find_spec("yaml") is not None,
         "minimap2 on PATH": shutil.which("minimap2") is not None,
+        "blastn on PATH": shutil.which("blastn") is not None,
     }
     print(f"SegPick {__version__}")
     print(f"Imported from: {Path(__file__).resolve().parent}")
     print()
     for label, passed in checks.items():
         print(f"[{'OK' if passed else 'MISSING'}] {label}")
-    required = [value for key, value in checks.items() if key != "minimap2 on PATH"]
+    required = [
+        value for key, value in checks.items()
+        if key not in {"minimap2 on PATH", "blastn on PATH"}
+    ]
     return 0 if all(required) else 1
 
 
@@ -135,6 +140,26 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Fail when a candidate depth file is missing",
     )
+    run.add_argument(
+        "--reference-dotplots",
+        dest="reference_dotplots_enabled",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Run BLASTN against each candidate's closest nucleotide reference",
+    )
+    run.add_argument(
+        "--reference-dotplot-task",
+        choices=("megablast", "dc-megablast", "blastn"),
+        default=None,
+    )
+    run.add_argument("--reference-dotplot-evalue", type=float, default=None)
+    run.add_argument("--reference-dotplot-word-size", type=int, default=None)
+    run.add_argument(
+        "--force-reference-dotplots",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Rerun BLASTN even when a non-empty cached TSV exists",
+    )
     _add_run_arguments(run)
     return parser
 
@@ -160,6 +185,11 @@ def _cli_override_values(args: argparse.Namespace) -> dict[str, object]:
         "terminal_fraction",
         "minimum_terminal_bases",
         "strict_depth",
+        "reference_dotplots_enabled",
+        "reference_dotplot_task",
+        "reference_dotplot_evalue",
+        "reference_dotplot_word_size",
+        "force_reference_dotplots",
     )
     return {key: getattr(args, key) for key in keys}
 
@@ -202,6 +232,21 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
 
     outdir = Path(config.outdir)
     analysis_dir = outdir / "analysis"
+
+    if config.reference_dotplots.enabled:
+        attached, attempted = attach_reference_dotplots(
+            sample,
+            analysis_dir / "reference_dotplots",
+            task=config.reference_dotplots.task,
+            evalue=config.reference_dotplots.evalue,
+            word_size=config.reference_dotplots.word_size,
+            force=config.reference_dotplots.force,
+            strict=config.strict,
+        )
+        print(
+            "Reference dot plots: "
+            f"{attached}/{attempted} candidate-reference comparisons attached"
+        )
 
     gene_fastas = export_gene_fastas(sample, outdir / "gene_fastas")
     anchor_fastas = export_anchor_fastas(sample, outdir / "anchors")
@@ -343,7 +388,7 @@ def main() -> None:
         yaml_values = load_config(args.config)
         config = resolve_config(yaml_values, _cli_override_values(args))
         execute_run(config, sys.argv, show_config=args.show_config)
-    except (ValueError, FileNotFoundError) as exc:
+    except (ValueError, FileNotFoundError, RuntimeError) as exc:
         parser.error(str(exc))
 
 

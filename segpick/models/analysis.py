@@ -16,6 +16,7 @@ from .observation import EvidenceObservation
 from .protein_interpretation import ProteinInterpretation
 from .protein_relatedness import ProteinRelatedness
 from .read_support import ReadSupportMetrics
+from .reference_dotplot import ReferenceDotplot
 from .rule_evaluation import RuleEvaluation
 
 
@@ -27,6 +28,7 @@ class ContigAnalysis:
         default_factory=ContainmentMetrics
     )
     read_support: ReadSupportMetrics | None = None
+    reference_dotplot: ReferenceDotplot | None = None
     blastx: BlastXHit | None = None
     blastx_anchored_orf: BlastXAnchoredORF | None = None
     blastx_consistency: BlastXConsistency | None = None

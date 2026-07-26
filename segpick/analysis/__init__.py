@@ -30,3 +30,10 @@ from .hypotheses import (
 )
 
 from .manifest import build_analysis_manifest
+
+from .reference_dotplot import (
+    attach_reference_dotplots,
+    parse_megablast_tsv,
+    reference_dotplot_filename,
+    run_candidate_megablast,
+)
