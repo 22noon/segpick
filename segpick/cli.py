@@ -22,6 +22,7 @@ from segpick.analysis.observations import attach_observation_intervals
 from segpick.analysis.findings import attach_biological_findings
 from segpick.analysis.manifest import build_analysis_manifest
 from segpick.analysis.reference_dotplot import attach_reference_dotplots
+from segpick.analysis.contig_dotplot import attach_contig_dotplots
 from segpick.analysis.hypotheses import attach_biological_hypotheses
 from segpick.config import RunConfig, load_config, resolve_config
 from segpick.reasoning import load_active_rules
@@ -160,6 +161,26 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Rerun BLASTN even when a non-empty cached TSV exists",
     )
+    run.add_argument(
+        "--contig-dotplots",
+        dest="contig_dotplots_enabled",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Run cached MegaBLAST comparisons between candidate contigs",
+    )
+    run.add_argument(
+        "--contig-dotplot-task",
+        choices=("megablast", "dc-megablast", "blastn"),
+        default=None,
+    )
+    run.add_argument("--contig-dotplot-evalue", type=float, default=None)
+    run.add_argument("--contig-dotplot-word-size", type=int, default=None)
+    run.add_argument(
+        "--force-contig-dotplots",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Rerun pairwise BLASTN even when cached results exist",
+    )
     _add_run_arguments(run)
     return parser
 
@@ -190,6 +211,11 @@ def _cli_override_values(args: argparse.Namespace) -> dict[str, object]:
         "reference_dotplot_evalue",
         "reference_dotplot_word_size",
         "force_reference_dotplots",
+        "contig_dotplots_enabled",
+        "contig_dotplot_task",
+        "contig_dotplot_evalue",
+        "contig_dotplot_word_size",
+        "force_contig_dotplots",
     )
     return {key: getattr(args, key) for key in keys}
 
@@ -246,6 +272,20 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
         print(
             "Reference dot plots: "
             f"{attached}/{attempted} candidate-reference comparisons attached"
+        )
+
+    if config.contig_dotplots.enabled:
+        attached, attempted = attach_contig_dotplots(
+            sample,
+            analysis_dir / "contig_dotplots",
+            task=config.contig_dotplots.task,
+            evalue=config.contig_dotplots.evalue,
+            word_size=config.contig_dotplots.word_size,
+            force=config.contig_dotplots.force,
+        )
+        print(
+            "Contig dot plots: "
+            f"{attached}/{attempted} candidate-pair comparisons attached"
         )
 
     gene_fastas = export_gene_fastas(sample, outdir / "gene_fastas")

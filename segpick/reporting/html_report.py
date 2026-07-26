@@ -17,6 +17,7 @@ from segpick.reporting.view_models import build_gene_page_view
 from segpick.scoring import GeneRecommendation
 from segpick.visualization import (
     make_containment_plot,
+    make_contig_dotplot,
     make_dotplot,
     make_reference_dotplot,
 )
@@ -150,6 +151,23 @@ def render_gene_page(
         recommendation,
         coverage_plot_paths=relative_coverage_paths,
     )
+    contig_dotplots = {}
+    for result in gene.contig_dotplots:
+        figure = make_contig_dotplot(result)
+        key = result.pair_key
+        contig_dotplots[key] = {
+            "figure": figure.to_plotly_json(),
+            "query_id": result.query_id,
+            "target_id": result.target_id,
+            "block_count": result.block_count,
+            "query_coverage": result.query_coverage,
+            "target_coverage": result.target_coverage,
+            "identity_min": result.identity_min,
+            "identity_max": result.identity_max,
+            "orientation": result.orientation,
+            "reused_existing": result.reused_existing,
+        }
+
     reference_dotplots = {}
     for candidate in gene.candidates:
         result = candidate.analysis.reference_dotplot
@@ -199,6 +217,9 @@ def render_gene_page(
             protein_sequences_json=json.dumps(protein_sequences),
             reference_dotplots_json=json.dumps(
                 reference_dotplots, cls=PlotlyJSONEncoder
+            ),
+            contig_dotplots_json=json.dumps(
+                contig_dotplots, cls=PlotlyJSONEncoder
             ),
             package_version=__version__,
         )

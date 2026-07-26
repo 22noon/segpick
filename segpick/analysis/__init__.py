@@ -37,3 +37,11 @@ from .reference_dotplot import (
     reference_dotplot_filename,
     run_candidate_megablast,
 )
+
+from .contig_dotplot import (
+    attach_contig_dotplots,
+    canonical_contig_pair,
+    contig_dotplot_filename,
+    parse_contig_megablast_tsv,
+    run_contig_pair_megablast,
+)

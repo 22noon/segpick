@@ -6,6 +6,7 @@ from .blastx_consistency import BlastXConsistency
 from .containment import ContainmentMetrics
 from .convergence import EvidenceConvergence
 from .contig import CandidateContig
+from .contig_dotplot import ContigDotplot
 from .gene import Gene
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
@@ -30,6 +31,7 @@ __all__ = [
     "BiologicalFinding",
     "BiologicalHypothesis",
     "CandidateContig",
+    "ContigDotplot",
     "ReferenceSequence",
     "BlastNHSP",
     "ReferenceDotplot",

@@ -674,6 +674,9 @@
     }
     .reference-dotplot-summary strong { color: #0f172a; }
     #reference-dotplot { width: 100%; min-height: 560px; }
+    #contig-dotplot { width: 100%; min-height: 560px; }
+    .contig-dotplot-controls { display:flex; gap:.75rem; align-items:center; flex-wrap:wrap; margin:.75rem 0 1rem; }
+    .contig-dotplot-controls select { min-width:240px; padding:.45rem .6rem; border:1px solid #cbd5e1; border-radius:.45rem; background:white; }
 
 </style>
 </head>
@@ -998,8 +1001,33 @@
 </section>
 {% endif %}
 
-  <section class="card">{{ dotplot|safe }}</section>
-  <section class="card">{{ containment|safe }}</section>
+  <section class="card reference-dotplot-panel">
+    <h2>Candidate-to-candidate structural comparison</h2>
+    <p class="muted">MegaBLAST HSPs provide a granular view of containment, terminal differences, internal gaps, inversions and alternative assembly structure. The selected candidate is compared with another candidate from the same gene.</p>
+    <div class="contig-dotplot-controls">
+      <label for="contig-dotplot-target"><strong>Compare selected candidate with</strong></label>
+      <select id="contig-dotplot-target" disabled>
+        <option value="">Select a candidate first</option>
+      </select>
+    </div>
+    <div id="contig-dotplot-placeholder" class="reference-dotplot-placeholder">
+      Select a candidate and comparison target to view their pairwise structural alignment.
+    </div>
+    <div id="contig-dotplot-unavailable" class="reference-dotplot-placeholder" hidden>
+      No candidate-to-candidate dot plot is available for this pair.
+    </div>
+    <div id="contig-dotplot-content" hidden>
+      <div id="contig-dotplot-summary" class="reference-dotplot-summary"></div>
+      <div id="contig-dotplot"></div>
+    </div>
+  </section>
+
+  <details class="card">
+    <summary><strong>Legacy PAF containment views</strong></summary>
+    <p class="muted">Minimap2-based overview retained for compatibility and compact containment inspection.</p>
+    <div>{{ dotplot|safe }}</div>
+    <div>{{ containment|safe }}</div>
+  </details>
 
   <section class="card reference-dotplot-panel">
     <h2>Candidate versus closest nucleotide reference</h2>
@@ -1433,9 +1461,97 @@ window.addEventListener("load",()=>{
   document.querySelectorAll("[data-protein-action]").forEach((button)=>{
     button.addEventListener("click",()=>handleProteinAction(button));
   });
+  const contigTarget = document.getElementById("contig-dotplot-target");
+  if (contigTarget) {
+    contigTarget.addEventListener("change", () =>
+      updateContigDotplot(DashboardState.selectedCandidate, contigTarget.value)
+    );
+  }
 });
 function sortTable(col){const table=document.getElementById("evidence-table"),tbody=table.tBodies[0],rows=[...tbody.rows],asc=table.dataset.sortCol!=col||table.dataset.sortDir!="asc";rows.sort((a,b)=>{const av=a.cells[col].innerText.trim().replace("%",""),bv=b.cells[col].innerText.trim().replace("%","");const an=Number(av),bn=Number(bv),cmp=(!Number.isNaN(an)&&!Number.isNaN(bn))?an-bn:av.localeCompare(bv);return asc?cmp:-cmp;});rows.forEach(r=>tbody.appendChild(r));table.dataset.sortCol=col;table.dataset.sortDir=asc?"asc":"desc";}
 
+
+const ContigDotplots = {{ contig_dotplots_json|safe }};
+
+function contigComparisonsFor(candidateId) {
+  return Object.values(ContigDotplots).filter((item) =>
+    item.query_id === candidateId || item.target_id === candidateId
+  );
+}
+
+function updateContigDotplotTargetOptions(candidateId) {
+  const select = document.getElementById("contig-dotplot-target");
+  const comparisons = contigComparisonsFor(candidateId);
+  select.innerHTML = "";
+  if (!candidateId || comparisons.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = comparisons.length === 0 && candidateId
+      ? "No other candidate available"
+      : "Select a candidate first";
+    select.appendChild(option);
+    select.disabled = true;
+    updateContigDotplot(candidateId, null);
+    return;
+  }
+  comparisons.forEach((item) => {
+    const other = item.query_id === candidateId ? item.target_id : item.query_id;
+    const option = document.createElement("option");
+    option.value = other;
+    option.textContent = other;
+    select.appendChild(option);
+  });
+  select.disabled = false;
+  updateContigDotplot(candidateId, select.value);
+}
+
+function updateContigDotplot(candidateId, targetId) {
+  const placeholder = document.getElementById("contig-dotplot-placeholder");
+  const unavailable = document.getElementById("contig-dotplot-unavailable");
+  const content = document.getElementById("contig-dotplot-content");
+  const summary = document.getElementById("contig-dotplot-summary");
+  const plot = document.getElementById("contig-dotplot");
+  placeholder.hidden = Boolean(candidateId && targetId);
+  if (!candidateId || !targetId) {
+    unavailable.hidden = true;
+    content.hidden = true;
+    if (plot && plot.data) Plotly.purge(plot);
+    return;
+  }
+  const item = Object.values(ContigDotplots).find((entry) =>
+    (entry.query_id === candidateId && entry.target_id === targetId) ||
+    (entry.query_id === targetId && entry.target_id === candidateId)
+  );
+  if (!item) {
+    unavailable.hidden = false;
+    unavailable.textContent = `No cached pairwise alignment is available for ${candidateId} and ${targetId}.`;
+    content.hidden = true;
+    if (plot && plot.data) Plotly.purge(plot);
+    return;
+  }
+  if (!item.figure || !item.figure.data || item.figure.data.length === 0) {
+    unavailable.hidden = false;
+    unavailable.textContent = `No MegaBLAST HSPs were detected for ${item.query_id} versus ${item.target_id}.`;
+    content.hidden = true;
+    if (plot && plot.data) Plotly.purge(plot);
+    return;
+  }
+  unavailable.hidden = true;
+  content.hidden = false;
+  const identity = item.identity_min === null
+    ? "—"
+    : `${item.identity_min.toFixed(1)}–${item.identity_max.toFixed(1)}%`;
+  summary.innerHTML = [
+    `<span><strong>Pair:</strong> ${item.query_id} vs ${item.target_id}</span>`,
+    `<span><strong>Blocks:</strong> ${item.block_count}</span>`,
+    `<span><strong>${item.query_id} covered:</strong> ${formatPercent(item.query_coverage)}</span>`,
+    `<span><strong>${item.target_id} covered:</strong> ${formatPercent(item.target_coverage)}</span>`,
+    `<span><strong>Identity:</strong> ${identity}</span>`,
+    `<span><strong>Orientation:</strong> ${item.orientation}</span>`,
+    `<span><strong>Alignment:</strong> ${item.reused_existing ? "cached" : "new"}</span>`
+  ].join("");
+  Plotly.react(plot, item.figure.data, item.figure.layout, {responsive: true, displaylogo: false});
+}
 
 const ReferenceDotplots = {{ reference_dotplots_json|safe }};
 
@@ -1505,6 +1621,7 @@ function selectCandidate(candidateId) {
   highlightPlot("containment-plot", candidateId);
   updateCoveragePanel(candidateId);
   updateReferenceDotplot(candidateId);
+  updateContigDotplotTargetOptions(candidateId);
 }
 
 function updateCoveragePanel(candidateId) {

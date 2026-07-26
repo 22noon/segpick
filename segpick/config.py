@@ -24,6 +24,15 @@ class ReadSupportConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class PairwiseDotplotConfig:
+    enabled: bool = False
+    task: str = "megablast"
+    evalue: float = 1e-5
+    word_size: int | None = None
+    force: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class ReferenceDotplotConfig:
     enabled: bool = False
     task: str = "megablast"
@@ -52,6 +61,9 @@ class RunConfig:
     )
     reference_dotplots: ReferenceDotplotConfig = field(
         default_factory=ReferenceDotplotConfig
+    )
+    contig_dotplots: PairwiseDotplotConfig = field(
+        default_factory=PairwiseDotplotConfig
     )
     def to_dict(self) -> dict[str, Any]:
         """Return a YAML/JSON-safe representation of the resolved config."""
@@ -85,6 +97,7 @@ def _flatten_yaml(data: dict[str, Any]) -> dict[str, Any]:
     dashboard_cfg = data.get("dashboard", {}) or {}
     reasoning_cfg = data.get("reasoning", {}) or {}
     reference_dotplot_cfg = data.get("reference_dotplots", {}) or {}
+    contig_dotplot_cfg = data.get("contig_dotplots", {}) or {}
 
     result["hits"] = input_cfg.get("hits", data.get("hits"))
     result["contigs"] = input_cfg.get("contigs", data.get("contigs"))
@@ -101,6 +114,8 @@ def _flatten_yaml(data: dict[str, Any]) -> dict[str, Any]:
     result["html"] = dashboard_cfg.get("html", data.get("html"))
     if reference_dotplot_cfg:
         result["reference_dotplots"] = reference_dotplot_cfg
+    if contig_dotplot_cfg:
+        result["contig_dotplots"] = contig_dotplot_cfg
     return {key: value for key, value in result.items() if value is not None}
 
 
@@ -155,6 +170,19 @@ def resolve_config(
         force=bool(dotplot_data.get("force", False)),
     )
 
+    contig_dotplot_data = yaml_values.get("contig_dotplots", {}) or {}
+    contig_dotplots = PairwiseDotplotConfig(
+        enabled=bool(contig_dotplot_data.get("enabled", False)),
+        task=str(contig_dotplot_data.get("task", "megablast")),
+        evalue=float(contig_dotplot_data.get("evalue", 1e-5)),
+        word_size=(
+            int(contig_dotplot_data["word_size"])
+            if contig_dotplot_data.get("word_size") is not None
+            else None
+        ),
+        force=bool(contig_dotplot_data.get("force", False)),
+    )
+
     merged = DEFAULTS.to_dict()
 
     # Extract nested scoring configuration separately.
@@ -206,7 +234,7 @@ def resolve_config(
         key: value
         for key, value in yaml_values.items()
         if value is not None
-        and key not in {"scoring", "read_support", "reference_dotplots"}
+        and key not in {"scoring", "read_support", "reference_dotplots", "contig_dotplots"}
     }
 
     merged.update(yaml_flat)
@@ -276,8 +304,37 @@ def resolve_config(
         ),
     )
 
+    contig_dotplots = PairwiseDotplotConfig(
+        enabled=(
+            bool(cli_values["contig_dotplots_enabled"])
+            if cli_values.get("contig_dotplots_enabled") is not None
+            else contig_dotplots.enabled
+        ),
+        task=(
+            str(cli_values["contig_dotplot_task"])
+            if cli_values.get("contig_dotplot_task") is not None
+            else contig_dotplots.task
+        ),
+        evalue=(
+            float(cli_values["contig_dotplot_evalue"])
+            if cli_values.get("contig_dotplot_evalue") is not None
+            else contig_dotplots.evalue
+        ),
+        word_size=(
+            int(cli_values["contig_dotplot_word_size"])
+            if cli_values.get("contig_dotplot_word_size") is not None
+            else contig_dotplots.word_size
+        ),
+        force=(
+            bool(cli_values["force_contig_dotplots"])
+            if cli_values.get("force_contig_dotplots") is not None
+            else contig_dotplots.force
+        ),
+    )
+
     merged["read_support"] = read_support
     merged["reference_dotplots"] = reference_dotplots
+    merged["contig_dotplots"] = contig_dotplots
     cli_clean = {key: value for key, value in cli_values.items() if value is not None}
     if "rule_files" in cli_clean:
         cli_clean["rule_files"] = tuple(Path(path) for path in cli_clean["rule_files"])
@@ -294,6 +351,11 @@ def resolve_config(
         "reference_dotplot_evalue",
         "reference_dotplot_word_size",
         "force_reference_dotplots",
+        "contig_dotplots_enabled",
+        "contig_dotplot_task",
+        "contig_dotplot_evalue",
+        "contig_dotplot_word_size",
+        "force_contig_dotplots",
     ):
         merged.pop(key, None)
 

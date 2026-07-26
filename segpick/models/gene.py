@@ -4,6 +4,7 @@ from Bio.SeqRecord import SeqRecord
 
 from .alignment import Alignment
 from .contig import CandidateContig
+from .contig_dotplot import ContigDotplot
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
 from .reference import ReferenceSequence
@@ -24,6 +25,7 @@ class Gene:
     findings: tuple[BiologicalFinding, ...] = ()
     hypotheses: tuple[BiologicalHypothesis, ...] = ()
     rule_evaluations: tuple[RuleEvaluation, ...] = ()
+    contig_dotplots: tuple[ContigDotplot, ...] = ()
 
     def add_candidate(self, contig: CandidateContig) -> None:
         self.candidates.append(contig)

@@ -102,3 +102,28 @@ def test_reference_dotplot_cli_overrides_yaml():
     assert config.reference_dotplots.evalue == 1e-5
     assert config.reference_dotplots.word_size == 7
     assert config.reference_dotplots.force is True
+
+
+def test_contig_dotplot_cli_overrides_yaml():
+    config = resolve_config(
+        {
+            "contig_dotplots": {
+                "enabled": False,
+                "task": "blastn",
+                "evalue": 0.01,
+                "word_size": 7,
+            }
+        },
+        {
+            "contig_dotplots_enabled": True,
+            "contig_dotplot_task": "megablast",
+            "contig_dotplot_evalue": 1e-5,
+            "contig_dotplot_word_size": None,
+            "force_contig_dotplots": True,
+        },
+    )
+    assert config.contig_dotplots.enabled is True
+    assert config.contig_dotplots.task == "megablast"
+    assert config.contig_dotplots.evalue == 1e-5
+    assert config.contig_dotplots.word_size == 7
+    assert config.contig_dotplots.force is True

@@ -32,6 +32,7 @@ def write_gene_json_reports(
             ],
             "biological_hypotheses": [hypothesis.to_dict() for hypothesis in g.hypotheses],
             "rule_evaluations": [item.to_dict() for item in g.rule_evaluations],
+            "contig_dotplots": [item.to_dict() for item in g.contig_dotplots],
         }
         if recommendations and g.name in recommendations:
             payload["recommendation"] = recommendations[g.name].to_dict()
