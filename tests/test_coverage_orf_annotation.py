@@ -5,6 +5,7 @@ from segpick.models import (
     CandidateContig,
     ContigMetadata,
     Gene,
+    BlastXAnchoredORF,
     ORFHit,
     ORFMetrics,
     Sample,
@@ -40,6 +41,26 @@ def test_coverage_plot_receives_selected_orf_annotation(tmp_path, monkeypatch) -
         orf_count=1,
         complete_orf_count=1,
     )
+    candidate.analysis.blastx_anchored_orf = BlastXAnchoredORF(
+        start=0,
+        end=12,
+        strand="+",
+        frame=0,
+        nucleotide_sequence="ATGAAATTTTAA",
+        protein_sequence="MKF",
+        has_start_codon=True,
+        has_stop_codon=True,
+        reaches_contig_start=True,
+        reaches_contig_end=True,
+        selected_orf_available=True,
+        matches_selected_orf=False,
+        same_strand=False,
+        same_frame=False,
+        same_start=False,
+        same_end=False,
+        n_terminal_difference_aa=1,
+        c_terminal_difference_aa=0,
+    )
     gene = Gene(name="VP2", segment="2", candidates=[candidate])
     sample = Sample(name="sample", genes={"VP2": gene})
     depth_dir = tmp_path / "depth"
@@ -68,3 +89,7 @@ def test_coverage_plot_receives_selected_orf_annotation(tmp_path, monkeypatch) -
     assert captured["orf_end"] == 11
     assert captured["orf_strand"] == "-"
     assert captured["orf_label"] == "Selected ORF (-)"
+    assert captured["anchored_orf_start"] == 1
+    assert captured["anchored_orf_end"] == 12
+    assert captured["anchored_orf_strand"] == "+"
+    assert captured["anchored_orf_label"] == "BLASTX-anchored ORF (+)"

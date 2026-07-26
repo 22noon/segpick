@@ -26,6 +26,10 @@ def write_coverage_plot(
     orf_end: int | None = None,
     orf_strand: str | None = None,
     orf_label: str = "Selected ORF",
+    anchored_orf_start: int | None = None,
+    anchored_orf_end: int | None = None,
+    anchored_orf_strand: str | None = None,
+    anchored_orf_label: str = "BLASTX-anchored ORF",
 ) -> Path:
     """Write a per-base coverage plot and return its output path."""
 
@@ -66,7 +70,7 @@ def write_coverage_plot(
 
     axis.set_xlim(positions_list[0], positions_list[-1])
     axis.set_ylim(bottom=0)
-    axis.set_xlabel("Contig position", labelpad=30)
+    axis.set_xlabel("Contig position", labelpad=48)
     axis.set_ylabel("Read depth")
 
     if title:
@@ -82,11 +86,34 @@ def write_coverage_plot(
         )
         axis.annotate(
             orf_label,
-            xy=(arrow_end, -0.16),
-            xytext=(arrow_start, -0.16),
+            xy=(arrow_end, -0.13),
+            xytext=(arrow_start, -0.13),
             xycoords=("data", "axes fraction"),
             textcoords=("data", "axes fraction"),
-            arrowprops={"arrowstyle": "->", "linewidth": 1.2},
+            arrowprops={"arrowstyle": "->", "linewidth": 1.2, "color": "tab:blue"},
+            color="tab:blue",
+            annotation_clip=False,
+            ha="center",
+            va="center",
+            fontsize=8,
+        )
+
+    if anchored_orf_start is not None and anchored_orf_end is not None:
+        interval_start = min(anchored_orf_start, anchored_orf_end)
+        interval_end = max(anchored_orf_start, anchored_orf_end)
+        arrow_start, arrow_end = (
+            (interval_end, interval_start)
+            if anchored_orf_strand == "-"
+            else (interval_start, interval_end)
+        )
+        axis.annotate(
+            anchored_orf_label,
+            xy=(arrow_end, -0.24),
+            xytext=(arrow_start, -0.24),
+            xycoords=("data", "axes fraction"),
+            textcoords=("data", "axes fraction"),
+            arrowprops={"arrowstyle": "->", "linewidth": 1.2, "color": "tab:red"},
+            color="tab:red",
             annotation_clip=False,
             ha="center",
             va="center",
@@ -96,7 +123,7 @@ def write_coverage_plot(
     axis.spines["top"].set_visible(False)
     axis.spines["right"].set_visible(False)
 
-    figure.tight_layout(rect=(0, 0.18, 1, 1))
+    figure.tight_layout(rect=(0, 0.28, 1, 1))
     figure.savefig(output_path, dpi=160, bbox_inches="tight")
     plt.close(figure)
 
@@ -151,6 +178,7 @@ def write_sample_coverage_plots(
                 if candidate.analysis.orf is not None
                 else None
             )
+            anchored_orf = candidate.analysis.blastx_anchored_orf
             write_coverage_plot(
                 positions,
                 depths,
@@ -161,6 +189,14 @@ def write_sample_coverage_plots(
                 orf_end=selected_orf.end if selected_orf else None,
                 orf_strand=selected_orf.strand if selected_orf else None,
                 orf_label=f"Selected ORF ({selected_orf.strand})" if selected_orf else "Selected ORF",
+                anchored_orf_start=(anchored_orf.start + 1 if anchored_orf else None),
+                anchored_orf_end=(anchored_orf.end if anchored_orf else None),
+                anchored_orf_strand=(anchored_orf.strand if anchored_orf else None),
+                anchored_orf_label=(
+                    f"BLASTX-anchored ORF ({anchored_orf.strand})"
+                    if anchored_orf
+                    else "BLASTX-anchored ORF"
+                ),
             )
             plot_paths[candidate.id] = output_path
 
