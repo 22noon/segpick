@@ -39,6 +39,51 @@
     .progress > span { display:block; height:100%; background:#2563eb; }
     .muted { color:var(--muted); }
     footer { color:var(--muted); font-size:.8rem; margin-top:1rem; }
+
+    .convergence-panel {
+      margin-top: 1rem;
+      padding: 0.9rem;
+      border: 1px solid #f59e0b;
+      border-radius: 10px;
+      background: #fffbeb;
+    }
+
+    .convergence-panel.convergence-strong {
+      border-color: #dc2626;
+      background: #fef2f2;
+    }
+
+    .convergence-item + .convergence-item {
+      margin-top: 0.8rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid #fed7aa;
+    }
+
+    .convergence-meta {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin: 0.4rem 0;
+    }
+
+    .convergence-chip {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      background: #fff7ed;
+      color: #9a3412;
+      font-size: 0.78rem;
+      font-weight: 650;
+    }
+
+    .convergence-actions a {
+      display: inline-block;
+      margin-right: 0.75rem;
+      color: #2563eb;
+      font-weight: 650;
+      text-decoration: none;
+    }
+
     @media(max-width:800px){ .recommend{grid-template-columns:1fr;} }
     .recommendation-card {
         border-left: 6px solid #2563eb;
@@ -611,6 +656,22 @@
         </div>
       {% endif %}
 
+
+      {% if view.recommendation.convergence_evidence %}
+        <div class="reasoning-panel convergence-panel{% if view.recommendation.convergence_review_required %} convergence-strong{% endif %}">
+          <h3>Local evidence convergence</h3>
+          <ul class="traffic-list">
+            {% for message in view.recommendation.convergence_evidence %}
+              <li class="{% if view.recommendation.convergence_review_required %}traffic-danger{% else %}traffic-warning{% endif %}">
+                <span class="traffic-icon">{% if view.recommendation.convergence_review_required %}✕{% else %}⚠{% endif %}</span>
+                <span>{{ message }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+          <p class="muted">Moderate convergence is shown for inspection. Strong or very strong convergence triggers manual review.</p>
+        </div>
+      {% endif %}
+
       {% if view.recommendation.manual_review %}
         <div class="manual-review-status manual-review-required">
           Manual review recommended.
@@ -891,6 +952,37 @@
       >
         <h3>{{ candidate.candidate_id }}</h3>
 
+
+        {% if candidate.convergences %}
+          <div class="convergence-panel{% if candidate.convergence_review_required %} convergence-strong{% endif %}">
+            <h4>Evidence convergence</h4>
+            {% for convergence in candidate.convergences %}
+              <div class="convergence-item">
+                <p><strong>AA {{ convergence.start }}–{{ convergence.end }} · {{ convergence.strength|replace('_', ' ')|title }}</strong></p>
+                <p>{{ convergence.summary }}</p>
+                <div class="convergence-meta">
+                  {% for source in convergence.sources %}
+                    <span class="convergence-chip">{{ source|replace('_', ' ')|title }}</span>
+                  {% endfor %}
+                </div>
+                <ul>
+                  {% for description in convergence.descriptions %}
+                    <li>{{ description }}</li>
+                  {% endfor %}
+                </ul>
+                <div class="convergence-actions">
+                  {% if candidate.orf.alignment_text %}
+                    <a href="#protein-alignment-{{ candidate.candidate_id|replace('|', '_')|replace('.', '_') }}">Inspect protein alignment</a>
+                  {% endif %}
+                  {% if candidate.coverage_plot %}
+                    <a href="#coverage-panel" onclick="selectCandidate('{{ candidate.candidate_id }}')">Inspect read coverage</a>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
         {% if not candidate.orf.available %}
           <p class="unavailable">No ORF evidence is available.</p>
         {% else %}
@@ -942,7 +1034,7 @@
           {% endif %}
 
           {% if candidate.orf.alignment_text %}
-            <details class="alignment-viewer">
+            <details id="protein-alignment-{{ candidate.candidate_id|replace('|', '_')|replace('.', '_') }}" class="alignment-viewer">
               <summary>Show protein alignment</summary>
               <p class="muted">| identical residue · . substitution · blank gap</p>
               <pre class="protein-alignment">{{ candidate.orf.alignment_text }}</pre>
@@ -973,7 +1065,7 @@
     {% endfor %}
   </section>
 
-  <section class="card coverage-panel">
+  <section id="coverage-panel" class="card coverage-panel">
     <h2>Read coverage</h2>
 
     <div id="coverage-placeholder" class="coverage-placeholder">

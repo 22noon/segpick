@@ -7,7 +7,7 @@ from .agreement import EvidenceAgreement
 from .recommendation import CandidateRecommendation
 
 if TYPE_CHECKING:
-    from segpick.models import ProteinContinuity
+    from segpick.models import EvidenceConvergence, ProteinContinuity
 
 
 CHANNEL_LABELS = {
@@ -58,6 +58,8 @@ class RecommendationReport:
     manual_review: bool
     assembly_review_required: bool
     assembly_level_evidence: tuple[str, ...]
+    convergence_review_required: bool
+    convergence_evidence: tuple[str, ...]
     summary: str
 
     def to_dict(self) -> dict[str, object]:
@@ -70,6 +72,8 @@ class RecommendationReport:
             "manual_review": self.manual_review,
             "assembly_review_required": self.assembly_review_required,
             "assembly_level_evidence": list(self.assembly_level_evidence),
+            "convergence_review_required": self.convergence_review_required,
+            "convergence_evidence": list(self.convergence_evidence),
             "summary": self.summary,
         }
 
@@ -78,6 +82,7 @@ def build_recommendation_report(
     recommended_candidate: str,
     agreement: EvidenceAgreement,
     protein_continuity: "ProteinContinuity | None" = None,
+    convergences: "tuple[EvidenceConvergence, ...]" = (),
 ) -> RecommendationReport:
     """Convert evidence agreement into an initial explanation report."""
 
@@ -120,12 +125,23 @@ def build_recommendation_report(
                 "review for redundant or alternative assemblies."
             )
 
+    convergence_evidence = tuple(convergence.summary for convergence in convergences)
+    convergence_review_required = any(
+        convergence.strength in {"strong", "very_strong"}
+        for convergence in convergences
+    )
+
     manual_review = (
         bool(agreement.strong_conflicts)
         or agreement.confidence == "low"
         or assembly_review_required
+        or convergence_review_required
     )
-    confidence = "low" if assembly_review_required else agreement.confidence
+    confidence = (
+        "low"
+        if assembly_review_required or convergence_review_required
+        else agreement.confidence
+    )
 
     if protein_continuity is not None and protein_continuity.classification == "complementary_fragments":
         summary = (
@@ -136,6 +152,11 @@ def build_recommendation_report(
         summary = (
             f"{recommended_candidate} is the best available candidate, but the candidate "
             "set does not recover the complete expected protein; manual review is required."
+        )
+    elif convergence_review_required:
+        summary = (
+            f"{recommended_candidate} is the weighted recommendation, but strong local "
+            "evidence convergence warrants manual review."
         )
     elif manual_review:
         summary = (
@@ -162,6 +183,8 @@ def build_recommendation_report(
         manual_review=manual_review,
         assembly_review_required=assembly_review_required,
         assembly_level_evidence=tuple(assembly_level_evidence),
+        convergence_review_required=convergence_review_required,
+        convergence_evidence=convergence_evidence,
         summary=summary,
     )
 

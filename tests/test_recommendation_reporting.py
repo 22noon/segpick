@@ -6,9 +6,11 @@ from Bio.SeqRecord import SeqRecord
 from segpick.models import (
     BlastXHit,
     CandidateContig,
+    EvidenceConvergence,
     ContainmentMetrics,
     ContigMetadata,
     Gene,
+    ObservationInterval,
     Sample,
 )
 from segpick.reporting import (
@@ -86,6 +88,36 @@ def make_sample() -> tuple[Sample, dict]:
         subject_length=300,
         query_frame=1,
     )
+    protein_observation = ObservationInterval(
+        coordinate_system="reference_protein:ref|VP2|A",
+        start=40,
+        end=43,
+        observation_type="internal_deletion",
+        source="protein_alignment",
+        description="Predicted protein lacks reference residues 40-43.",
+    )
+    coverage_observation = ObservationInterval(
+        coordinate_system="reference_protein:ref|VP2|A",
+        start=39,
+        end=45,
+        observation_type="coverage_drop",
+        source="read_coverage",
+        description="Sustained low read coverage overlaps positions 39-45.",
+    )
+    contig_a.analysis.convergences = (
+        EvidenceConvergence(
+            coordinate_system="reference_protein:ref|VP2|A",
+            start=39,
+            end=45,
+            strength="moderate",
+            sources=("protein_alignment", "read_coverage"),
+            observation_types=("coverage_drop", "internal_deletion"),
+            observations=(protein_observation, coverage_observation),
+            summary="2 independent evidence sources converge on reference-protein positions 39-45.",
+            candidate_id="contig_a",
+        ),
+    )
+
     gene.add_candidate(contig_a)
     gene.add_candidate(contig_b)
 
@@ -172,6 +204,8 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "contig_a ★" in html
     assert "ref|VP2|B" in html
     assert "Assembly-level review" in html
+    assert "Local evidence convergence" in html
+    assert "AA 39–45" in html
 
     assert "selectCandidate" in html
     assert "DashboardState" in html

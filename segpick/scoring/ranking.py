@@ -64,6 +64,11 @@ def rank_gene(
         ranked[0].candidate_id,
     )
     protein_continuity = analyse_protein_continuity(gene)
+    selected_candidate = next(
+        candidate
+        for candidate in gene.candidates
+        if candidate.id == ranked[0].candidate_id
+    )
 
     return GeneRecommendation(
         gene=gene.name,
@@ -74,6 +79,7 @@ def rank_gene(
             ranked[0].candidate_id,
             agreement,
             protein_continuity,
+            selected_candidate.analysis.convergences,
         ),
         comparisons=build_candidate_comparisons(ranked),
     )

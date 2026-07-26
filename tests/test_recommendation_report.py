@@ -125,3 +125,78 @@ def test_report_notes_redundant_overlap_without_forcing_review():
     assert report.manual_review is False
     assert report.assembly_review_required is False
     assert "overlapping protein regions" in report.assembly_level_evidence[0]
+
+
+def _convergence(strength: str):
+    from segpick.models import EvidenceConvergence, ObservationInterval
+
+    protein = ObservationInterval(
+        coordinate_system="reference_protein:ref1",
+        start=214,
+        end=217,
+        observation_type="internal_deletion",
+        source="protein_alignment",
+        description="Internal deletion at AA 214-217.",
+    )
+    coverage = ObservationInterval(
+        coordinate_system="reference_protein:ref1",
+        start=213,
+        end=221,
+        observation_type="coverage_drop",
+        source="read_coverage",
+        description="Sustained coverage drop at AA 213-221.",
+    )
+    return EvidenceConvergence(
+        coordinate_system="reference_protein:ref1",
+        start=213,
+        end=221,
+        strength=strength,
+        sources=("protein_alignment", "read_coverage"),
+        observation_types=("coverage_drop", "internal_deletion"),
+        observations=(protein, coverage),
+        summary="2 independent evidence sources converge on reference-protein positions 213-221.",
+        candidate_id="contig_a",
+    )
+
+
+def test_moderate_convergence_is_reported_without_forcing_review():
+    agreement = EvidenceAgreement(
+        channel_winners={"protein_confidence": ("contig_a",)},
+        supporting_channels=("protein_confidence",),
+        disagreeing_channels=(),
+        strong_conflicts=(),
+        agreement_fraction=1.0,
+        confidence="high",
+    )
+
+    report = build_recommendation_report(
+        "contig_a",
+        agreement,
+        convergences=(_convergence("moderate"),),
+    )
+
+    assert report.manual_review is False
+    assert report.convergence_review_required is False
+    assert "positions 213-221" in report.convergence_evidence[0]
+
+
+def test_strong_convergence_requires_manual_review():
+    agreement = EvidenceAgreement(
+        channel_winners={"protein_confidence": ("contig_a",)},
+        supporting_channels=("protein_confidence",),
+        disagreeing_channels=(),
+        strong_conflicts=(),
+        agreement_fraction=1.0,
+        confidence="high",
+    )
+
+    report = build_recommendation_report(
+        "contig_a",
+        agreement,
+        convergences=(_convergence("strong"),),
+    )
+
+    assert report.manual_review is True
+    assert report.convergence_review_required is True
+    assert report.confidence == "low"
+    assert "strong local evidence convergence" in report.summary

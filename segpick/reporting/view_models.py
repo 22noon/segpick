@@ -99,6 +99,18 @@ class ProteinContinuityView:
     findings: tuple[str, ...]
 
 
+
+
+@dataclass(frozen=True, slots=True)
+class ConvergenceView:
+    start: int
+    end: int
+    strength: str
+    sources: tuple[str, ...]
+    observation_types: tuple[str, ...]
+    descriptions: tuple[str, ...]
+    summary: str
+
 @dataclass(frozen=True, slots=True)
 class EvidenceView:
     name: str
@@ -126,6 +138,8 @@ class RecommendationView:
     manual_review: bool
     assembly_review_required: bool
     assembly_level_evidence: tuple[str, ...]
+    convergence_review_required: bool
+    convergence_evidence: tuple[str, ...]
     summary: str | None
     runner_up_reasons: tuple[str, ...]
     runner_up_advantages: tuple[str, ...]
@@ -149,6 +163,8 @@ class CandidateView:
     read_support: ReadSupportView
     orf: ORFView
     coverage_plot: str | None
+    convergences: tuple[ConvergenceView, ...]
+    convergence_review_required: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -255,6 +271,16 @@ def build_recommendation_view(
             if recommendation.report is not None
             else ()
         ),
+        convergence_review_required=(
+            recommendation.report.convergence_review_required
+            if recommendation.report is not None
+            else False
+        ),
+        convergence_evidence=(
+            recommendation.report.convergence_evidence
+            if recommendation.report is not None
+            else ()
+        ),
         summary=(
             recommendation.report.summary
             if recommendation.report is not None
@@ -309,6 +335,24 @@ def build_gene_page_view(
             read_support=build_read_support_view(candidate),
             orf=build_orf_view(candidate),
             coverage_plot=coverage_plot_paths.get(candidate.id),
+            convergences=tuple(
+                ConvergenceView(
+                    start=item.start,
+                    end=item.end,
+                    strength=item.strength,
+                    sources=item.sources,
+                    observation_types=item.observation_types,
+                    descriptions=tuple(
+                        observation.description for observation in item.observations
+                    ),
+                    summary=item.summary,
+                )
+                for item in candidate.analysis.convergences
+            ),
+            convergence_review_required=any(
+                item.strength in {"strong", "very_strong"}
+                for item in candidate.analysis.convergences
+            ),
         )
         for candidate in gene.candidates
     )
