@@ -1,6 +1,7 @@
 from .alignment import Alignment
 from .analysis import ContigAnalysis
 from .blastx import BlastXHit
+from .blastx_anchored_orf import BlastXAnchoredORF
 from .blastx_consistency import BlastXConsistency
 from .containment import ContainmentMetrics
 from .convergence import EvidenceConvergence
@@ -35,6 +36,7 @@ __all__ = [
     "ContigAnalysis",
     "Alignment",
     "BlastXHit",
+    "BlastXAnchoredORF",
     "BlastXConsistency",
     "EvidenceConvergence",
     "ORFHit",

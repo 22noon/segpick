@@ -129,6 +129,26 @@ class ORFView:
     reference_protein: str | None
     predicted_header: str | None
     reference_header: str | None
+    predicted_coding_sequence: str | None
+    predicted_coding_header: str | None
+    anchored_available: bool
+    anchored_protein: str | None
+    anchored_coding_sequence: str | None
+    anchored_protein_header: str | None
+    anchored_coding_header: str | None
+    anchored_start: int | None
+    anchored_end: int | None
+    anchored_strand: str | None
+    anchored_frame: int | None
+    anchored_protein_length: int | None
+    anchored_complete: bool | None
+    anchored_has_start: bool | None
+    anchored_has_stop: bool | None
+    anchored_matches_selected: bool | None
+    anchored_same_start: bool | None
+    anchored_same_end: bool | None
+    anchored_n_terminal_difference_aa: int | None
+    anchored_c_terminal_difference_aa: int | None
     warnings: tuple[str, ...]
     relatedness: ProteinRelatednessView
 
@@ -614,6 +634,13 @@ def build_protein_relatedness_view(
     )
 
 
+def _orf_nucleotide_sequence(candidate: CandidateContig, orf) -> str:
+    sequence = candidate.record.seq[orf.start:orf.end]
+    if orf.strand == "-":
+        sequence = sequence.reverse_complement()
+    return str(sequence).upper().replace("U", "T")
+
+
 def build_orf_view(candidate: CandidateContig) -> ORFView:
     """Build ORF structural details and conservative review warnings."""
 
@@ -621,6 +648,7 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
     quality = candidate.analysis.orf_quality
     alignment = candidate.analysis.orf_alignment
     interpretation = candidate.analysis.protein_interpretation
+    anchored = candidate.analysis.blastx_anchored_orf
 
     if metrics is None or metrics.best_orf is None:
         return ORFView(
@@ -659,6 +687,26 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
             reference_protein=None,
             predicted_header=None,
             reference_header=None,
+            predicted_coding_sequence=None,
+            predicted_coding_header=None,
+            anchored_available=False,
+            anchored_protein=None,
+            anchored_coding_sequence=None,
+            anchored_protein_header=None,
+            anchored_coding_header=None,
+            anchored_start=None,
+            anchored_end=None,
+            anchored_strand=None,
+            anchored_frame=None,
+            anchored_protein_length=None,
+            anchored_complete=None,
+            anchored_has_start=None,
+            anchored_has_stop=None,
+            anchored_matches_selected=None,
+            anchored_same_start=None,
+            anchored_same_end=None,
+            anchored_n_terminal_difference_aa=None,
+            anchored_c_terminal_difference_aa=None,
             warnings=("No ORF was identified.",),
             relatedness=build_protein_relatedness_view(candidate),
         )
@@ -773,6 +821,47 @@ def build_orf_view(candidate: CandidateContig) -> ORFView:
             if candidate.analysis.blastx is not None
             and candidate.analysis.blastx.subject_protein is not None
             else None
+        ),
+        predicted_coding_sequence=_orf_nucleotide_sequence(candidate, best),
+        predicted_coding_header=(
+            f"{candidate.id}|selected_orf_cds|strand={best.strand}|"
+            f"frame={best.frame}|nt={best.start}-{best.end}|"
+            f"length={best.nucleotide_length}nt"
+        ),
+        anchored_available=anchored is not None,
+        anchored_protein=anchored.protein_sequence if anchored is not None else None,
+        anchored_coding_sequence=(
+            anchored.nucleotide_sequence if anchored is not None else None
+        ),
+        anchored_protein_header=(
+            f"{candidate.id}|blastx_anchored_orf|strand={anchored.strand}|"
+            f"frame={anchored.frame}|nt={anchored.start}-{anchored.end}|"
+            f"start={'present' if anchored.has_start_codon else 'missing'}|"
+            f"stop={'present' if anchored.has_stop_codon else 'missing'}"
+            if anchored is not None else None
+        ),
+        anchored_coding_header=(
+            f"{candidate.id}|blastx_anchored_cds|strand={anchored.strand}|"
+            f"frame={anchored.frame}|nt={anchored.start}-{anchored.end}|"
+            f"length={anchored.nucleotide_length}nt"
+            if anchored is not None else None
+        ),
+        anchored_start=anchored.start if anchored is not None else None,
+        anchored_end=anchored.end if anchored is not None else None,
+        anchored_strand=anchored.strand if anchored is not None else None,
+        anchored_frame=anchored.frame if anchored is not None else None,
+        anchored_protein_length=(anchored.protein_length if anchored is not None else None),
+        anchored_complete=anchored.complete if anchored is not None else None,
+        anchored_has_start=(anchored.has_start_codon if anchored is not None else None),
+        anchored_has_stop=(anchored.has_stop_codon if anchored is not None else None),
+        anchored_matches_selected=(anchored.matches_selected_orf if anchored is not None else None),
+        anchored_same_start=(anchored.same_start if anchored is not None else None),
+        anchored_same_end=(anchored.same_end if anchored is not None else None),
+        anchored_n_terminal_difference_aa=(
+            anchored.n_terminal_difference_aa if anchored is not None else None
+        ),
+        anchored_c_terminal_difference_aa=(
+            anchored.c_terminal_difference_aa if anchored is not None else None
         ),
         warnings=tuple(warnings),
         relatedness=build_protein_relatedness_view(candidate),

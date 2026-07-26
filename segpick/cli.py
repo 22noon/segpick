@@ -11,6 +11,7 @@ from segpick.alignment.export import export_anchor_fastas, export_gene_fastas, s
 from segpick.alignment.minimap import align_gene, attach_existing_paf
 from segpick.analysis.blastx import attach_blastx_hits
 from segpick.analysis.blastx_consistency import attach_blastx_consistency
+from segpick.analysis.blastx_anchored_orf import attach_blastx_anchored_orfs
 from segpick.analysis.containment import analyse_gene
 from segpick.analysis.orf import attach_orf_metrics
 from segpick.analysis.orf_selection import attach_blastx_guided_orf_metrics
@@ -226,6 +227,7 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
 
     attach_orf_metrics(sample)
     attach_blastx_guided_orf_metrics(sample)
+    attach_blastx_anchored_orfs(sample)
     attach_blastx_consistency(sample)
     attach_orf_alignment_metrics(sample)
     attach_protein_interpretations(sample)

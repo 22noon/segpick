@@ -58,6 +58,11 @@ def write_gene_json_reports(
                         if c.analysis.blastx_consistency is not None
                         else None
                     ),
+                    "blastx_anchored_orf": (
+                        c.analysis.blastx_anchored_orf.to_dict()
+                        if c.analysis.blastx_anchored_orf is not None
+                        else None
+                    ),
                     "protein_relatedness": (
                         c.analysis.protein_relatedness.to_dict()
                         if c.analysis.protein_relatedness is not None

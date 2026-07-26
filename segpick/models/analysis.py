@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .blastx import BlastXHit
+from .blastx_anchored_orf import BlastXAnchoredORF
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
 from .blastx_consistency import BlastXConsistency
@@ -27,6 +28,7 @@ class ContigAnalysis:
     )
     read_support: ReadSupportMetrics | None = None
     blastx: BlastXHit | None = None
+    blastx_anchored_orf: BlastXAnchoredORF | None = None
     blastx_consistency: BlastXConsistency | None = None
     orf: ORFMetrics | None = None
     orf_alignment: ORFAlignmentMetrics | None = None

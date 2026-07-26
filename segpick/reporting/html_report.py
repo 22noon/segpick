@@ -151,6 +151,12 @@ def render_gene_page(
             "predicted_sequence": candidate.orf.predicted_protein,
             "reference_header": candidate.orf.reference_header,
             "reference_sequence": candidate.orf.reference_protein,
+            "predicted_coding_header": candidate.orf.predicted_coding_header,
+            "predicted_coding_sequence": candidate.orf.predicted_coding_sequence,
+            "anchored_protein_header": candidate.orf.anchored_protein_header,
+            "anchored_protein_sequence": candidate.orf.anchored_protein,
+            "anchored_coding_header": candidate.orf.anchored_coding_header,
+            "anchored_coding_sequence": candidate.orf.anchored_coding_sequence,
             "alignment": candidate.orf.alignment_text,
         }
         for candidate in view.candidates

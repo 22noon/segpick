@@ -40,6 +40,13 @@
     .muted { color:var(--muted); }
     footer { color:var(--muted); font-size:.8rem; margin-top:1rem; }
 
+    .subcard { margin-top:1rem; padding:.85rem; border:1px solid var(--line); border-radius:10px; background:#f8fafc; }
+    .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:.55rem; margin:.7rem 0; }
+    .metric-grid > div { padding:.55rem; border-radius:8px; background:white; border:1px solid var(--line); }
+    .metric-grid span { display:block; color:var(--muted); font-size:.75rem; }
+    .metric-grid strong { display:block; margin-top:.15rem; }
+    .protein-actions { display:flex; gap:.45rem; flex-wrap:wrap; margin-top:.65rem; }
+
     .convergence-panel {
       margin-top: 1rem;
       padding: 0.9rem;
@@ -1222,20 +1229,58 @@
             {% endif %}
           {% endif %}
 
-          {% if candidate.orf.alignment_text %}
+          {% if candidate.orf.alignment_text or candidate.orf.anchored_available %}
             <details id="protein-alignment-{{ candidate.candidate_id|replace('|', '_')|replace('.', '_') }}" class="alignment-viewer">
               <summary>Show protein alignment</summary>
-              <p class="muted">| identical residue · . substitution · blank gap</p>
-              <pre class="protein-alignment">{{ candidate.orf.alignment_text }}</pre>
+              {% if candidate.orf.alignment_text %}
+                <p class="muted">| identical residue · . substitution · blank gap</p>
+                <pre class="protein-alignment">{{ candidate.orf.alignment_text }}</pre>
+              {% else %}
+                <p class="muted">No pairwise protein alignment is available; sequence export remains available.</p>
+              {% endif %}
               <div class="protein-actions">
                 <button type="button" data-protein-action="copy-predicted" data-candidate-id="{{ candidate.candidate_id }}">Copy predicted protein</button>
-                <button type="button" data-protein-action="download-predicted" data-candidate-id="{{ candidate.candidate_id }}">Download predicted FASTA</button>
+                <button type="button" data-protein-action="download-predicted" data-candidate-id="{{ candidate.candidate_id }}">Download predicted protein</button>
+                <button type="button" data-protein-action="copy-predicted-cds" data-candidate-id="{{ candidate.candidate_id }}">Copy predicted CDS</button>
+                <button type="button" data-protein-action="download-predicted-cds" data-candidate-id="{{ candidate.candidate_id }}">Download predicted CDS</button>
                 {% if candidate.orf.reference_protein %}
                   <button type="button" data-protein-action="download-reference" data-candidate-id="{{ candidate.candidate_id }}">Download reference FASTA</button>
-                  <button type="button" data-protein-action="download-both" data-candidate-id="{{ candidate.candidate_id }}">Download both FASTA</button>
+                  <button type="button" data-protein-action="download-both" data-candidate-id="{{ candidate.candidate_id }}">Download predicted + reference</button>
                 {% endif %}
                 <button type="button" data-protein-action="copy-alignment" data-candidate-id="{{ candidate.candidate_id }}">Copy alignment</button>
               </div>
+
+              {% if candidate.orf.anchored_available %}
+                <div class="subcard blastx-anchored-orf">
+                  <h4>BLASTX-anchored coding sequence</h4>
+                  <p class="muted">Extended in the DIAMOND strand and frame to plausible start and stop boundaries.</p>
+                  <div class="metric-grid">
+                    <div><span>Protein length</span><strong>{{ candidate.orf.anchored_protein_length }} aa</strong></div>
+                    <div><span>Coordinates</span><strong>{{ candidate.orf.anchored_start }}–{{ candidate.orf.anchored_end }} nt</strong></div>
+                    <div><span>Strand / frame</span><strong>{{ candidate.orf.anchored_strand }} / {{ candidate.orf.anchored_frame }}</strong></div>
+                    <div><span>Start codon</span><strong>{{ "Present" if candidate.orf.anchored_has_start else "Not found" }}</strong></div>
+                    <div><span>Stop codon</span><strong>{{ "Present" if candidate.orf.anchored_has_stop else "Not found" }}</strong></div>
+                    <div><span>Matches selected ORF</span><strong>{{ "Yes" if candidate.orf.anchored_matches_selected else "No" }}</strong></div>
+                  </div>
+                  {% if not candidate.orf.anchored_matches_selected %}
+                    <p class="warning-text">
+                      BLASTX-anchored and selected ORF boundaries differ.
+                      {% if candidate.orf.anchored_n_terminal_difference_aa is not none %}
+                        N-terminal difference: {{ "%+d"|format(candidate.orf.anchored_n_terminal_difference_aa) }} aa.
+                      {% endif %}
+                      {% if candidate.orf.anchored_c_terminal_difference_aa is not none %}
+                        C-terminal difference: {{ "%+d"|format(candidate.orf.anchored_c_terminal_difference_aa) }} aa.
+                      {% endif %}
+                    </p>
+                  {% endif %}
+                  <div class="protein-actions">
+                    <button type="button" data-protein-action="copy-anchored-protein" data-candidate-id="{{ candidate.candidate_id }}">Copy anchored protein</button>
+                    <button type="button" data-protein-action="download-anchored-protein" data-candidate-id="{{ candidate.candidate_id }}">Download anchored protein</button>
+                    <button type="button" data-protein-action="copy-anchored-cds" data-candidate-id="{{ candidate.candidate_id }}">Copy anchored CDS</button>
+                    <button type="button" data-protein-action="download-anchored-cds" data-candidate-id="{{ candidate.candidate_id }}">Download anchored CDS</button>
+                  </div>
+                </div>
+              {% endif %}
             </details>
           {% endif %}
 
@@ -1326,10 +1371,19 @@ function handleProteinAction(button){
   const item=proteinEntry(candidateId);
   if(!item)return;
   const predicted=proteinFasta(item.predicted_header,item.predicted_sequence);
+  const predictedCds=item.predicted_coding_sequence?proteinFasta(item.predicted_coding_header,item.predicted_coding_sequence):"";
   const reference=item.reference_sequence?proteinFasta(item.reference_header,item.reference_sequence):"";
+  const anchoredProtein=item.anchored_protein_sequence?proteinFasta(item.anchored_protein_header,item.anchored_protein_sequence):"";
+  const anchoredCds=item.anchored_coding_sequence?proteinFasta(item.anchored_coding_header,item.anchored_coding_sequence):"";
   if(action==="copy-predicted")navigator.clipboard.writeText(predicted);
+  if(action==="copy-predicted-cds"&&predictedCds)navigator.clipboard.writeText(predictedCds);
+  if(action==="copy-anchored-protein"&&anchoredProtein)navigator.clipboard.writeText(anchoredProtein);
+  if(action==="copy-anchored-cds"&&anchoredCds)navigator.clipboard.writeText(anchoredCds);
   if(action==="copy-alignment")navigator.clipboard.writeText(item.alignment||"");
   if(action==="download-predicted")triggerDownload(predicted,`${safeFilename(candidateId)}.predicted.faa`);
+  if(action==="download-predicted-cds"&&predictedCds)triggerDownload(predictedCds,`${safeFilename(candidateId)}.predicted.fna`);
+  if(action==="download-anchored-protein"&&anchoredProtein)triggerDownload(anchoredProtein,`${safeFilename(candidateId)}.blastx_anchored.faa`);
+  if(action==="download-anchored-cds"&&anchoredCds)triggerDownload(anchoredCds,`${safeFilename(candidateId)}.blastx_anchored.fna`);
   if(action==="download-reference"&&reference)triggerDownload(reference,`${safeFilename(candidateId)}.reference.faa`);
   if(action==="download-both"&&reference)triggerDownload(predicted+reference,`${safeFilename(candidateId)}.predicted_with_reference.faa`);
 }
