@@ -28,3 +28,5 @@ from .hypotheses import (
     candidate_biological_hypotheses,
     gene_biological_hypotheses,
 )
+
+from .manifest import build_analysis_manifest

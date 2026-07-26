@@ -11,7 +11,7 @@ from plotly.io import to_html
 from segpick import __version__
 from segpick.alignment.export import safe_name
 from segpick.analysis import analyse_protein_continuity
-from segpick.models import Gene, Sample
+from segpick.models import AnalysisManifest, Gene, Sample
 from segpick.reporting.view_models import build_gene_page_view
 from segpick.scoring import GeneRecommendation
 from segpick.visualization import make_containment_plot, make_dotplot
@@ -178,6 +178,7 @@ def write_html_dashboard(
     outdir: str | Path,
     recommendations: Mapping[str, GeneRecommendation] | None = None,
     coverage_plot_paths: Mapping[str, str | Path] | None = None,
+    manifest: AnalysisManifest | None = None,
 ) -> Path:
     """Write static interactive HTML dashboard pages."""
 
@@ -252,6 +253,7 @@ def write_html_dashboard(
             sample=sample,
             genes=overviews,
             package_version=__version__,
+            manifest=manifest,
         )
     )
 

@@ -9,6 +9,7 @@ from .gene import Gene
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
 from .metadata import ContigMetadata
+from .manifest import AnalysisManifest
 from .orf import ORFHit, ORFMetrics
 from .orf_alignment import ORFAlignmentMetrics
 from .orf_quality import ORFQuality
@@ -28,6 +29,7 @@ __all__ = [
     "CandidateContig",
     "ReferenceSequence",
     "ContigMetadata",
+    "AnalysisManifest",
     "ContigAnalysis",
     "Alignment",
     "BlastXHit",

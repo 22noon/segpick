@@ -7,6 +7,8 @@ import yaml
 
 from .rules import HypothesisRule, RuleCondition
 
+RULE_SCHEMA_VERSION = 1
+
 _ALLOWED_RULE_KEYS = {
     "id",
     "title",
@@ -136,8 +138,8 @@ def load_rule_file(path: str | Path, *, source_label: str | None = None) -> tupl
                 f"{source}: unknown top-level fields: "
                 + ", ".join(sorted(unknown_root))
             )
-        version = raw.get("version", 1)
-        if version != 1:
+        version = raw.get("version", RULE_SCHEMA_VERSION)
+        if version != RULE_SCHEMA_VERSION:
             raise ValueError(f"{source}: unsupported rule schema version {version!r}")
         rule_data = raw.get("rules", [])
     else:

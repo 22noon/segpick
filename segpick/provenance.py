@@ -11,6 +11,7 @@ import yaml
 
 from segpick import __version__
 from segpick.config import RunConfig
+from segpick.models import AnalysisManifest
 
 
 def _tool_version(command: str) -> str | None:
@@ -25,7 +26,12 @@ def _tool_version(command: str) -> str | None:
     return text[0] if text else path
 
 
-def write_provenance(config: RunConfig, path: str | Path, argv: list[str]) -> Path:
+def write_provenance(
+    config: RunConfig,
+    path: str | Path,
+    argv: list[str],
+    manifest: AnalysisManifest | None = None,
+) -> Path:
     """Write a reproducibility record for the current run."""
 
     path = Path(path)
@@ -38,6 +44,7 @@ def write_provenance(config: RunConfig, path: str | Path, argv: list[str]) -> Pa
         "platform": platform.platform(),
         "minimap2": _tool_version("minimap2"),
         "resolved_config": config.to_dict(),
+        "analysis_manifest": manifest.to_dict() if manifest is not None else None,
     }
     path.write_text(yaml.safe_dump(payload, sort_keys=False))
     return path

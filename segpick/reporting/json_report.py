@@ -6,7 +6,7 @@ from pathlib import Path
 
 from segpick.alignment.export import safe_name
 from segpick.analysis import analyse_protein_continuity
-from segpick.models import Sample
+from segpick.models import AnalysisManifest, Sample
 from segpick.scoring import GeneRecommendation
 
 
@@ -14,11 +14,13 @@ def write_gene_json_reports(
     sample: Sample,
     outdir: str | Path,
     recommendations: Mapping[str, GeneRecommendation] | None = None,
+    manifest: AnalysisManifest | None = None,
 ) -> None:
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     for name, g in sample.genes.items():
         payload = {
+            "analysis_manifest": manifest.to_dict() if manifest is not None else None,
             "gene": g.name,
             "segment": g.segment,
             "anchor": g.anchor_id,
@@ -110,3 +112,12 @@ def write_gene_json_reports(
                 }
             )
         (outdir / f"{safe_name(name)}.json").write_text(json.dumps(payload, indent=2))
+
+
+def write_analysis_manifest(manifest: AnalysisManifest, path: str | Path) -> Path:
+    """Write the run-level manifest as JSON."""
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(manifest.to_dict(), indent=2))
+    return path

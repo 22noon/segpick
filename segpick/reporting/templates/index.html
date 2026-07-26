@@ -32,6 +32,12 @@
     .metric strong { display:block; font-size:1.55rem; }
     .metric span { color:var(--muted); font-size:.9rem; }
     .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow:hidden; }
+    .provenance { margin-bottom:1.2rem; padding:1rem 1.1rem; }
+    .provenance h2 { margin:0 0 .75rem; font-size:1.05rem; }
+    .provenance-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.65rem 1rem; }
+    .provenance-item strong { display:block; font-size:.82rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+    .provenance-item span { display:block; margin-top:.15rem; overflow-wrap:anywhere; }
+    details.rule-sources { margin-top:.8rem; }
     .table-wrap { overflow-x:auto; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: .8rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
@@ -58,6 +64,27 @@
     <div class="metric"><strong>{{ genes|selectattr('manual_review')|list|length }}</strong><span>Manual review required</span></div>
     <div class="metric"><strong>{{ genes|selectattr('confidence', 'equalto', 'high')|list|length }}</strong><span>High-confidence segments</span></div>
   </div>
+  <section class="card provenance">
+    <h2>Analysis provenance</h2>
+    {% if manifest %}
+      <div class="provenance-grid">
+        <div class="provenance-item"><strong>SegPick</strong><span>{{ manifest.segpick_version }}</span></div>
+        <div class="provenance-item"><strong>Git commit</strong><span>{{ manifest.git_commit[:12] if manifest.git_commit else 'Unavailable' }}</span></div>
+        <div class="provenance-item"><strong>Rule schema</strong><span>Version {{ manifest.rule_schema_version }}</span></div>
+        <div class="provenance-item"><strong>Active rules</strong><span>{{ manifest.total_rule_count }} total · {{ manifest.builtin_rule_count }} built-in · {{ manifest.user_rule_count }} user</span></div>
+        <div class="provenance-item"><strong>Reasoning output</strong><span>{{ manifest.observation_count }} observations · {{ manifest.finding_count }} findings · {{ manifest.hypothesis_count }} hypotheses</span></div>
+        <div class="provenance-item"><strong>Review status</strong><span>{{ manifest.manual_review_count }} of {{ manifest.recommended_gene_count }} recommended genes require review</span></div>
+      </div>
+      <details class="rule-sources">
+        <summary>Loaded rule sources</summary>
+        <ul>
+          {% for source in manifest.rule_sources %}<li><code>{{ source }}</code></li>{% endfor %}
+        </ul>
+      </details>
+    {% else %}
+      <div class="muted">Run-level provenance metadata was not supplied for this dashboard.</div>
+    {% endif %}
+  </section>
   <div class="card table-wrap">
     <table>
       <thead>
