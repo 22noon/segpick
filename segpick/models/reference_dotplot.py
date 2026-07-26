@@ -77,6 +77,32 @@ class ReferenceDotplot:
             return "reverse"
         return "mixed"
 
+    @property
+    def forward_support(self) -> int:
+        return sum(hsp.alignment_length for hsp in self.hsps if hsp.strand == "+")
+
+    @property
+    def reverse_support(self) -> int:
+        return sum(hsp.alignment_length for hsp in self.hsps if hsp.strand == "-")
+
+    @property
+    def dominant_orientation_fraction(self) -> float | None:
+        total = self.forward_support + self.reverse_support
+        if total == 0:
+            return None
+        return max(self.forward_support, self.reverse_support) / total
+
+    @property
+    def display_orientation(self) -> str:
+        fraction = self.dominant_orientation_fraction
+        if fraction is None or fraction < 0.80:
+            return "uncertain" if self.hsps else "unavailable"
+        return "reverse" if self.reverse_support > self.forward_support else "forward"
+
+    @property
+    def display_reverse_complemented(self) -> bool:
+        return self.display_orientation == "reverse"
+
     def to_dict(self) -> dict[str, object]:
         return {
             "candidate_id": self.candidate_id,
@@ -90,6 +116,11 @@ class ReferenceDotplot:
             "identity_max": self.identity_max,
             "block_count": self.block_count,
             "orientation": self.orientation,
+            "forward_support": self.forward_support,
+            "reverse_support": self.reverse_support,
+            "dominant_orientation_fraction": self.dominant_orientation_fraction,
+            "display_orientation": self.display_orientation,
+            "display_reverse_complemented": self.display_reverse_complemented,
             "output_path": self.output_path,
             "reused_existing": self.reused_existing,
             "available": self.available,

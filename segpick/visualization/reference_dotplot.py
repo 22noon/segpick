@@ -9,12 +9,20 @@ from plotly.subplots import make_subplots
 from segpick.models import ReferenceDotplot
 
 
+def _display_coordinate(position: int, length: int, reverse: bool) -> int:
+    return length - position + 1 if reverse else position
+
+
 def make_reference_dotplot(result: ReferenceDotplot) -> go.Figure:
     fig = go.Figure()
+    reverse_query = result.display_reverse_complemented
     for index, hsp in enumerate(result.hsps, start=1):
         fig.add_trace(
             go.Scattergl(
-                x=[hsp.query_start, hsp.query_end],
+                x=[
+                    _display_coordinate(hsp.query_start, result.query_length, reverse_query),
+                    _display_coordinate(hsp.query_end, result.query_length, reverse_query),
+                ],
                 y=[hsp.subject_start, hsp.subject_end],
                 mode="lines",
                 name=f"HSP {index}",
@@ -35,7 +43,10 @@ def make_reference_dotplot(result: ReferenceDotplot) -> go.Figure:
             )
         )
     fig.update_layout(
-        title=f"{result.candidate_id} vs {result.reference_id}",
+        title=(
+            f"{result.candidate_id} vs {result.reference_id}"
+            + (" — reverse-complemented for display" if reverse_query else "")
+        ),
         xaxis={
             "title": "Candidate position (bp)",
             "range": [0, max(1, result.query_length)],
@@ -74,7 +85,10 @@ def make_multi_candidate_reference_dotplot(
         shared_yaxes=True,
         vertical_spacing=min(0.08, 0.18 / max(1, rows)),
         subplot_titles=[
-            f"{result.candidate_id} ({result.query_length:,} nt)"
+            (
+                f"{result.candidate_id} ({result.query_length:,} nt)"
+                + (" · RC for display" if result.display_reverse_complemented else "")
+            )
             for result in results
         ],
     )
@@ -83,11 +97,15 @@ def make_multi_candidate_reference_dotplot(
 
     for row, result in enumerate(results, start=1):
         colour = colours[(row - 1) % len(colours)]
+        reverse_query = result.display_reverse_complemented
         for index, hsp in enumerate(result.hsps):
             opacity = max(0.35, min(1.0, 0.35 + (hsp.percent_identity / 100.0) * 0.65))
             fig.add_trace(
                 go.Scattergl(
-                    x=[hsp.query_start, hsp.query_end],
+                    x=[
+                        _display_coordinate(hsp.query_start, result.query_length, reverse_query),
+                        _display_coordinate(hsp.query_end, result.query_length, reverse_query),
+                    ],
                     y=[hsp.subject_start, hsp.subject_end],
                     mode="lines",
                     name=result.candidate_id,

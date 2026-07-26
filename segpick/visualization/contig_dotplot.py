@@ -5,13 +5,28 @@ import plotly.graph_objects as go
 from segpick.models import ContigDotplot
 
 
-def make_contig_dotplot(result: ContigDotplot) -> go.Figure:
+def _display_coordinate(position: int, length: int, reverse: bool) -> int:
+    return length - position + 1 if reverse else position
+
+
+def make_contig_dotplot(
+    result: ContigDotplot,
+    *,
+    query_reverse: bool = False,
+    target_reverse: bool = False,
+) -> go.Figure:
     fig = go.Figure()
     for index, hsp in enumerate(result.hsps, start=1):
         fig.add_trace(
             go.Scattergl(
-                x=[hsp.query_start, hsp.query_end],
-                y=[hsp.subject_start, hsp.subject_end],
+                x=[
+                    _display_coordinate(hsp.query_start, result.query_length, query_reverse),
+                    _display_coordinate(hsp.query_end, result.query_length, query_reverse),
+                ],
+                y=[
+                    _display_coordinate(hsp.subject_start, result.target_length, target_reverse),
+                    _display_coordinate(hsp.subject_end, result.target_length, target_reverse),
+                ],
                 mode="lines",
                 name=f"HSP {index}",
                 showlegend=False,
@@ -31,9 +46,33 @@ def make_contig_dotplot(result: ContigDotplot) -> go.Figure:
             )
         )
     fig.update_layout(
-        title=f"{result.query_id} vs {result.target_id}",
-        xaxis={"title": f"{result.query_id} position (bp)", "range": [0, max(1, result.query_length)], "constrain": "domain"},
-        yaxis={"title": f"{result.target_id} position (bp)", "range": [0, max(1, result.target_length)], "scaleanchor": "x", "scaleratio": 1},
+        title=(
+            f"{result.query_id} vs {result.target_id}"
+            + (
+                " — "
+                + ", ".join(
+                    label
+                    for label, enabled in (
+                        (f"{result.query_id} RC for display", query_reverse),
+                        (f"{result.target_id} RC for display", target_reverse),
+                    )
+                    if enabled
+                )
+                if query_reverse or target_reverse
+                else ""
+            )
+        ),
+        xaxis={
+            "title": f"{result.query_id} position (bp)" + (" · RC display" if query_reverse else ""),
+            "range": [0, max(1, result.query_length)],
+            "constrain": "domain",
+        },
+        yaxis={
+            "title": f"{result.target_id} position (bp)" + (" · RC display" if target_reverse else ""),
+            "range": [0, max(1, result.target_length)],
+            "scaleanchor": "x",
+            "scaleratio": 1,
+        },
         template="plotly_white",
         height=560,
         margin={"l": 80, "r": 30, "t": 70, "b": 75},

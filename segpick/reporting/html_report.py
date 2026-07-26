@@ -153,9 +153,24 @@ def render_gene_page(
         recommendation,
         coverage_plot_paths=relative_coverage_paths,
     )
+    reference_orientations = {
+        candidate.id: (
+            candidate.analysis.reference_dotplot.display_reverse_complemented
+            if candidate.analysis.reference_dotplot is not None
+            else False
+        )
+        for candidate in gene.candidates
+    }
+
     contig_dotplots = {}
     for result in gene.contig_dotplots:
-        figure = make_contig_dotplot(result)
+        query_reverse = reference_orientations.get(result.query_id, False)
+        target_reverse = reference_orientations.get(result.target_id, False)
+        figure = make_contig_dotplot(
+            result,
+            query_reverse=query_reverse,
+            target_reverse=target_reverse,
+        )
         key = result.pair_key
         contig_dotplots[key] = {
             "figure": figure.to_plotly_json(),
@@ -168,6 +183,8 @@ def render_gene_page(
             "identity_max": result.identity_max,
             "orientation": result.orientation,
             "reused_existing": result.reused_existing,
+            "query_reverse_complemented_for_display": query_reverse,
+            "target_reverse_complemented_for_display": target_reverse,
         }
 
     reference_groups: dict[str, list[object]] = defaultdict(list)
@@ -217,6 +234,9 @@ def render_gene_page(
             "identity_min": result.identity_min,
             "identity_max": result.identity_max,
             "orientation": result.orientation,
+            "display_orientation": result.display_orientation,
+            "display_reverse_complemented": result.display_reverse_complemented,
+            "dominant_orientation_fraction": result.dominant_orientation_fraction,
             "reused_existing": result.reused_existing,
             "output_path": result.output_path,
         }
