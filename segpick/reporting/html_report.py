@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections import defaultdict
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -19,6 +20,7 @@ from segpick.visualization import (
     make_containment_plot,
     make_contig_dotplot,
     make_dotplot,
+    make_multi_candidate_reference_dotplot,
     make_reference_dotplot,
 )
 
@@ -168,6 +170,38 @@ def render_gene_page(
             "reused_existing": result.reused_existing,
         }
 
+    reference_groups: dict[str, list[object]] = defaultdict(list)
+    candidate_order = (
+        [item.candidate_id for item in recommendation.candidates]
+        if recommendation is not None
+        else [candidate.id for candidate in gene.candidates]
+    )
+    order_index = {candidate_id: index for index, candidate_id in enumerate(candidate_order)}
+    for candidate in gene.candidates:
+        result = candidate.analysis.reference_dotplot
+        if result is not None:
+            reference_groups[result.reference_id].append(result)
+
+    reference_overviews = []
+    for reference_id, results in reference_groups.items():
+        if len(results) < 2:
+            continue
+        results.sort(key=lambda item: order_index.get(item.candidate_id, len(order_index)))
+        overview = make_multi_candidate_reference_dotplot(results)
+        reference_overviews.append(
+            {
+                "reference_id": reference_id,
+                "candidate_count": len(results),
+                "plot_html": to_html(
+                    overview,
+                    include_plotlyjs=False,
+                    full_html=False,
+                    config={"responsive": True, "displaylogo": False},
+                    div_id=f"reference-overview-{safe_name(reference_id)}",
+                ),
+            }
+        )
+
     reference_dotplots = {}
     for candidate in gene.candidates:
         result = candidate.analysis.reference_dotplot
@@ -215,6 +249,7 @@ def render_gene_page(
             sequences=sequences,
             sequences_json=json.dumps(sequences),
             protein_sequences_json=json.dumps(protein_sequences),
+            reference_overviews=reference_overviews,
             reference_dotplots_json=json.dumps(
                 reference_dotplots, cls=PlotlyJSONEncoder
             ),

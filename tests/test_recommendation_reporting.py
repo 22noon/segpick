@@ -311,3 +311,5 @@ def test_gene_template_contains_reference_dotplot_panel():
     assert "Candidate versus closest nucleotide reference" in content
     assert "reference_dotplots_json" in content
     assert "updateReferenceDotplot" in content
+    assert "Candidates aligned to shared nucleotide reference" in content
+    assert "reference_overviews" in content

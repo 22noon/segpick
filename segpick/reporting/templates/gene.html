@@ -674,6 +674,10 @@
     }
     .reference-dotplot-summary strong { color: #0f172a; }
     #reference-dotplot { width: 100%; min-height: 560px; }
+    .reference-overview-panel { min-height: auto; }
+    .reference-overview-group + .reference-overview-group { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid #e2e8f0; }
+    .reference-overview-group h3 { margin-bottom: .25rem; }
+    .reference-overview-plot { width: 100%; overflow-x: auto; }
     #contig-dotplot { width: 100%; min-height: 560px; }
     .contig-dotplot-controls { display:flex; gap:.75rem; align-items:center; flex-wrap:wrap; margin:.75rem 0 1rem; }
     .contig-dotplot-controls select { min-width:240px; padding:.45rem .6rem; border:1px solid #cbd5e1; border-radius:.45rem; background:white; }
@@ -1028,6 +1032,20 @@
     <div>{{ dotplot|safe }}</div>
     <div>{{ containment|safe }}</div>
   </details>
+
+  {% if reference_overviews %}
+  <section class="card reference-overview-panel">
+    <h2>Candidates aligned to shared nucleotide reference</h2>
+    <p class="muted">Candidates sharing the same closest nucleotide reference are stacked in one compact view. Candidate colours distinguish sequences; line opacity reflects nucleotide identity. The recommended candidate is shown first.</p>
+    {% for overview in reference_overviews %}
+      <div class="reference-overview-group">
+        <h3>{{ overview.reference_id }}</h3>
+        <p class="muted">{{ overview.candidate_count }} candidates share this closest reference.</p>
+        <div class="reference-overview-plot">{{ overview.plot_html|safe }}</div>
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
 
   <section class="card reference-dotplot-panel">
     <h2>Candidate versus closest nucleotide reference</h2>
