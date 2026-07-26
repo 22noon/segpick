@@ -70,6 +70,9 @@ def evaluate_rules(
                 matched_required=required,
                 matched_supporting=supporting,
                 matched_conflicting=conflicting,
+                rule_source=rule.source,
+                rule_description=rule.description,
+                rule_references=rule.references,
             )
         )
     return tuple(hypotheses)

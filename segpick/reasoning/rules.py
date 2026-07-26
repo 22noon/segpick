@@ -52,5 +52,8 @@ class HypothesisRule:
     base_confidence: str
     summary: str
     requires: tuple[RuleCondition, ...]
+    description: str = ""
+    references: tuple[str, ...] = ()
+    source: str = "python"
     supports: tuple[RuleCondition, ...] = ()
     conflicts: tuple[RuleCondition, ...] = ()

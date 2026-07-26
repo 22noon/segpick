@@ -28,6 +28,7 @@ class RunConfig:
     refs: Path | None = None
     blastx_results: Path | None = None
     protein_refs: Path | None = None
+    rule_files: tuple[Path, ...] = ()
     outdir: Path = Path("results")
     sample_name: str = "sample"
     align: bool = False
@@ -69,12 +70,14 @@ def _flatten_yaml(data: dict[str, Any]) -> dict[str, Any]:
     input_cfg = data.get("input", {}) or {}
     alignment_cfg = data.get("alignment", {}) or {}
     dashboard_cfg = data.get("dashboard", {}) or {}
+    reasoning_cfg = data.get("reasoning", {}) or {}
 
     result["hits"] = input_cfg.get("hits", data.get("hits"))
     result["contigs"] = input_cfg.get("contigs", data.get("contigs"))
     result["refs"] = input_cfg.get("references", input_cfg.get("refs", data.get("refs")))
     result["blastx_results"] = input_cfg.get("blastx_results", data.get("blastx_results"))
     result["protein_refs"] = input_cfg.get("protein_refs", data.get("protein_refs"))
+    result["rule_files"] = reasoning_cfg.get("rule_files", data.get("rule_files"))
     result["outdir"] = data.get("outdir")
     result["sample_name"] = data.get("sample", data.get("sample_name"))
     result["strict"] = data.get("strict")
@@ -178,6 +181,8 @@ def resolve_config(
     }
 
     merged.update(yaml_flat)
+    if "rule_files" in merged:
+        merged["rule_files"] = tuple(Path(path) for path in (merged["rule_files"] or ()))
     merged["scoring_weights"] = scoring_weights
 
     # CLI values override YAML values.
@@ -215,7 +220,10 @@ def resolve_config(
     )
 
     merged["read_support"] = read_support
-    merged.update({key: value for key, value in cli_values.items() if value is not None})
+    cli_clean = {key: value for key, value in cli_values.items() if value is not None}
+    if "rule_files" in cli_clean:
+        cli_clean["rule_files"] = tuple(Path(path) for path in cli_clean["rule_files"])
+    merged.update(cli_clean)
     for key in (
         "depth_dir",
         "depth_suffix",

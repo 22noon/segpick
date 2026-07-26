@@ -18,6 +18,9 @@ class BiologicalHypothesis:
     matched_required: tuple[str, ...] = ()
     matched_supporting: tuple[str, ...] = ()
     matched_conflicting: tuple[str, ...] = ()
+    rule_source: str = "python"
+    rule_description: str = ""
+    rule_references: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         data = asdict(self)
@@ -25,4 +28,5 @@ class BiologicalHypothesis:
         data["matched_required"] = list(self.matched_required)
         data["matched_supporting"] = list(self.matched_supporting)
         data["matched_conflicting"] = list(self.matched_conflicting)
+        data["rule_references"] = list(self.rule_references)
         return data

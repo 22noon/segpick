@@ -4,6 +4,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from segpick.models import (
+    BiologicalHypothesis,
     BlastXHit,
     CandidateContig,
     EvidenceConvergence,
@@ -118,6 +119,41 @@ def make_sample() -> tuple[Sample, dict]:
         ),
     )
 
+    contig_a.analysis.hypotheses = (
+        BiologicalHypothesis(
+            rule_id="possible_assembly_interruption",
+            title="Possible assembly interruption",
+            category="assembly",
+            scope="candidate",
+            confidence="high",
+            severity="review",
+            summary="Protein and coverage evidence support local structural review.",
+            candidate_ids=("contig_a",),
+            matched_required=(
+                "observation:internal_deletion@protein_alignment",
+                "observation:coverage_drop@read_coverage",
+            ),
+            matched_supporting=("finding:Local evidence convergence",),
+            rule_source="builtin:default_rules.yml",
+            rule_description="Tests transparent rule rendering.",
+            rule_references=("PMID:12345678",),
+        ),
+    )
+    gene.hypotheses = (
+        BiologicalHypothesis(
+            rule_id="possible_split_assembly",
+            title="Possible split assembly",
+            category="assembly",
+            scope="gene",
+            confidence="moderate",
+            severity="review",
+            summary="Complementary candidates may recover different protein regions.",
+            candidate_ids=("contig_a", "contig_b"),
+            matched_required=("finding:Possible split assembly",),
+            rule_source="builtin:default_rules.yml",
+        ),
+    )
+
     gene.add_candidate(contig_a)
     gene.add_candidate(contig_b)
 
@@ -206,6 +242,14 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "Assembly-level review" in html
     assert "Local evidence convergence" in html
     assert "AA 39–45" in html
+    assert "Biological interpretation" in html
+    assert "Possible assembly interruption" in html
+    assert "Possible split assembly" in html
+    assert "Required matches" in html
+    assert "Supporting matches" in html
+    assert "Conflicting matches" in html
+    assert "builtin:default_rules.yml" in html
+    assert "PMID:12345678" in html
 
     assert "selectCandidate" in html
     assert "DashboardState" in html

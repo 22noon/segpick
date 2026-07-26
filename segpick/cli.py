@@ -21,6 +21,7 @@ from segpick.analysis.observations import attach_observation_intervals
 from segpick.analysis.findings import attach_biological_findings
 from segpick.analysis.hypotheses import attach_biological_hypotheses
 from segpick.config import RunConfig, load_config, resolve_config
+from segpick.reasoning import load_active_rules
 from segpick.io.builder import build_sample
 from segpick.provenance import write_provenance
 from segpick.reporting import (
@@ -63,6 +64,13 @@ def _add_run_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--refs", default=None)
     parser.add_argument("--blastx-results", default=None)
     parser.add_argument("--protein-refs", default=None)
+    parser.add_argument(
+        "--rule-file",
+        dest="rule_files",
+        action="append",
+        default=None,
+        help="Additional YAML hypothesis rule file; may be supplied more than once",
+    )
     parser.add_argument("--outdir", default=None)
     parser.add_argument("--sample-name", default=None)
     parser.add_argument("--preset", default=None)
@@ -135,6 +143,7 @@ def _cli_override_values(args: argparse.Namespace) -> dict[str, object]:
         "refs",
         "blastx_results",
         "protein_refs",
+        "rule_files",
         "outdir",
         "sample_name",
         "strict",
@@ -224,7 +233,12 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
     )
     attach_orf_quality(sample)
     attach_biological_findings(sample)
-    attach_biological_hypotheses(sample)
+    candidate_rules, gene_rules = load_active_rules(config.rule_files)
+    attach_biological_hypotheses(
+        sample,
+        candidate_rules=candidate_rules,
+        gene_rules=gene_rules,
+    )
 
     coverage_plot_paths = {}
     if config.html and config.read_support.depth_dir is not None:
