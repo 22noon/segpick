@@ -22,3 +22,9 @@ from .findings import (
     candidate_biological_findings,
     gene_biological_findings,
 )
+
+from .hypotheses import (
+    attach_biological_hypotheses,
+    candidate_biological_hypotheses,
+    gene_biological_hypotheses,
+)

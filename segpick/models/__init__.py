@@ -7,6 +7,7 @@ from .convergence import EvidenceConvergence
 from .contig import CandidateContig
 from .gene import Gene
 from .finding import BiologicalFinding
+from .hypothesis import BiologicalHypothesis
 from .metadata import ContigMetadata
 from .orf import ORFHit, ORFMetrics
 from .orf_alignment import ORFAlignmentMetrics
@@ -23,6 +24,7 @@ __all__ = [
     "Sample",
     "Gene",
     "BiologicalFinding",
+    "BiologicalHypothesis",
     "CandidateContig",
     "ReferenceSequence",
     "ContigMetadata",

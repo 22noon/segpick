@@ -5,6 +5,7 @@ from Bio.SeqRecord import SeqRecord
 from .alignment import Alignment
 from .contig import CandidateContig
 from .finding import BiologicalFinding
+from .hypothesis import BiologicalHypothesis
 from .reference import ReferenceSequence
 
 
@@ -20,6 +21,7 @@ class Gene:
     anchor_id: str | None = None
     recommendation: CandidateContig | None = None
     findings: tuple[BiologicalFinding, ...] = ()
+    hypotheses: tuple[BiologicalHypothesis, ...] = ()
 
     def add_candidate(self, contig: CandidateContig) -> None:
         self.candidates.append(contig)

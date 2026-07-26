@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 
 from .blastx import BlastXHit
 from .finding import BiologicalFinding
+from .hypothesis import BiologicalHypothesis
 from .blastx_consistency import BlastXConsistency
 from .containment import ContainmentMetrics
 from .convergence import EvidenceConvergence
@@ -34,5 +35,6 @@ class ContigAnalysis:
     observations: tuple[EvidenceObservation, ...] = ()
     convergences: tuple[EvidenceConvergence, ...] = ()
     findings: tuple[BiologicalFinding, ...] = ()
+    hypotheses: tuple[BiologicalHypothesis, ...] = ()
     depth_profile: dict[int, int] = field(default_factory=dict)
     recommendation_reason: str | None = None

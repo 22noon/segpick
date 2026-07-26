@@ -19,6 +19,7 @@ from segpick.analysis.orf_quality import attach_orf_quality
 from segpick.analysis.protein_interpretation import attach_protein_interpretations
 from segpick.analysis.observations import attach_observation_intervals
 from segpick.analysis.findings import attach_biological_findings
+from segpick.analysis.hypotheses import attach_biological_hypotheses
 from segpick.config import RunConfig, load_config, resolve_config
 from segpick.io.builder import build_sample
 from segpick.provenance import write_provenance
@@ -223,6 +224,7 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
     )
     attach_orf_quality(sample)
     attach_biological_findings(sample)
+    attach_biological_hypotheses(sample)
 
     coverage_plot_paths = {}
     if config.html and config.read_support.depth_dir is not None:
