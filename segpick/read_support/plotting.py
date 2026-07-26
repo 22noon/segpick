@@ -13,6 +13,59 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+
+
+def _subtract_interval(
+    interval: tuple[int, int],
+    other: tuple[int, int],
+) -> list[tuple[int, int]]:
+    """Return portions of *interval* not covered by *other*."""
+
+    start, end = interval
+    other_start, other_end = other
+    pieces: list[tuple[int, int]] = []
+
+    if end <= other_start or start >= other_end:
+        return [(start, end)]
+    if start < other_start:
+        pieces.append((start, min(end, other_start)))
+    if end > other_end:
+        pieces.append((max(start, other_end), end))
+    return [(left, right) for left, right in pieces if right > left]
+
+
+def _draw_orf_track(
+    axis,
+    *,
+    start: int,
+    end: int,
+    strand: str | None,
+    y: float,
+    color: str,
+) -> None:
+    """Draw a strand-aware ORF arrow in the annotation strip."""
+
+    interval_start = min(start, end)
+    interval_end = max(start, end)
+    arrow_start, arrow_end = (
+        (interval_end, interval_start)
+        if strand == "-"
+        else (interval_start, interval_end)
+    )
+    axis.annotate(
+        "",
+        xy=(arrow_end, y),
+        xytext=(arrow_start, y),
+        arrowprops={
+            "arrowstyle": "-|>",
+            "linewidth": 2.0,
+            "color": color,
+            "shrinkA": 0,
+            "shrinkB": 0,
+        },
+        annotation_clip=False,
+    )
 
 
 def write_coverage_plot(
@@ -45,85 +98,141 @@ def write_coverage_plot(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    figure, axis = plt.subplots(figsize=(10, 3.6))
+    figure, (coverage_axis, track_axis) = plt.subplots(
+        2,
+        1,
+        figsize=(10, 4.2),
+        sharex=True,
+        gridspec_kw={"height_ratios": [4.0, 1.0], "hspace": 0.06},
+        layout="constrained",
+    )
 
-    axis.fill_between(
+    coverage_axis.fill_between(
         positions_list,
         depths_list,
         step="mid",
         alpha=0.35,
     )
-    axis.plot(
+    coverage_axis.plot(
         positions_list,
         depths_list,
         linewidth=0.8,
     )
 
+    legend_handles: list[Line2D] = []
     if minimum_depth is not None:
-        axis.axhline(
+        coverage_axis.axhline(
             minimum_depth,
             linestyle="--",
             linewidth=0.8,
-            label=f"Minimum depth: {minimum_depth}",
         )
-        axis.legend(frameon=False, fontsize=8)
+        legend_handles.append(
+            Line2D(
+                [0],
+                [0],
+                linestyle="--",
+                linewidth=0.8,
+                color="0.35",
+                label=f"Minimum depth: {minimum_depth}",
+            )
+        )
 
-    axis.set_xlim(positions_list[0], positions_list[-1])
-    axis.set_ylim(bottom=0)
-    axis.set_xlabel("Contig position", labelpad=48)
-    axis.set_ylabel("Read depth")
+    coverage_axis.set_xlim(positions_list[0], positions_list[-1])
+    coverage_axis.set_ylim(bottom=0)
+    coverage_axis.set_ylabel("Read depth")
+    coverage_axis.tick_params(axis="x", labelbottom=False)
 
     if title:
-        axis.set_title(title)
+        coverage_axis.set_title(title)
 
+    selected_interval = None
+    anchored_interval = None
     if orf_start is not None and orf_end is not None:
-        interval_start = min(orf_start, orf_end)
-        interval_end = max(orf_start, orf_end)
-        arrow_start, arrow_end = (
-            (interval_end, interval_start)
-            if orf_strand == "-"
-            else (interval_start, interval_end)
-        )
-        axis.annotate(
-            orf_label,
-            xy=(arrow_end, -0.13),
-            xytext=(arrow_start, -0.13),
-            xycoords=("data", "axes fraction"),
-            textcoords=("data", "axes fraction"),
-            arrowprops={"arrowstyle": "->", "linewidth": 1.2, "color": "tab:blue"},
-            color="tab:blue",
-            annotation_clip=False,
-            ha="center",
-            va="center",
-            fontsize=8,
-        )
-
+        selected_interval = (min(orf_start, orf_end), max(orf_start, orf_end))
     if anchored_orf_start is not None and anchored_orf_end is not None:
-        interval_start = min(anchored_orf_start, anchored_orf_end)
-        interval_end = max(anchored_orf_start, anchored_orf_end)
-        arrow_start, arrow_end = (
-            (interval_end, interval_start)
-            if anchored_orf_strand == "-"
-            else (interval_start, interval_end)
+        anchored_interval = (
+            min(anchored_orf_start, anchored_orf_end),
+            max(anchored_orf_start, anchored_orf_end),
         )
-        axis.annotate(
-            anchored_orf_label,
-            xy=(arrow_end, -0.24),
-            xytext=(arrow_start, -0.24),
-            xycoords=("data", "axes fraction"),
-            textcoords=("data", "axes fraction"),
-            arrowprops={"arrowstyle": "->", "linewidth": 1.2, "color": "tab:red"},
+
+    selected_y = 1.35
+    anchored_y = 0.55
+    if selected_interval and anchored_interval:
+        for left, right in _subtract_interval(selected_interval, anchored_interval):
+            track_axis.plot(
+                [left, right],
+                [selected_y, selected_y],
+                linewidth=8,
+                alpha=0.18,
+                color="tab:blue",
+                solid_capstyle="butt",
+            )
+        for left, right in _subtract_interval(anchored_interval, selected_interval):
+            track_axis.plot(
+                [left, right],
+                [anchored_y, anchored_y],
+                linewidth=8,
+                alpha=0.18,
+                color="tab:red",
+                solid_capstyle="butt",
+            )
+
+    if selected_interval:
+        _draw_orf_track(
+            track_axis,
+            start=selected_interval[0],
+            end=selected_interval[1],
+            strand=orf_strand,
+            y=selected_y,
+            color="tab:blue",
+        )
+        legend_handles.append(
+            Line2D(
+                [0],
+                [0],
+                color="tab:blue",
+                linewidth=2.0,
+                label=f"{orf_label} ({orf_strand or '?'})",
+            )
+        )
+
+    if anchored_interval:
+        _draw_orf_track(
+            track_axis,
+            start=anchored_interval[0],
+            end=anchored_interval[1],
+            strand=anchored_orf_strand,
+            y=anchored_y,
             color="tab:red",
-            annotation_clip=False,
-            ha="center",
-            va="center",
-            fontsize=8,
+        )
+        legend_handles.append(
+            Line2D(
+                [0],
+                [0],
+                color="tab:red",
+                linewidth=2.0,
+                label=f"{anchored_orf_label} ({anchored_orf_strand or '?'})",
+            )
         )
 
-    axis.spines["top"].set_visible(False)
-    axis.spines["right"].set_visible(False)
+    track_axis.set_ylim(0.0, 1.9)
+    track_axis.set_yticks([])
+    track_axis.set_xlabel("Contig position")
+    track_axis.spines["left"].set_visible(False)
+    track_axis.spines["right"].set_visible(False)
+    track_axis.spines["top"].set_visible(False)
 
-    figure.tight_layout(rect=(0, 0.28, 1, 1))
+    if legend_handles:
+        coverage_axis.legend(
+            handles=legend_handles,
+            frameon=False,
+            fontsize=8,
+            loc="upper right",
+        )
+
+    coverage_axis.spines["top"].set_visible(False)
+    coverage_axis.spines["right"].set_visible(False)
+
     figure.savefig(output_path, dpi=160, bbox_inches="tight")
     plt.close(figure)
 
