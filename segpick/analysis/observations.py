@@ -325,6 +325,78 @@ def coverage_observations(
     return tuple(observations)
 
 
+
+def orf_structure_observations(
+    candidate: CandidateContig,
+) -> tuple[ObservationInterval, ...]:
+    """Project partial selected-ORF boundaries onto reference coordinates.
+
+    These observations describe where an incomplete selected ORF begins or
+    ends relative to the aligned reference protein. They do not diagnose the
+    cause of the incomplete boundary.
+    """
+
+    orf_metrics = candidate.analysis.orf
+    alignment = candidate.analysis.orf_alignment
+    selected = orf_metrics.best_orf if orf_metrics is not None else None
+    if selected is None or alignment is None or not alignment.aligned_candidate:
+        return ()
+
+    reference_map = _candidate_to_reference_map(alignment)
+    if not reference_map:
+        return ()
+
+    coordinate_system = _coordinate_system(alignment)
+    observations: list[ObservationInterval] = []
+
+    if not selected.has_start_codon:
+        first_reference_position = min(reference_map.values())
+        observations.append(
+            ObservationInterval(
+                coordinate_system=coordinate_system,
+                start=first_reference_position,
+                end=first_reference_position,
+                observation_type="partial_orf_start_boundary",
+                source="orf_structure",
+                description=(
+                    "Selected ORF lacks a confirmed start codon near "
+                    f"reference-protein position {first_reference_position}."
+                ),
+                attributes={
+                    "strand": selected.strand,
+                    "frame": selected.frame,
+                    "has_start_codon": False,
+                },
+            )
+        )
+
+    if not selected.has_stop_codon:
+        last_reference_position = max(reference_map.values())
+        boundary = min(
+            last_reference_position + 1,
+            alignment.reference_protein_length,
+        )
+        observations.append(
+            ObservationInterval(
+                coordinate_system=coordinate_system,
+                start=boundary,
+                end=boundary,
+                observation_type="partial_orf_end_boundary",
+                source="orf_structure",
+                description=(
+                    "Selected ORF lacks a confirmed stop codon near "
+                    f"reference-protein position {boundary}."
+                ),
+                attributes={
+                    "strand": selected.strand,
+                    "frame": selected.frame,
+                    "has_stop_codon": False,
+                },
+            )
+        )
+
+    return tuple(observations)
+
 def attach_observation_intervals(
     sample: Sample,
     *,
@@ -346,4 +418,5 @@ def attach_observation_intervals(
                     candidate,
                     minimum_depth=minimum_depth,
                 )
+                + orf_structure_observations(candidate)
             )
