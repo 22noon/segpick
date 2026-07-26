@@ -280,3 +280,23 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "Possible split assembly" in index_html
 
 
+
+
+def test_dashboard_shows_empty_hypothesis_state(tmp_path) -> None:
+    sample, recommendations = make_sample()
+    gene = sample.genes["VP2"]
+    gene.hypotheses = ()
+    for candidate in gene.candidates:
+        candidate.analysis.hypotheses = ()
+
+    write_html_dashboard(
+        sample,
+        tmp_path,
+        recommendations=recommendations,
+    )
+
+    html = (tmp_path / "genes" / "VP2.html").read_text()
+
+    assert "Biological interpretation" in html
+    assert "No rule-based biological hypotheses were generated." in html
+    assert "No current hypothesis rule matched" in html
