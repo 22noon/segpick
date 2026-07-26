@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from segpick.models import EvidenceConvergence, ObservationInterval
+from segpick.models import EvidenceConvergence, EvidenceObservation
 
 
 def _strength(source_count: int) -> str:
@@ -14,7 +14,7 @@ def _strength(source_count: int) -> str:
 
 
 def detect_evidence_convergence(
-    observations: tuple[ObservationInterval, ...],
+    observations: tuple[EvidenceObservation, ...],
     candidate_id: str,
     proximity: int = 3,
 ) -> tuple[EvidenceConvergence, ...]:
@@ -28,14 +28,16 @@ def detect_evidence_convergence(
     if proximity < 0:
         raise ValueError("proximity must be non-negative")
 
-    grouped: dict[str, list[ObservationInterval]] = defaultdict(list)
+    grouped: dict[str, list[EvidenceObservation]] = defaultdict(list)
     for observation in observations:
+        if not observation.is_spatial:
+            continue
         grouped[observation.coordinate_system].append(observation)
 
     convergences: list[EvidenceConvergence] = []
     for coordinate_system, items in grouped.items():
         ordered = sorted(items, key=lambda item: (item.start, item.end))
-        clusters: list[list[ObservationInterval]] = []
+        clusters: list[list[EvidenceObservation]] = []
 
         for observation in ordered:
             if not clusters:

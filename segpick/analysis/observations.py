@@ -4,7 +4,9 @@ from statistics import median
 
 from segpick.models import (
     CandidateContig,
+    EvidenceObservation,
     ObservationInterval,
+    ObservationSource,
     ORFAlignmentMetrics,
     Sample,
 )
@@ -397,12 +399,83 @@ def orf_structure_observations(
 
     return tuple(observations)
 
+
+def global_candidate_observations(
+    candidate: CandidateContig,
+) -> tuple[EvidenceObservation, ...]:
+    """Return non-spatial structural observations for one candidate."""
+
+    observations: list[EvidenceObservation] = []
+    orf = candidate.analysis.orf
+    if orf is not None:
+        if orf.major_competing_orf_count:
+            observations.append(
+                EvidenceObservation(
+                    observation_type="major_competing_orf",
+                    source=ObservationSource.ORF_STRUCTURE,
+                    description=(
+                        f"{orf.major_competing_orf_count} major competing complete "
+                        "ORF(s) were identified."
+                    ),
+                    severity="review",
+                    attributes={
+                        "count": orf.major_competing_orf_count,
+                        "largest_competing_orf_length": (
+                            orf.largest_competing_orf_length
+                        ),
+                    },
+                )
+            )
+        if not orf.selected_matches_longest:
+            observations.append(
+                EvidenceObservation(
+                    observation_type="selected_orf_differs_from_longest",
+                    source=ObservationSource.ORF_STRUCTURE,
+                    description=(
+                        "The protein-supported selected ORF differs from the "
+                        "longest discovered ORF."
+                    ),
+                    severity="informational",
+                    attributes={"selection_method": orf.selection_method},
+                )
+            )
+
+    consistency = candidate.analysis.blastx_consistency
+    if consistency is not None:
+        if not consistency.strand_agrees:
+            observations.append(
+                EvidenceObservation(
+                    observation_type="blastx_strand_disagreement",
+                    source=ObservationSource.DIAMOND,
+                    description=(
+                        "The selected ORF strand disagrees with the DIAMOND "
+                        "translated alignment."
+                    ),
+                    severity="review",
+                )
+            )
+        if not consistency.frame_agrees:
+            observations.append(
+                EvidenceObservation(
+                    observation_type="blastx_frame_disagreement",
+                    source=ObservationSource.DIAMOND,
+                    description=(
+                        "The selected ORF frame disagrees with the DIAMOND "
+                        "translated alignment."
+                    ),
+                    severity="review",
+                )
+            )
+
+    return tuple(observations)
+
+
 def attach_observation_intervals(
     sample: Sample,
     *,
     minimum_depth: int = 3,
 ) -> None:
-    """Attach spatial observations derived from candidate protein alignments."""
+    """Attach spatial and global evidence observations to candidates."""
 
     for gene in sample.genes.values():
         for candidate in gene.candidates:
@@ -419,4 +492,5 @@ def attach_observation_intervals(
                     minimum_depth=minimum_depth,
                 )
                 + orf_structure_observations(candidate)
+                + global_candidate_observations(candidate)
             )

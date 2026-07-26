@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .observation import ObservationInterval
+from .observation import EvidenceObservation
 
 
 @dataclass(frozen=True, slots=True)
@@ -15,7 +15,7 @@ class EvidenceConvergence:
     strength: str
     sources: tuple[str, ...]
     observation_types: tuple[str, ...]
-    observations: tuple[ObservationInterval, ...]
+    observations: tuple[EvidenceObservation, ...]
     summary: str
     candidate_id: str
 

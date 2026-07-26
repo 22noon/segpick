@@ -10,7 +10,7 @@ from .convergence import EvidenceConvergence
 from .orf import ORFMetrics
 from .orf_alignment import ORFAlignmentMetrics
 from .orf_quality import ORFQuality
-from .observation import ObservationInterval
+from .observation import EvidenceObservation
 from .protein_interpretation import ProteinInterpretation
 from .protein_relatedness import ProteinRelatedness
 from .read_support import ReadSupportMetrics
@@ -31,7 +31,7 @@ class ContigAnalysis:
     orf_quality: ORFQuality | None = None
     protein_interpretation: ProteinInterpretation | None = None
     protein_relatedness: ProteinRelatedness | None = None
-    observations: tuple[ObservationInterval, ...] = ()
+    observations: tuple[EvidenceObservation, ...] = ()
     convergences: tuple[EvidenceConvergence, ...] = ()
     findings: tuple[BiologicalFinding, ...] = ()
     depth_profile: dict[int, int] = field(default_factory=dict)
