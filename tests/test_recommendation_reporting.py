@@ -235,6 +235,7 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "evidence-bar" not in html
     assert "Protein Confidence" in html
     assert "Read support" in html
+    assert "Structural integrity" in html
     assert "Protein coordinate map" in html
     assert "Expected protein position" in html
     assert "contig_a ★" in html
@@ -313,3 +314,14 @@ def test_gene_template_contains_reference_dotplot_panel():
     assert "updateReferenceDotplot" in content
     assert "Candidates aligned to shared nucleotide reference" in content
     assert "reference_overviews" in content
+
+
+def test_gene_template_explains_structural_integrity_score():
+    from pathlib import Path
+    from segpick.reporting import html_report
+
+    template = Path(html_report.__file__).resolve().parent / "templates" / "gene.html"
+    content = template.read_text()
+    assert "How the score is calculated" in content
+    assert "orientation consistency" in content.lower()
+    assert "Nucleotide percentage identity is intentionally excluded" in content

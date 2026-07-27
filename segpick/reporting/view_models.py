@@ -252,7 +252,13 @@ class CandidateView:
     candidate_coverage: float | None
     reference_coverage: float | None
     block_count: int | None
+    structural_reference_id: str | None
+    longest_block_fraction: float | None
+    largest_candidate_gap: int | None
     largest_reference_gap: int | None
+    structural_continuity: float | None
+    orientation_consistency: float | None
+    order_consistency: float | None
     structural_integrity: float | None
     structural_status: str
     recommended: bool
@@ -427,7 +433,13 @@ def build_gene_page_view(
             candidate_coverage=(candidate.analysis.structural_integrity.candidate_coverage if candidate.analysis.structural_integrity is not None else None),
             reference_coverage=(candidate.analysis.structural_integrity.reference_coverage if candidate.analysis.structural_integrity is not None else None),
             block_count=(candidate.analysis.structural_integrity.block_count if candidate.analysis.structural_integrity is not None else None),
+            structural_reference_id=(candidate.analysis.structural_integrity.reference_id if candidate.analysis.structural_integrity is not None else None),
+            longest_block_fraction=(candidate.analysis.structural_integrity.longest_block_fraction if candidate.analysis.structural_integrity is not None else None),
+            largest_candidate_gap=(candidate.analysis.structural_integrity.largest_candidate_gap if candidate.analysis.structural_integrity is not None else None),
             largest_reference_gap=(candidate.analysis.structural_integrity.largest_reference_gap if candidate.analysis.structural_integrity is not None else None),
+            structural_continuity=(candidate.analysis.structural_integrity.continuity if candidate.analysis.structural_integrity is not None else None),
+            orientation_consistency=(candidate.analysis.structural_integrity.orientation_consistency if candidate.analysis.structural_integrity is not None else None),
+            order_consistency=(candidate.analysis.structural_integrity.order_consistency if candidate.analysis.structural_integrity is not None else None),
             structural_integrity=(candidate.analysis.structural_integrity.score if candidate.analysis.structural_integrity is not None else None),
             structural_status=(candidate.analysis.structural_integrity.status if candidate.analysis.structural_integrity is not None else "UNAVAILABLE"),
             recommended=candidate.id == recommended_id,

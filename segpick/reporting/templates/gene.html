@@ -1201,6 +1201,43 @@
 
 
   <section class="card">
+    <h2>Structural integrity</h2>
+    <p class="muted">Reference-relative structural evidence from MegaBLAST. The score excludes nucleotide identity and combines coverage agreement, continuity, orientation consistency and HSP ordering.</p>
+    {% for candidate in view.candidates %}
+      <div
+        class="candidate-detail{% if candidate.recommended %} active{% endif %}"
+        data-sequence-id="{{ candidate.candidate_id }}"
+      >
+        <h3>{{ candidate.candidate_id }}</h3>
+        {% if candidate.structural_integrity is not none %}
+          <p><strong>{{ candidate.structural_status|replace("_", " ")|title }}</strong> relative to {{ candidate.structural_reference_id }}</p>
+          <div class="mini-grid">
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.structural_integrity) }}</strong><span>Structural integrity</span></div>
+            <div class="mini"><strong>{{ "%.1f%%"|format(candidate.candidate_coverage * 100) }}</strong><span>Candidate coverage</span></div>
+            <div class="mini"><strong>{{ "%.1f%%"|format(candidate.reference_coverage * 100) }}</strong><span>Reference coverage</span></div>
+            <div class="mini"><strong>{{ candidate.block_count }}</strong><span>MegaBLAST blocks</span></div>
+            <div class="mini"><strong>{{ "%.1f%%"|format(candidate.longest_block_fraction * 100) }}</strong><span>Longest block</span></div>
+            <div class="mini"><strong>{{ candidate.largest_candidate_gap }} nt</strong><span>Largest candidate gap</span></div>
+            <div class="mini"><strong>{{ candidate.largest_reference_gap }} nt</strong><span>Largest reference gap</span></div>
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.structural_continuity) }}</strong><span>Continuity</span></div>
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.orientation_consistency) }}</strong><span>Orientation consistency</span></div>
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.order_consistency) }}</strong><span>HSP order consistency</span></div>
+          </div>
+          <details class="evidence-summary-row">
+            <summary>How the score is calculated</summary>
+            <div class="evidence-detail">
+              <p><code>sqrt(candidate coverage × reference coverage) × continuity × orientation consistency × order consistency</code></p>
+              <p class="muted">Nucleotide percentage identity is intentionally excluded so structurally coherent divergent lineages are not penalised.</p>
+            </div>
+          </details>
+        {% else %}
+          <p class="muted">No closest-reference MegaBLAST alignment was available for this candidate.</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="card">
     <h2>Read evidence</h2>
     {% for candidate in view.candidates %}
       <div class="candidate-detail" data-candidate-detail="{{ candidate.candidate_id }}" {% if not candidate.recommended %}hidden{% endif %}>

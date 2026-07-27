@@ -7,6 +7,7 @@ from segpick.models import (
     ContainmentMetrics,
     ContigMetadata,
     Gene,
+    StructuralIntegrity,
 )
 from segpick.reporting.view_models import build_gene_page_view
 from segpick.scoring import ScoringWeights, rank_gene
@@ -41,6 +42,20 @@ def make_candidate(
         fragmentation=0.0,
         structural_score=0.99,
         status="COMPLETE",
+    )
+    candidate.analysis.structural_integrity = StructuralIntegrity(
+        reference_id="ref_a",
+        candidate_coverage=0.95,
+        reference_coverage=0.90,
+        block_count=2,
+        longest_block_fraction=0.75,
+        largest_candidate_gap=12,
+        largest_reference_gap=20,
+        continuity=0.98,
+        orientation_consistency=1.0,
+        order_consistency=0.9,
+        score=0.81,
+        status="MINOR_DISCONTINUITY",
     )
 
     return candidate
@@ -80,6 +95,12 @@ def test_build_gene_page_view() -> None:
     assert view.recommendation.summary is not None
     assert len(view.candidates) == 2
     assert view.candidates[0].recommended is True
+    assert view.candidates[0].structural_reference_id == "ref_a"
+    assert view.candidates[0].longest_block_fraction == pytest.approx(0.75)
+    assert view.candidates[0].largest_candidate_gap == 12
+    assert view.candidates[0].structural_continuity == pytest.approx(0.98)
+    assert view.candidates[0].orientation_consistency == pytest.approx(1.0)
+    assert view.candidates[0].order_consistency == pytest.approx(0.9)
     assert view.recommendation.evidence
     assert {
         item.name
