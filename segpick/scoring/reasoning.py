@@ -16,7 +16,8 @@ CHANNEL_LABELS = {
     "containment": "Containment",
     "identity": "Reference identity",
     "fragmentation": "Fragmentation",
-    "read_support": "Read support",
+    "coverage_sufficiency": "ORF coverage sufficiency",
+    "coverage_integrity": "ORF coverage integrity",
     "orf_quality": "ORF quality",
     "blastx_consistency": "ORF–BLASTX consistency",
 }

@@ -17,7 +17,8 @@ class Evidence:
     containment: float | None
     identity: float | None
     fragmentation: float | None
-    read_support: float | None = None
+    coverage_sufficiency: float | None = None
+    coverage_integrity: float | None = None
     orf_quality: float | None = None
     blastx_consistency: float | None = None
 

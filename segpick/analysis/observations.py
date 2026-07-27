@@ -440,6 +440,54 @@ def global_candidate_observations(
                 )
             )
 
+    read_metrics = candidate.analysis.read_support
+    if read_metrics is not None:
+        if read_metrics.coverage_sufficiency >= 0.95:
+            observations.append(EvidenceObservation(
+                observation_type="complete_orf_read_coverage",
+                source=ObservationSource.READ_COVERAGE,
+                description="At least 95% of the coding region meets the minimum read-depth threshold.",
+                attributes={"score": read_metrics.coverage_sufficiency, "region_source": read_metrics.region_source},
+            ))
+        elif read_metrics.coverage_sufficiency < 0.75:
+            observations.append(EvidenceObservation(
+                observation_type="insufficient_orf_read_coverage",
+                source=ObservationSource.READ_COVERAGE,
+                description="Less than 75% of the coding region meets the minimum read-depth threshold.",
+                severity="review",
+                attributes={"score": read_metrics.coverage_sufficiency, "region_source": read_metrics.region_source},
+            ))
+        if read_metrics.internal_low_depth_interruption_count:
+            observations.append(EvidenceObservation(
+                observation_type="internal_coverage_interruption",
+                source=ObservationSource.READ_COVERAGE,
+                description="One or more internal low-depth intervals interrupt the coding region.",
+                severity="review",
+                attributes={
+                    "count": read_metrics.internal_low_depth_interruption_count,
+                    "longest_low_depth_interval": read_metrics.longest_low_depth_interval,
+                },
+            ))
+        if min(read_metrics.left_terminal_support, read_metrics.right_terminal_support) < 0.5:
+            observations.append(EvidenceObservation(
+                observation_type="weak_orf_terminal_support",
+                source=ObservationSource.READ_COVERAGE,
+                description="At least one coding-region terminus has weak read-depth support.",
+                severity="review",
+                attributes={
+                    "left_terminal_support": read_metrics.left_terminal_support,
+                    "right_terminal_support": read_metrics.right_terminal_support,
+                },
+            ))
+        if read_metrics.uniformity < 0.5:
+            observations.append(EvidenceObservation(
+                observation_type="variable_orf_coverage",
+                source=ObservationSource.READ_COVERAGE,
+                description="Read depth is highly variable across the coding region.",
+                severity="review",
+                attributes={"uniformity": read_metrics.uniformity},
+            ))
+
     consistency = candidate.analysis.blastx_consistency
     if consistency is not None:
         if not consistency.strand_agrees:

@@ -1178,7 +1178,8 @@
 
           <td>
             {% if candidate.read_support.available %}
-              {{ "%.3f"|format(candidate.read_support.overall_support) }}
+              {{ "%.3f"|format(candidate.read_support.coverage_sufficiency) }} /
+              {{ "%.3f"|format(candidate.read_support.coverage_integrity) }}
             {% else %}
               <span class="unavailable">—</span>
             {% endif %}
@@ -1202,6 +1203,40 @@
   </section>
 
 
+
+  <section class="card">
+    <h2>Read evidence</h2>
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail" data-candidate-detail="{{ candidate.candidate_id }}" {% if not candidate.recommended %}hidden{% endif %}>
+        {% if candidate.read_support.available %}
+          <p class="muted">Primary region: {{ candidate.read_support.region_source|replace("_", " ") }}; contig coordinates {{ candidate.read_support.region_start + 1 }}–{{ candidate.read_support.region_end }} ({{ candidate.read_support.region_length }} nt).</p>
+          <div class="evidence-list">
+            <details class="evidence-summary-row" open>
+              <summary><span class="evidence-label">Coverage sufficiency</span><span class="evidence-score">{{ "%.3f"|format(candidate.read_support.coverage_sufficiency) }}</span></summary>
+              <div class="evidence-detail">
+                <div class="evidence-detail-item">Median ORF depth <strong>{{ "%.1f"|format(candidate.read_support.median_depth) }}×</strong></div>
+                <div class="evidence-detail-item">ORF breadth ≥ minimum depth <strong>{{ "%.1f%%"|format(candidate.read_support.covered_fraction * 100) }}</strong></div>
+                <div class="evidence-detail-item">ORF breadth with any reads <strong>{{ "%.1f%%"|format(candidate.read_support.any_covered_fraction * 100) }}</strong></div>
+                <div class="evidence-detail-item">Whole-contig breadth ≥ minimum depth <strong>{{ "%.1f%%"|format(candidate.read_support.whole_contig_covered_fraction * 100) }}</strong></div>
+              </div>
+            </details>
+            <details class="evidence-summary-row" open>
+              <summary><span class="evidence-label">Coverage integrity</span><span class="evidence-score">{{ "%.3f"|format(candidate.read_support.coverage_integrity) }}</span></summary>
+              <div class="evidence-detail">
+                <div class="evidence-detail-item">Uniformity <strong>{{ "%.3f"|format(candidate.read_support.uniformity) }}</strong></div>
+                <div class="evidence-detail-item">Longest low-depth interval <strong>{{ candidate.read_support.longest_low_depth_interval }} nt</strong></div>
+                <div class="evidence-detail-item">Internal low-depth interruptions <strong>{{ candidate.read_support.internal_low_depth_interruption_count }}</strong></div>
+                <div class="evidence-detail-item">5′ terminal support <strong>{{ "%.3f"|format(candidate.read_support.left_terminal_support) }}</strong></div>
+                <div class="evidence-detail-item">3′ terminal support <strong>{{ "%.3f"|format(candidate.read_support.right_terminal_support) }}</strong></div>
+              </div>
+            </details>
+          </div>
+        {% else %}
+          <p class="muted">No read-depth data were attached for this candidate.</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </section>
 
   <section class="card">
     <h2>ORF structural evidence</h2>

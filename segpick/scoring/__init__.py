@@ -7,6 +7,8 @@ from .builder import (
     length_plausibility_evidence,
     protein_confidence_evidence,
     read_support_evidence,
+    coverage_sufficiency_evidence,
+    coverage_integrity_evidence,
     orf_quality_evidence,
     blastx_consistency_evidence,
 )
@@ -48,6 +50,8 @@ __all__ = [
     "identity_evidence",
     "fragmentation_evidence",
     "read_support_evidence",
+    "coverage_sufficiency_evidence",
+    "coverage_integrity_evidence",
     "orf_quality_evidence",
     "blastx_consistency_evidence",
     "EvidenceAgreement",

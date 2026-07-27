@@ -60,7 +60,7 @@ def test_uniform_depth_has_maximum_uniformity() -> None:
     assert metrics.uniformity == pytest.approx(1.0)
     assert metrics.left_terminal_support == pytest.approx(1.0)
     assert metrics.right_terminal_support == pytest.approx(1.0)
-    assert metrics.read_support == pytest.approx(1.0)
+    assert metrics.coverage_sufficiency == pytest.approx(1.0)
 
 
 def test_unsupported_right_terminal_reduces_read_support() -> None:
@@ -82,7 +82,7 @@ def test_unsupported_right_terminal_reduces_read_support() -> None:
     )
 
     assert metrics.right_terminal_support == pytest.approx(0.0)
-    assert metrics.read_support == pytest.approx(0.0)
+    assert metrics.coverage_integrity == pytest.approx(0.0)
 
 
 def test_variable_depth_reduces_uniformity() -> None:
@@ -126,3 +126,42 @@ def test_position_beyond_sequence_length_is_rejected() -> None:
             },
             sequence_length=10,
         )
+
+
+def test_read_evidence_can_be_restricted_to_orf_region() -> None:
+    depths = {position: 0 for position in range(1, 101)}
+    depths.update({position: 12 for position in range(21, 81)})
+
+    metrics = calculate_read_support(
+        sequence_id="contig_a",
+        position_depths=depths,
+        sequence_length=100,
+        region_start=20,
+        region_end=80,
+        region_source="selected_orf",
+        minimum_depth=3,
+        minimum_terminal_bases=5,
+    )
+
+    assert metrics.region_source == "selected_orf"
+    assert metrics.region_length == 60
+    assert metrics.coverage_sufficiency == pytest.approx(1.0)
+    assert metrics.whole_contig_covered_fraction == pytest.approx(0.6)
+
+
+def test_sufficiency_and_integrity_are_independent() -> None:
+    depths = {position: 20 for position in range(1, 101)}
+    for position in range(91, 101):
+        depths[position] = 0
+
+    metrics = calculate_read_support(
+        sequence_id="contig_a",
+        position_depths=depths,
+        sequence_length=100,
+        minimum_depth=3,
+        terminal_fraction=0.10,
+        minimum_terminal_bases=10,
+    )
+
+    assert metrics.coverage_sufficiency == pytest.approx(0.9)
+    assert metrics.coverage_integrity == pytest.approx(0.0)

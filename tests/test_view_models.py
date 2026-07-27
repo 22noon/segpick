@@ -90,7 +90,8 @@ def test_build_gene_page_view() -> None:
         "containment",
         "identity",
         "fragmentation",
-        "read_support",
+        "coverage_sufficiency",
+        "coverage_integrity",
         "orf_quality",
         "blastx_consistency",
     }
@@ -100,9 +101,9 @@ def test_build_gene_page_view() -> None:
     for item in view.recommendation.evidence
     }
 
-    assert evidence_by_name["read_support"].value is None
-    assert evidence_by_name["read_support"].contribution is None
-    assert evidence_by_name["read_support"].effective_weight is None
+    assert evidence_by_name["coverage_sufficiency"].value is None
+    assert evidence_by_name["coverage_sufficiency"].contribution is None
+    assert evidence_by_name["coverage_sufficiency"].effective_weight is None
 
     protein = evidence_by_name["protein_confidence"]
 

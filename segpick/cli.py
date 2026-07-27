@@ -294,6 +294,10 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
     paf_dir = outdir / "paf"
     paf_dir.mkdir(parents=True, exist_ok=True)
 
+    attach_orf_metrics(sample)
+    attach_blastx_guided_orf_metrics(sample)
+    attach_blastx_anchored_orfs(sample)
+
     if config.read_support.depth_dir is not None:
         depth_summary = attach_depth_directory(
             sample,
@@ -305,14 +309,10 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
             minimum_terminal_bases=config.read_support.minimum_terminal_bases,
         )
         print(
-            "Read support: "
+            "Read evidence: "
             f"{depth_summary.metrics_attached}/"
             f"{depth_summary.candidate_count} candidates attached"
         )
-
-    attach_orf_metrics(sample)
-    attach_blastx_guided_orf_metrics(sample)
-    attach_blastx_anchored_orfs(sample)
     attach_blastx_consistency(sample)
     attach_orf_alignment_metrics(sample)
     attach_protein_interpretations(sample)

@@ -177,7 +177,7 @@ def test_read_support_is_unavailable_without_depth_metrics() -> None:
 
     evidence = build_evidence(candidate, [candidate])
 
-    assert evidence.read_support is None
+    assert evidence.coverage_sufficiency is None
 
 def test_attached_read_support_becomes_evidence() -> None:
     candidate = make_candidate(
@@ -201,4 +201,4 @@ def test_attached_read_support_becomes_evidence() -> None:
 
     evidence = build_evidence(candidate, [candidate])
 
-    assert evidence.read_support == pytest.approx(1.0)
+    assert evidence.coverage_sufficiency == pytest.approx(1.0)

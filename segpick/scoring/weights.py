@@ -11,7 +11,8 @@ class ScoringWeights:
     containment: float = 0.16
     identity: float = 0.08
     fragmentation: float = 0.08
-    read_support: float = 0.08
+    coverage_sufficiency: float = 0.04
+    coverage_integrity: float = 0.04
     orf_quality: float = 0.12
     blastx_consistency: float = 0.20
 
@@ -37,7 +38,8 @@ class ScoringWeights:
             containment=self.containment / total,
             identity=self.identity / total,
             fragmentation=self.fragmentation / total,
-            read_support=self.read_support / total,
+            coverage_sufficiency=self.coverage_sufficiency / total,
+            coverage_integrity=self.coverage_integrity / total,
             orf_quality=self.orf_quality / total,
             blastx_consistency=self.blastx_consistency / total,
         )

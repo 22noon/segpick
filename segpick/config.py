@@ -215,8 +215,21 @@ def resolve_config(
                 default_weights.fragmentation,
             )
         ),
-        read_support=float(
-            weights_data.get("read_support", default_weights.read_support)
+        coverage_sufficiency=float(
+            weights_data.get(
+                "coverage_sufficiency",
+                float(weights_data.get("read_support", 0.08)) / 2.0
+                if "read_support" in weights_data
+                else default_weights.coverage_sufficiency,
+            )
+        ),
+        coverage_integrity=float(
+            weights_data.get(
+                "coverage_integrity",
+                float(weights_data.get("read_support", 0.08)) / 2.0
+                if "read_support" in weights_data
+                else default_weights.coverage_integrity,
+            )
         ),
         orf_quality=float(
             weights_data.get("orf_quality", default_weights.orf_quality)

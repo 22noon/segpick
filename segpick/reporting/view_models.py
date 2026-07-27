@@ -70,13 +70,29 @@ def build_hypothesis_view(hypothesis: BiologicalHypothesis) -> HypothesisView:
 @dataclass(frozen=True, slots=True)
 class ReadSupportView:
     available: bool
+    region_source: str | None
+    region_start: int | None
+    region_end: int | None
+    region_length: int | None
     mean_depth: float | None
     median_depth: float | None
+    any_covered_fraction: float | None
     covered_fraction: float | None
     uniformity: float | None
     left_terminal_support: float | None
     right_terminal_support: float | None
-    overall_support: float | None
+    longest_uncovered_interval: int | None
+    longest_low_depth_interval: int | None
+    internal_low_depth_interruption_count: int | None
+    coverage_sufficiency: float | None
+    coverage_integrity: float | None
+    whole_contig_covered_fraction: float | None
+
+    @property
+    def overall_support(self) -> float | None:
+        if self.coverage_sufficiency is None or self.coverage_integrity is None:
+            return None
+        return self.coverage_sufficiency * self.coverage_integrity
 
 
 @dataclass(frozen=True, slots=True)
@@ -517,30 +533,50 @@ def build_gene_page_view(
 
 
 def build_read_support_view(candidate: CandidateContig) -> ReadSupportView:
-    """Build optional read-support data for dashboard presentation."""
+    """Build ORF-centred read-evidence data for dashboard presentation."""
 
     metrics = candidate.analysis.read_support
     if metrics is None:
         return ReadSupportView(
             available=False,
+            region_source=None,
+            region_start=None,
+            region_end=None,
+            region_length=None,
             mean_depth=None,
             median_depth=None,
+            any_covered_fraction=None,
             covered_fraction=None,
             uniformity=None,
             left_terminal_support=None,
             right_terminal_support=None,
-            overall_support=None,
+            longest_uncovered_interval=None,
+            longest_low_depth_interval=None,
+            internal_low_depth_interruption_count=None,
+            coverage_sufficiency=None,
+            coverage_integrity=None,
+            whole_contig_covered_fraction=None,
         )
 
     return ReadSupportView(
         available=True,
+        region_source=metrics.region_source,
+        region_start=metrics.region_start,
+        region_end=metrics.region_end,
+        region_length=metrics.region_length,
         mean_depth=metrics.mean_depth,
         median_depth=metrics.median_depth,
+        any_covered_fraction=metrics.any_covered_fraction,
         covered_fraction=metrics.covered_fraction,
         uniformity=metrics.uniformity,
         left_terminal_support=metrics.left_terminal_support,
         right_terminal_support=metrics.right_terminal_support,
-        overall_support=metrics.read_support,
+        longest_uncovered_interval=metrics.longest_uncovered_interval,
+        longest_low_depth_interval=metrics.longest_low_depth_interval,
+        internal_low_depth_interruption_count=metrics.internal_low_depth_interruption_count,
+        coverage_sufficiency=metrics.coverage_sufficiency,
+        coverage_integrity=metrics.coverage_integrity,
+        whole_contig_covered_fraction=metrics.whole_contig_covered_fraction,
     )
 
 

@@ -13,7 +13,8 @@ def _candidate(candidate_id: str, **values) -> CandidateRecommendation:
         containment=values.get("containment"),
         identity=values.get("identity"),
         fragmentation=values.get("fragmentation"),
-        read_support=values.get("read_support"),
+        coverage_sufficiency=values.get("read_support"),
+        coverage_integrity=values.get("read_support"),
         orf_quality=values.get("orf_quality"),
         blastx_consistency=values.get("blastx_consistency"),
     )

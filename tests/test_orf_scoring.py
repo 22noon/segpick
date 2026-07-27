@@ -49,7 +49,8 @@ def test_missing_orf_quality_weight_is_redistributed():
         containment=1.0,
         identity=1.0,
         fragmentation=1.0,
-        read_support=1.0,
+        coverage_sufficiency=1.0,
+        coverage_integrity=1.0,
         orf_quality=None,
         blastx_consistency=None,
     )
@@ -68,7 +69,8 @@ def test_orf_quality_contributes_to_weighted_score():
         containment=1.0,
         identity=1.0,
         fragmentation=1.0,
-        read_support=1.0,
+        coverage_sufficiency=1.0,
+        coverage_integrity=1.0,
         orf_quality=0.0,
         blastx_consistency=None,
     )

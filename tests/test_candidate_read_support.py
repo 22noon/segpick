@@ -48,7 +48,7 @@ def test_attach_read_support_to_candidate() -> None:
     )
 
     assert candidate.analysis.read_support is metrics
-    assert metrics.read_support == pytest.approx(1.0)
+    assert metrics.coverage_sufficiency == pytest.approx(1.0)
 
 
 def test_attach_gene_depths_matches_candidate_ids() -> None:

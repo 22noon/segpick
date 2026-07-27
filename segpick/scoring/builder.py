@@ -112,7 +112,8 @@ def build_evidence(
         containment=containment_evidence(candidate),
         identity=identity_evidence(candidate),
         fragmentation=fragmentation_evidence(candidate),
-        read_support=read_support_evidence(candidate),
+        coverage_sufficiency=coverage_sufficiency_evidence(candidate),
+        coverage_integrity=coverage_integrity_evidence(candidate),
         orf_quality=orf_quality_evidence(candidate),
         blastx_consistency=blastx_consistency_evidence(candidate),
     )
@@ -126,16 +127,34 @@ def build_gene_evidence(
 
     return {candidate.id: build_evidence(candidate, candidate_list) for candidate in candidate_list}
 
-def read_support_evidence(
+def coverage_sufficiency_evidence(
     candidate: CandidateContig,
 ) -> float | None:
-    """Return attached read-support evidence when available."""
+    """Return ORF breadth above the configured minimum depth."""
 
     metrics = candidate.analysis.read_support
-
     if metrics is None:
         return None
+    return clamp01(float(metrics.coverage_sufficiency))
 
+
+def coverage_integrity_evidence(
+    candidate: CandidateContig,
+) -> float | None:
+    """Return the derived ORF coverage-shape summary."""
+
+    metrics = candidate.analysis.read_support
+    if metrics is None:
+        return None
+    return clamp01(float(metrics.coverage_integrity))
+
+
+def read_support_evidence(candidate: CandidateContig) -> float | None:
+    """Deprecated compatibility wrapper for the former combined channel."""
+
+    metrics = candidate.analysis.read_support
+    if metrics is None:
+        return None
     return clamp01(float(metrics.read_support))
 
 

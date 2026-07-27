@@ -10,7 +10,8 @@ def test_score_uses_all_available_channels() -> None:
         containment=0.8,
         identity=0.9,
         fragmentation=1.0,
-        read_support=0.75,
+        coverage_sufficiency=0.75,
+        coverage_integrity=0.75,
     )
 
     weights = ScoringWeights(
@@ -19,7 +20,8 @@ def test_score_uses_all_available_channels() -> None:
         containment=0.20,
         identity=0.15,
         fragmentation=0.10,
-        read_support=0.20,
+        coverage_sufficiency=0.10,
+        coverage_integrity=0.10,
         orf_quality=0.0,
         blastx_consistency=0.0,
     )
@@ -45,7 +47,8 @@ def test_missing_channel_weight_is_redistributed() -> None:
         containment=0.8,
         identity=0.9,
         fragmentation=1.0,
-        read_support=0.75,
+        coverage_sufficiency=0.75,
+        coverage_integrity=0.75,
     )
 
     weights = ScoringWeights(
@@ -54,7 +57,8 @@ def test_missing_channel_weight_is_redistributed() -> None:
         containment=0.20,
         identity=0.15,
         fragmentation=0.10,
-        read_support=0.20,
+        coverage_sufficiency=0.10,
+        coverage_integrity=0.10,
         orf_quality=0.0,
         blastx_consistency=0.0,
     )
@@ -65,7 +69,7 @@ def test_missing_channel_weight_is_redistributed() -> None:
 
     assert result.effective_weights["protein_confidence"] == pytest.approx( 0.25 / 0.90)
     assert result.effective_weights["containment"] == pytest.approx( 0.20 / 0.90)
-    assert result.effective_weights["read_support"] == pytest.approx( 0.20 / 0.90)
+    assert result.effective_weights["coverage_sufficiency"] == pytest.approx( 0.10 / 0.90)
 
 def test_missing_evidence_does_not_count_as_zero() -> None:
     missing = Evidence(
@@ -74,7 +78,8 @@ def test_missing_evidence_does_not_count_as_zero() -> None:
         containment=1.0,
         identity=1.0,
         fragmentation=1.0,
-        read_support=1.0,
+        coverage_sufficiency=1.0,
+        coverage_integrity=1.0,
     )
 
     zero = Evidence(
@@ -83,7 +88,8 @@ def test_missing_evidence_does_not_count_as_zero() -> None:
         containment=1.0,
         identity=1.0,
         fragmentation=1.0,
-        read_support=1.0,
+        coverage_sufficiency=1.0,
+        coverage_integrity=1.0,
     )
     weights = ScoringWeights(
         protein_confidence=0.25,
@@ -91,7 +97,8 @@ def test_missing_evidence_does_not_count_as_zero() -> None:
         containment=0.20,
         identity=0.15,
         fragmentation=0.10,
-        read_support=0.20,
+        coverage_sufficiency=0.10,
+        coverage_integrity=0.10,
         orf_quality=0.0,
         blastx_consistency=0.0,
     )
@@ -106,7 +113,8 @@ def test_candidate_can_be_scored_with_one_available_channel() -> None:
         containment=None,
         identity=None,
         fragmentation=None,
-        read_support=None,
+        coverage_sufficiency=None,
+        coverage_integrity=None,
     )
 
     result = score_evidence(evidence, ScoringWeights())
@@ -122,7 +130,8 @@ def test_scoring_fails_when_no_evidence_is_available() -> None:
         containment=None,
         identity=None,
         fragmentation=None,
-        read_support=None,
+        coverage_sufficiency=None,
+        coverage_integrity=None,
     )
 
     with pytest.raises(ValueError):
@@ -135,7 +144,8 @@ def test_missing_read_support_weight_is_redistributed() -> None:
         containment=1.0,
         identity=1.0,
         fragmentation=1.0,
-        read_support=None,
+        coverage_sufficiency=None,
+        coverage_integrity=None,
     )
 
     result = score_evidence(

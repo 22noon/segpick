@@ -101,7 +101,7 @@ def test_attach_depth_directory(tmp_path) -> None:
         "contig_a",
         "contig_b",
     }
-    assert attached["contig_a"].read_support == pytest.approx(1.0)
+    assert attached["contig_a"].coverage_sufficiency == pytest.approx(1.0)
 
 
 def test_missing_files_are_skipped_by_default(tmp_path) -> None:
