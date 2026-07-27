@@ -271,6 +271,21 @@ class RecommendationView:
     runner_up_strongest_difference: str | None
 
 
+
+@dataclass(frozen=True, slots=True)
+class BoundaryCoverageView:
+    gap_start: int
+    gap_end: int
+    gap_length: int
+    left_median_depth: float
+    gap_median_depth: float
+    right_median_depth: float
+    gap_to_baseline_ratio: float | None
+    zero_fraction: float
+    classification: str
+    severity: str
+    summary: str
+
 @dataclass(frozen=True, slots=True)
 class CandidateView:
     candidate_id: str
@@ -297,6 +312,7 @@ class CandidateView:
     convergences: tuple[ConvergenceView, ...]
     convergence_review_required: bool
     hypotheses: tuple[HypothesisView, ...]
+    boundary_coverage: tuple[BoundaryCoverageView, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -551,6 +567,22 @@ def build_gene_page_view(
             hypotheses=tuple(
                 build_hypothesis_view(item)
                 for item in candidate.analysis.hypotheses
+            ),
+            boundary_coverage=tuple(
+                BoundaryCoverageView(
+                    gap_start=item.gap_start,
+                    gap_end=item.gap_end,
+                    gap_length=item.gap_length,
+                    left_median_depth=item.left_median_depth,
+                    gap_median_depth=item.gap_median_depth,
+                    right_median_depth=item.right_median_depth,
+                    gap_to_baseline_ratio=item.gap_to_baseline_ratio,
+                    zero_fraction=item.zero_fraction,
+                    classification=item.classification,
+                    severity=item.severity,
+                    summary=item.summary,
+                )
+                for item in candidate.analysis.boundary_coverage
             ),
         )
         for candidate in gene.candidates

@@ -1,3 +1,4 @@
+from .boundary_coverage import attach_boundary_coverage_assessments, assess_reference_boundaries
 from .status import classify_status
 
 from .orf import attach_orf_metrics, calculate_orf_metrics, find_orfs

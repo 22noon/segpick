@@ -24,6 +24,7 @@ class BlastNHSP:
     def strand(self) -> str:
         return "+" if self.subject_end >= self.subject_start else "-"
 
+
     def to_dict(self) -> dict[str, object]:
         return {
             "query_id": self.query_id,
@@ -61,6 +62,21 @@ class ReferenceDotplot:
     @property
     def available(self) -> bool:
         return bool(self.hsps)
+
+    def merged_query_intervals(self, *, maximum_gap: int = 25) -> tuple[tuple[int, int], ...]:
+        """Return merged one-based inclusive query intervals for all HSPs."""
+
+        intervals = sorted(
+            (min(hsp.query_start, hsp.query_end), max(hsp.query_start, hsp.query_end))
+            for hsp in self.hsps
+        )
+        merged: list[list[int]] = []
+        for start, end in intervals:
+            if not merged or start > merged[-1][1] + maximum_gap + 1:
+                merged.append([start, end])
+            else:
+                merged[-1][1] = max(merged[-1][1], end)
+        return tuple((start, end) for start, end in merged)
 
     @property
     def block_count(self) -> int:

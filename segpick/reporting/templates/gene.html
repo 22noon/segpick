@@ -1331,7 +1331,10 @@
   <section class="card">
     <h2>Read evidence</h2>
     {% for candidate in view.candidates %}
-      <div class="candidate-detail" data-candidate-detail="{{ candidate.candidate_id }}" {% if not candidate.recommended %}hidden{% endif %}>
+      <div
+        class="candidate-detail{% if candidate.recommended %} active{% endif %}"
+        data-sequence-id="{{ candidate.candidate_id }}"
+      >
         {% if candidate.read_support.available %}
           <p class="muted">Primary region: {{ candidate.read_support.region_source|replace("_", " ") }}; contig coordinates {{ candidate.read_support.region_start + 1 }}–{{ candidate.read_support.region_end }} ({{ candidate.read_support.region_length }} nt).</p>
           <div class="evidence-list">
@@ -1357,6 +1360,31 @@
           </div>
         {% else %}
           <p class="muted">No read-depth data were attached for this candidate.</p>
+        {% endif %}
+
+        {% if candidate.boundary_coverage %}
+          <h4>Coverage at reference-alignment boundaries</h4>
+          <p class="muted">Cross-evidence assessment of read depth across internal gaps between reference-supported regions. These classifications are descriptive and do not affect ranking.</p>
+          <div class="evidence-list">
+            {% for boundary in candidate.boundary_coverage %}
+              <details class="evidence-summary-row"{% if boundary.severity == "review" %} open{% endif %}>
+                <summary>
+                  <span class="evidence-label">{{ boundary.gap_start }}–{{ boundary.gap_end }} ({{ boundary.gap_length }} nt)</span>
+                  <span class="evidence-score">{{ boundary.classification|replace("_", " ")|title }}</span>
+                </summary>
+                <div class="evidence-detail">
+                  <p><strong>{{ boundary.summary }}</strong></p>
+                  <div class="evidence-detail-item">Median depth before gap <strong>{{ "%.1f"|format(boundary.left_median_depth) }}×</strong></div>
+                  <div class="evidence-detail-item">Median depth within gap <strong>{{ "%.1f"|format(boundary.gap_median_depth) }}×</strong></div>
+                  <div class="evidence-detail-item">Median depth after gap <strong>{{ "%.1f"|format(boundary.right_median_depth) }}×</strong></div>
+                  <div class="evidence-detail-item">Gap-to-flank depth ratio <strong>{{ "%.3f"|format(boundary.gap_to_baseline_ratio) if boundary.gap_to_baseline_ratio is not none else "—" }}</strong></div>
+                  <div class="evidence-detail-item">Uncovered bases in gap <strong>{{ "%.1f%%"|format(boundary.zero_fraction * 100) }}</strong></div>
+                </div>
+              </details>
+            {% endfor %}
+          </div>
+        {% elif candidate.read_support.available %}
+          <p class="muted">No internal reference-alignment gaps were available for cross-evidence assessment.</p>
         {% endif %}
       </div>
     {% endfor %}

@@ -103,6 +103,7 @@ def write_coverage_plot(
     reference_supported_intervals: Iterable[tuple[int, int]] | None = None,
     reference_hsp_merge_gap: int = 25,
     reference_supported_label: str = "Reference-supported regions",
+    boundary_coverage_assessments: Iterable[object] | None = None,
 ) -> Path:
     """Write a per-base coverage plot and return its output path."""
 
@@ -179,6 +180,7 @@ def write_coverage_plot(
         reference_supported_intervals or (),
         maximum_gap=reference_hsp_merge_gap,
     )
+    boundary_assessments = list(boundary_coverage_assessments or ())
 
     selected_y = 2.15
     anchored_y = 1.35
@@ -251,13 +253,33 @@ def write_coverage_plot(
                 solid_capstyle="butt",
             )
         for left, right in zip(reference_intervals, reference_intervals[1:]):
+            matching = next(
+                (
+                    item for item in boundary_assessments
+                    if getattr(item, "gap_start", None) == left[1] + 1
+                    and getattr(item, "gap_end", None) == right[0] - 1
+                ),
+                None,
+            )
+            classification = getattr(matching, "classification", None)
+            marker_color = (
+                "tab:red"
+                if classification in {
+                    "coverage_gap",
+                    "local_coverage_decrease",
+                    "asymmetric_flank_drop",
+                    "low_coverage_both_sides",
+                }
+                else "tab:green"
+            )
+            marker_alpha = 0.8 if marker_color == "tab:red" else 0.45
             for boundary in (left[1], right[0]):
                 coverage_axis.axvline(
                     boundary,
                     linestyle=":",
-                    linewidth=0.8,
-                    color="tab:green",
-                    alpha=0.55,
+                    linewidth=0.9,
+                    color=marker_color,
+                    alpha=marker_alpha,
                 )
         legend_handles.append(
             Line2D(
@@ -368,6 +390,7 @@ def write_sample_coverage_plots(
                     if candidate.analysis.reference_dotplot is not None
                     else None
                 ),
+                boundary_coverage_assessments=candidate.analysis.boundary_coverage,
             )
             plot_paths[candidate.id] = output_path
 

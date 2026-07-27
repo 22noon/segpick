@@ -257,6 +257,8 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "candidate-row" in html
     assert "candidate-detail" in html
     assert 'data-sequence-id="contig_a"' in html
+    assert 'data-candidate-detail=' not in html
+    assert 'class="candidate-detail active"' in html
 
     assert "Runner-up" in html
     assert "Score gap" in html

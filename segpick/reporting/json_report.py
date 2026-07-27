@@ -75,6 +75,9 @@ def write_gene_json_reports(
                         if c.analysis.reference_dotplot is not None
                         else None
                     ),
+                    "boundary_coverage_assessments": [
+                        item.to_dict() for item in c.analysis.boundary_coverage
+                    ],
                     "orf": (
                         c.analysis.orf.to_dict()
                         if c.analysis.orf is not None

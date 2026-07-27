@@ -14,6 +14,7 @@ class ObservationSource(StrEnum):
     DIAMOND = "diamond"
     PROTEIN_CONTINUITY = "protein_continuity"
     STRUCTURAL_ALIGNMENT = "structural_alignment"
+    CROSS_EVIDENCE = "cross_evidence"
 
 
 @dataclass(frozen=True, slots=True)

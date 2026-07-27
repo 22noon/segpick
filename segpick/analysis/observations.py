@@ -522,6 +522,30 @@ def global_candidate_observations(
                 attributes={"uniformity": read_metrics.uniformity},
             ))
 
+    for assessment in candidate.analysis.boundary_coverage:
+        if assessment.classification == "continuous_coverage":
+            observation_type = "coverage_continuous_across_reference_gap"
+        elif assessment.classification == "coverage_gap":
+            observation_type = "coverage_gap_at_reference_boundary"
+        elif assessment.classification in {"local_coverage_decrease", "asymmetric_flank_drop"}:
+            observation_type = "coverage_drop_at_reference_boundary"
+        elif assessment.classification == "low_coverage_both_sides":
+            observation_type = "low_coverage_around_reference_boundary"
+        else:
+            observation_type = "reference_boundary_coverage_unresolved"
+        observations.append(
+            EvidenceObservation(
+                observation_type=observation_type,
+                source=ObservationSource.CROSS_EVIDENCE,
+                description=assessment.summary,
+                coordinate_system=f"contig:{candidate.id}",
+                start=assessment.gap_start,
+                end=assessment.gap_end,
+                severity=assessment.severity,
+                attributes=assessment.to_dict(),
+            )
+        )
+
     consistency = candidate.analysis.blastx_consistency
     if consistency is not None:
         if not consistency.strand_agrees:

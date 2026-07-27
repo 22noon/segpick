@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .blastx import BlastXHit
+from .boundary_coverage import BoundaryCoverageAssessment
 from .blastx_anchored_orf import BlastXAnchoredORF
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
@@ -43,4 +44,5 @@ class ContigAnalysis:
     hypotheses: tuple[BiologicalHypothesis, ...] = ()
     rule_evaluations: tuple[RuleEvaluation, ...] = ()
     depth_profile: dict[int, int] = field(default_factory=dict)
+    boundary_coverage: tuple[BoundaryCoverageAssessment, ...] = ()
     recommendation_reason: str | None = None

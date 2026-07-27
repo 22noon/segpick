@@ -3,6 +3,7 @@ from .analysis import ContigAnalysis
 from .blastx import BlastXHit
 from .blastx_anchored_orf import BlastXAnchoredORF
 from .blastx_consistency import BlastXConsistency
+from .boundary_coverage import BoundaryCoverageAssessment
 from .containment import ContainmentMetrics
 from .convergence import EvidenceConvergence
 from .contig import CandidateContig
@@ -45,6 +46,7 @@ __all__ = [
     "BlastXHit",
     "BlastXAnchoredORF",
     "BlastXConsistency",
+    "BoundaryCoverageAssessment",
     "EvidenceConvergence",
     "ORFHit",
     "ORFMetrics",

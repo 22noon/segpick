@@ -17,6 +17,7 @@ from segpick.analysis.orf_alignment import attach_orf_alignment_metrics
 from segpick.analysis.orf_quality import attach_orf_quality
 from segpick.analysis.protein_interpretation import attach_protein_interpretations
 from segpick.analysis.observations import attach_observation_intervals
+from segpick.analysis.boundary_coverage import attach_boundary_coverage_assessments
 from segpick.analysis.findings import attach_biological_findings
 from segpick.analysis.manifest import build_analysis_manifest
 from segpick.analysis.reference_dotplot import attach_reference_dotplots
@@ -297,6 +298,12 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
             f"{depth_summary.metrics_attached}/"
             f"{depth_summary.candidate_count} candidates attached"
         )
+    boundary_count = attach_boundary_coverage_assessments(
+        sample,
+        minimum_depth=config.read_support.minimum_depth,
+    )
+    if boundary_count:
+        print(f"Cross-evidence boundaries: {boundary_count} reference gaps assessed")
     attach_blastx_consistency(sample)
     attach_orf_alignment_metrics(sample)
     attach_protein_interpretations(sample)
