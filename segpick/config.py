@@ -34,7 +34,7 @@ class PairwiseDotplotConfig:
 
 @dataclass(frozen=True, slots=True)
 class ReferenceDotplotConfig:
-    enabled: bool = False
+    enabled: bool = True
     task: str = "megablast"
     evalue: float = 1e-5
     word_size: int | None = None
@@ -50,9 +50,6 @@ class RunConfig:
     rule_files: tuple[Path, ...] = ()
     outdir: Path = Path("results")
     sample_name: str = "sample"
-    align: bool = False
-    use_existing_paf: bool = False
-    preset: str = "asm5"
     html: bool = False
     strict: bool = False
     scoring_weights: ScoringWeights = field(default_factory=ScoringWeights)
@@ -93,7 +90,6 @@ def _flatten_yaml(data: dict[str, Any]) -> dict[str, Any]:
 
     result: dict[str, Any] = {}
     input_cfg = data.get("input", {}) or {}
-    alignment_cfg = data.get("alignment", {}) or {}
     dashboard_cfg = data.get("dashboard", {}) or {}
     reasoning_cfg = data.get("reasoning", {}) or {}
     reference_dotplot_cfg = data.get("reference_dotplots", {}) or {}
@@ -108,9 +104,6 @@ def _flatten_yaml(data: dict[str, Any]) -> dict[str, Any]:
     result["outdir"] = data.get("outdir")
     result["sample_name"] = data.get("sample", data.get("sample_name"))
     result["strict"] = data.get("strict")
-    result["align"] = alignment_cfg.get("run", alignment_cfg.get("align", data.get("align")))
-    result["use_existing_paf"] = alignment_cfg.get("use_existing_paf", data.get("use_existing_paf"))
-    result["preset"] = alignment_cfg.get("preset", data.get("preset"))
     result["html"] = dashboard_cfg.get("html", data.get("html"))
     if reference_dotplot_cfg:
         result["reference_dotplots"] = reference_dotplot_cfg
@@ -159,7 +152,7 @@ def resolve_config(
 
     dotplot_data = yaml_values.get("reference_dotplots", {}) or {}
     reference_dotplots = ReferenceDotplotConfig(
-        enabled=bool(dotplot_data.get("enabled", False)),
+        enabled=bool(dotplot_data.get("enabled", True)),
         task=str(dotplot_data.get("task", "megablast")),
         evalue=float(dotplot_data.get("evalue", 1e-5)),
         word_size=(
@@ -203,16 +196,14 @@ def resolve_config(
                 default_weights.length_plausibility,
             )
         ),
-        containment=float(
-            weights_data.get("containment", default_weights.containment)
-        ),
-        identity=float(
-            weights_data.get("identity", default_weights.identity)
-        ),
-        fragmentation=float(
+        structural_integrity=float(
             weights_data.get(
-                "fragmentation",
-                default_weights.fragmentation,
+                "structural_integrity",
+                (float(weights_data.get("containment", 0.0))
+                 + float(weights_data.get("identity", 0.0))
+                 + float(weights_data.get("fragmentation", 0.0)))
+                if any(key in weights_data for key in ("containment", "identity", "fragmentation"))
+                else default_weights.structural_integrity,
             )
         ),
         coverage_sufficiency=float(
@@ -247,7 +238,7 @@ def resolve_config(
         key: value
         for key, value in yaml_values.items()
         if value is not None
-        and key not in {"scoring", "read_support", "reference_dotplots", "contig_dotplots"}
+        and key not in {"scoring", "read_support", "reference_dotplots", "contig_dotplots", "align", "use_existing_paf", "preset"}
     }
 
     merged.update(yaml_flat)
@@ -348,7 +339,7 @@ def resolve_config(
     merged["read_support"] = read_support
     merged["reference_dotplots"] = reference_dotplots
     merged["contig_dotplots"] = contig_dotplots
-    cli_clean = {key: value for key, value in cli_values.items() if value is not None}
+    cli_clean = {key: value for key, value in cli_values.items() if value is not None and key not in {"align", "use_existing_paf", "preset"}}
     if "rule_files" in cli_clean:
         cli_clean["rule_files"] = tuple(Path(path) for path in cli_clean["rule_files"])
     merged.update(cli_clean)

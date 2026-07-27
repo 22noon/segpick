@@ -42,7 +42,6 @@ def write_provenance(
         "command": argv,
         "python": sys.version.split()[0],
         "platform": platform.platform(),
-        "minimap2": _tool_version("minimap2"),
         "resolved_config": config.to_dict(),
         "analysis_manifest": manifest.to_dict() if manifest is not None else None,
     }

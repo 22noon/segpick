@@ -8,6 +8,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from plotly.io import to_html
+from plotly.offline import get_plotlyjs
 from plotly.utils import PlotlyJSONEncoder
 
 from segpick import __version__
@@ -17,9 +18,7 @@ from segpick.models import AnalysisManifest, Gene, Sample
 from segpick.reporting.view_models import build_gene_page_view
 from segpick.scoring import GeneRecommendation
 from segpick.visualization import (
-    make_containment_plot,
     make_contig_dotplot,
-    make_dotplot,
     make_multi_candidate_reference_dotplot,
     make_reference_dotplot,
 )
@@ -48,72 +47,37 @@ def _sequence_payload(gene: Gene) -> list[dict[str, object]]:
     return seqs
 
 
+
 def _table_rows(gene: Gene) -> list[dict[str, object]]:
+    """Return candidate structural rows for compatibility and tests."""
     rows: list[dict[str, object]] = []
-    for ref in gene.references:
-        m = ref.containment
-        rows.append(
-            {
-                "id": ref.accession,
-                "type": "reference",
-                "length": ref.length,
-                "confidence": None,
-                "z": None,
-                "cluster": None,
-                "query_coverage": m.query_coverage,
-                "anchor_coverage": m.anchor_coverage,
-                "identity": m.identity,
-                "fragmentation": m.fragmentation,
-                "n_blocks": m.n_blocks,
-                "structural_score": m.structural_score,
-                "status": m.status,
-                "is_anchor": ref.accession == gene.anchor_id,
-            }
-        )
-    for contig in gene.candidates:
-        m = contig.analysis.containment
-        rows.append(
-            {
-                "id": contig.id,
-                "type": "candidate",
-                "length": contig.length,
-                "confidence": contig.metadata.confidence,
-                "z": contig.metadata.z,
-                "cluster": contig.metadata.cluster,
-                "query_coverage": m.query_coverage,
-                "anchor_coverage": m.anchor_coverage,
-                "identity": m.identity,
-                "fragmentation": m.fragmentation,
-                "n_blocks": m.n_blocks,
-                "structural_score": m.structural_score,
-                "status": m.status,
-                "is_anchor": contig.id == gene.anchor_id,
-            }
-        )
+    for reference in gene.references:
+        rows.append({
+            "id": reference.accession, "type": "reference", "length": reference.length,
+            "confidence": None, "z": None, "cluster": None,
+            "candidate_coverage": None, "reference_coverage": None,
+            "block_count": None, "largest_reference_gap": None,
+            "structural_integrity": None, "status": "REFERENCE",
+            "is_anchor": reference.accession == gene.anchor_id,
+        })
+    for candidate in gene.candidates:
+        m = candidate.analysis.structural_integrity
+        rows.append({
+            "id": candidate.id,
+            "type": "candidate",
+            "length": candidate.length,
+            "confidence": candidate.metadata.confidence,
+            "z": candidate.metadata.z,
+            "cluster": candidate.metadata.cluster,
+            "candidate_coverage": m.candidate_coverage if m else None,
+            "reference_coverage": m.reference_coverage if m else None,
+            "block_count": m.block_count if m else None,
+            "largest_reference_gap": m.largest_reference_gap if m else None,
+            "structural_integrity": m.score if m else None,
+            "status": m.status if m else "UNAVAILABLE",
+            "is_anchor": candidate.id == gene.anchor_id,
+        })
     return rows
-
-
-def _gene_overview(gene: Gene, page: str) -> dict[str, object]:
-    recommendation = _provisional_recommendation(gene)
-    statuses = [c.analysis.containment.status for c in gene.candidates]
-    if any(s in {"COMPLETE", "ANCHOR"} for s in statuses):
-        overall_status = "COMPLETE"
-    elif any(s == "PARTIAL" for s in statuses):
-        overall_status = "PARTIAL"
-    elif any(s == "FRAGMENTED" for s in statuses):
-        overall_status = "FRAGMENTED"
-    elif statuses:
-        overall_status = "POOR"
-    else:
-        overall_status = "NO_CANDIDATE"
-
-    return {
-        "gene": gene,
-        "page": page,
-        "overall_status": overall_status,
-        "recommendation": recommendation,
-    }
-
 
 def render_gene_page(
     gene: Gene,
@@ -124,23 +88,7 @@ def render_gene_page(
 ) -> Path:
     template = env.get_template("gene.html")
 
-    dot_html = to_html(
-        make_dotplot(gene),
-        include_plotlyjs="inline",
-        full_html=False,
-        config={"responsive": True, "displaylogo": False},
-        div_id="dotplot",
-    )
-    containment_html = to_html(
-        make_containment_plot(gene),
-        include_plotlyjs=False,
-        full_html=False,
-        config={"responsive": True, "displaylogo": False},
-        div_id="containment-plot",
-    )
-
     sequences = _sequence_payload(gene)
-    rows = _table_rows(gene)
     out = outdir / "genes" / f"{safe_name(gene.name)}.html"
     relative_coverage_paths = {
         candidate_id: Path(
@@ -264,8 +212,6 @@ def render_gene_page(
         template.render(
             view=view,
             gene=gene,
-            dotplot=dot_html,
-            containment=containment_html,
             sequences=sequences,
             sequences_json=json.dumps(sequences),
             protein_sequences_json=json.dumps(protein_sequences),
@@ -293,6 +239,10 @@ def write_html_dashboard(
 
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
+
+    assets_dir = outdir / "assets"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    (assets_dir / "plotly.min.js").write_text(get_plotlyjs(), encoding="utf-8")
 
     templates = Path(__file__).resolve().parent / "templates"
     env = Environment(

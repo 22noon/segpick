@@ -7,7 +7,6 @@ from .blastx_anchored_orf import BlastXAnchoredORF
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
 from .blastx_consistency import BlastXConsistency
-from .containment import ContainmentMetrics
 from .convergence import EvidenceConvergence
 from .orf import ORFMetrics
 from .orf_alignment import ORFAlignmentMetrics
@@ -17,6 +16,8 @@ from .protein_interpretation import ProteinInterpretation
 from .protein_relatedness import ProteinRelatedness
 from .read_support import ReadSupportMetrics
 from .reference_dotplot import ReferenceDotplot
+from .structural_integrity import StructuralIntegrity
+from .containment import ContainmentMetrics
 from .rule_evaluation import RuleEvaluation
 
 
@@ -24,9 +25,8 @@ from .rule_evaluation import RuleEvaluation
 class ContigAnalysis:
     """Derived analysis values for a candidate contig."""
 
-    containment: ContainmentMetrics = field(
-        default_factory=ContainmentMetrics
-    )
+    structural_integrity: StructuralIntegrity | None = None
+    containment: ContainmentMetrics = field(default_factory=ContainmentMetrics)  # legacy data only
     read_support: ReadSupportMetrics | None = None
     reference_dotplot: ReferenceDotplot | None = None
     blastx: BlastXHit | None = None

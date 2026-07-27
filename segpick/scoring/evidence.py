@@ -12,11 +12,12 @@ class Evidence:
     across the available channels.
     """
 
-    protein_confidence: float | None
-    length_plausibility: float | None
-    containment: float | None
-    identity: float | None
-    fragmentation: float | None
+    protein_confidence: float | None = None
+    length_plausibility: float | None = None
+    structural_integrity: float | None = None
+    containment: float | None = None  # deprecated compatibility
+    identity: float | None = None  # deprecated compatibility
+    fragmentation: float | None = None  # deprecated compatibility
     coverage_sufficiency: float | None = None
     coverage_integrity: float | None = None
     orf_quality: float | None = None
@@ -36,6 +37,9 @@ class Evidence:
         return {name: value for name, value in asdict(self).items() if value is not None}
 
     def to_dict(self) -> dict[str, float | None]:
-        """Return all evidence channels as a plain dictionary."""
+        """Return active evidence channels as a plain dictionary."""
 
-        return asdict(self)
+        values = asdict(self)
+        for name in ("containment", "identity", "fragmentation"):
+            values.pop(name, None)
+        return values

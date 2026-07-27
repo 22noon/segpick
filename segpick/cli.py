@@ -7,12 +7,10 @@ import sys
 from pathlib import Path
 
 from segpick import __version__
-from segpick.alignment.export import export_anchor_fastas, export_gene_fastas, safe_name
-from segpick.alignment.minimap import align_gene, attach_existing_paf
+from segpick.alignment.export import export_anchor_fastas, export_gene_fastas
 from segpick.analysis.blastx import attach_blastx_hits
 from segpick.analysis.blastx_consistency import attach_blastx_consistency
 from segpick.analysis.blastx_anchored_orf import attach_blastx_anchored_orfs
-from segpick.analysis.containment import analyse_gene
 from segpick.analysis.orf import attach_orf_metrics
 from segpick.analysis.orf_selection import attach_blastx_guided_orf_metrics
 from segpick.analysis.orf_alignment import attach_orf_alignment_metrics
@@ -23,6 +21,7 @@ from segpick.analysis.findings import attach_biological_findings
 from segpick.analysis.manifest import build_analysis_manifest
 from segpick.analysis.reference_dotplot import attach_reference_dotplots
 from segpick.analysis.contig_dotplot import attach_contig_dotplots
+from segpick.analysis.structural_integrity import attach_structural_integrity
 from segpick.analysis.hypotheses import attach_biological_hypotheses
 from segpick.config import RunConfig, load_config, resolve_config
 from segpick.reasoning import load_active_rules
@@ -51,7 +50,6 @@ def run_doctor() -> int:
         "Plotly": importlib.util.find_spec("plotly") is not None,
         "Jinja2": importlib.util.find_spec("jinja2") is not None,
         "PyYAML": importlib.util.find_spec("yaml") is not None,
-        "minimap2 on PATH": shutil.which("minimap2") is not None,
         "blastn on PATH": shutil.which("blastn") is not None,
     }
     print(f"SegPick {__version__}")
@@ -59,10 +57,7 @@ def run_doctor() -> int:
     print()
     for label, passed in checks.items():
         print(f"[{'OK' if passed else 'MISSING'}] {label}")
-    required = [
-        value for key, value in checks.items()
-        if key not in {"minimap2 on PATH", "blastn on PATH"}
-    ]
+    required = list(checks.values())
     return 0 if all(required) else 1
 
 
@@ -82,11 +77,7 @@ def _add_run_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--outdir", default=None)
     parser.add_argument("--sample-name", default=None)
-    parser.add_argument("--preset", default=None)
-
     parser.add_argument("--strict", action=argparse.BooleanOptionalAction, default=None)
-    parser.add_argument("--align", action=argparse.BooleanOptionalAction, default=None)
-    parser.add_argument("--use-existing-paf", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--html", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument(
         "--show-config",
@@ -196,9 +187,6 @@ def _cli_override_values(args: argparse.Namespace) -> dict[str, object]:
         "outdir",
         "sample_name",
         "strict",
-        "align",
-        "use_existing_paf",
-        "preset",
         "html",
         "depth_dir",
         "depth_suffix",
@@ -224,9 +212,6 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
     missing = [key for key in ("hits", "contigs", "refs") if not getattr(config, key)]
     if missing:
         raise ValueError("Missing required configuration values: " + ", ".join(missing))
-    if config.align and config.use_existing_paf:
-        raise ValueError("Choose either align or use_existing_paf, not both")
-
     if show_config:
         import yaml
 
@@ -273,6 +258,8 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
             "Reference dot plots: "
             f"{attached}/{attempted} candidate-reference comparisons attached"
         )
+        structural_attached = attach_structural_integrity(sample)
+        print(f"Structural integrity: {structural_attached} candidates summarised")
 
     if config.contig_dotplots.enabled:
         attached, attempted = attach_contig_dotplots(
@@ -290,9 +277,6 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
 
     gene_fastas = export_gene_fastas(sample, outdir / "gene_fastas")
     anchor_fastas = export_anchor_fastas(sample, outdir / "anchors")
-
-    paf_dir = outdir / "paf"
-    paf_dir.mkdir(parents=True, exist_ok=True)
 
     attach_orf_metrics(sample)
     attach_blastx_guided_orf_metrics(sample)
@@ -340,26 +324,7 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
         )
 
     recommendations = {}
-
     for gene_name, gene in sample.genes.items():
-        paf_path = paf_dir / f"{safe_name(gene_name)}.paf"
-
-        if config.align:
-            align_gene(
-                gene=gene,
-                anchor_fasta=anchor_fastas[gene_name],
-                query_fasta=gene_fastas[gene_name],
-                paf_out=paf_path,
-                preset=config.preset,
-            )
-        elif config.use_existing_paf:
-            if not paf_path.exists():
-                raise FileNotFoundError(f"Existing PAF not found: {paf_path}")
-
-            attach_existing_paf(gene, paf_path)
-
-
-        analyse_gene(gene)
         recommendations[gene_name] = rank_gene(
             gene,
             config.scoring_weights,
@@ -372,7 +337,7 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
 
     write_metrics_tsv(
         sample,
-        outdir / "containment_metrics.tsv",
+        outdir / "structural_integrity.tsv",
     )
 
     write_recommendations_tsv(

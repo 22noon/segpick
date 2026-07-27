@@ -13,7 +13,7 @@ class ObservationSource(StrEnum):
     ORF_STRUCTURE = "orf_structure"
     DIAMOND = "diamond"
     PROTEIN_CONTINUITY = "protein_continuity"
-    CONTAINMENT = "containment"
+    STRUCTURAL_ALIGNMENT = "structural_alignment"
 
 
 @dataclass(frozen=True, slots=True)

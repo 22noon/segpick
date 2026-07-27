@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ gene.name }} — SegPick</title>
+  <script src="../assets/plotly.min.js"></script>
   <style>
     :root { --bg:#f8fafc; --card:#fff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --blue:#2563eb; }
     * { box-sizing:border-box; }
@@ -1026,12 +1027,7 @@
     </div>
   </section>
 
-  <details class="card">
-    <summary><strong>Legacy PAF containment views</strong></summary>
-    <p class="muted">Minimap2-based overview retained for compatibility and compact containment inspection.</p>
-    <div>{{ dotplot|safe }}</div>
-    <div>{{ containment|safe }}</div>
-  </details>
+
 
   {% if reference_overviews %}
   <section class="card reference-overview-panel">
@@ -1119,11 +1115,11 @@
             "Confidence",
             "z",
             "Cluster",
-            "Query cov.",
-            "Anchor cov.",
-            "Identity",
-            "Fragmentation",
-            "Structural",
+            "Candidate cov.",
+            "Reference cov.",
+            "Blocks",
+            "Largest ref gap",
+            "Structural integrity",
             "Status",
             "Read support",
             "ORF quality"
@@ -1164,17 +1160,17 @@
 
           <td>{{ candidate.cluster }}</td>
 
-          <td>{{ "%.1f%%"|format(candidate.query_coverage * 100) }}</td>
+          <td>{% if candidate.candidate_coverage is not none %}{{ "%.1f%%"|format(candidate.candidate_coverage * 100) }}{% else %}—{% endif %}</td>
 
-          <td>{{ "%.1f%%"|format(candidate.anchor_coverage * 100) }}</td>
+          <td>{% if candidate.reference_coverage is not none %}{{ "%.1f%%"|format(candidate.reference_coverage * 100) }}{% else %}—{% endif %}</td>
 
-          <td>{{ "%.2f%%"|format(candidate.identity * 100) }}</td>
+          <td>{{ candidate.block_count if candidate.block_count is not none else "—" }}</td>
 
-          <td>{{ "%.3f"|format(candidate.fragmentation) }}</td>
+          <td>{{ candidate.largest_reference_gap if candidate.largest_reference_gap is not none else "—" }}</td>
 
-          <td>{{ "%.3f"|format(candidate.structural_score) }}</td>
+          <td>{% if candidate.structural_integrity is not none %}{{ "%.3f"|format(candidate.structural_integrity) }}{% else %}—{% endif %}</td>
 
-          <td>{{ candidate.status }}</td>
+          <td>{{ candidate.structural_status }}</td>
 
           <td>
             {% if candidate.read_support.available %}
@@ -1506,11 +1502,10 @@ function handleProteinAction(button){
 }
 function traceSequence(trace){return trace.meta&&trace.meta.sequence_id?trace.meta.sequence_id:null;}
 function highlightPlot(divId,id){const div=document.getElementById(divId);if(!div||!div.data)return;const op=div.data.map(t=>!id||traceSequence(t)===id?1:0.16);const widths=div.data.map(t=>{const w=(t.line&&t.line.width)||4;return !id||traceSequence(t)===id?Math.max(w,6):Math.max(2,w*.55);});Plotly.restyle(div,{opacity:op,"line.width":widths});}
-function clearSelection(){DashboardState.selectedCandidate=null;document.querySelectorAll(".selected,.candidate-detail.active").forEach(x=>x.classList.remove("selected","active"));highlightPlot("dotplot",null);highlightPlot("containment-plot",null);}
+function clearSelection(){DashboardState.selectedCandidate=null;document.querySelectorAll(".selected,.candidate-detail.active").forEach(x=>x.classList.remove("selected","active"));}
 function bindPlotClick(id){const div=document.getElementById(id);if(div&&div.on)div.on("plotly_click",e=>{const sid=e.points&&e.points[0]&&e.points[0].customdata;if(sid)selectCandidate(sid);});}
 window.addEventListener("load",()=>{
   bindPlotClick("dotplot");
-  bindPlotClick("containment-plot");
   document.querySelectorAll("[data-protein-action]").forEach((button)=>{
     button.addEventListener("click",()=>handleProteinAction(button));
   });
@@ -1671,7 +1666,6 @@ function selectCandidate(candidateId) {
   });
 
   highlightPlot("dotplot", candidateId);
-  highlightPlot("containment-plot", candidateId);
   updateCoveragePanel(candidateId);
   updateReferenceDotplot(candidateId);
   updateContigDotplotTargetOptions(candidateId);

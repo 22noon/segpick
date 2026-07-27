@@ -56,9 +56,7 @@ def test_blastx_consistency_contributes_to_score():
     evidence = Evidence(
         protein_confidence=1.0,
         length_plausibility=1.0,
-        containment=1.0,
-        identity=1.0,
-        fragmentation=1.0,
+        structural_integrity=1.0,
         coverage_sufficiency=1.0,
         coverage_integrity=1.0,
         orf_quality=1.0,

@@ -33,6 +33,7 @@ def test_weights_normalise_to_one() -> None:
         containment=2,
         identity=2,
         fragmentation=2,
+        structural_integrity=0,
         coverage_sufficiency=1,
         coverage_integrity=1,
         orf_quality=0,
@@ -50,7 +51,8 @@ def test_weights_allow_partial_overrides() -> None:
     )
 
     assert weights.protein_confidence == 0.5
-    assert weights.containment == 0.16
+    assert weights.containment == 0.0
+    assert weights.structural_integrity == 0.32
     assert weights.coverage_sufficiency == 0.04
     assert weights.orf_quality == 0.12
     assert weights.blastx_consistency == 0.20
@@ -64,6 +66,7 @@ def test_weights_reject_all_zero() -> None:
             containment=0,
             identity=0,
             fragmentation=0,
+            structural_integrity=0,
             coverage_sufficiency=0,
             coverage_integrity=0,
             orf_quality=0,

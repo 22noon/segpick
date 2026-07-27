@@ -87,9 +87,7 @@ def test_build_gene_page_view() -> None:
     } == {
         "protein_confidence",
         "length_plausibility",
-        "containment",
-        "identity",
-        "fragmentation",
+        "structural_integrity",
         "coverage_sufficiency",
         "coverage_integrity",
         "orf_quality",

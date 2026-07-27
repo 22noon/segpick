@@ -440,6 +440,40 @@ def global_candidate_observations(
                 )
             )
 
+    structural = candidate.analysis.structural_integrity
+    if structural is not None:
+        if structural.status == "CONTINUOUS":
+            observations.append(EvidenceObservation(
+                observation_type="continuous_reference_structure",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description="Candidate aligns continuously and collinearly to its closest nucleotide reference.",
+                attributes=structural.to_dict(),
+            ))
+        elif structural.status in {"REVIEW", "DISRUPTED"}:
+            observations.append(EvidenceObservation(
+                observation_type="reference_structural_discontinuity",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description="Candidate-to-reference HSPs contain substantial structural discontinuity.",
+                severity="review",
+                attributes=structural.to_dict(),
+            ))
+        if structural.orientation_consistency < 0.8:
+            observations.append(EvidenceObservation(
+                observation_type="mixed_reference_orientation",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description="Candidate-to-reference HSPs have mixed orientation support.",
+                severity="review",
+                attributes={"orientation_consistency": structural.orientation_consistency},
+            ))
+        if structural.order_consistency < 0.8:
+            observations.append(EvidenceObservation(
+                observation_type="reference_order_disruption",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description="Candidate HSP order is inconsistent with reference collinearity.",
+                severity="review",
+                attributes={"order_consistency": structural.order_consistency},
+            ))
+
     read_metrics = candidate.analysis.read_support
     if read_metrics is not None:
         if read_metrics.coverage_sufficiency >= 0.95:
@@ -518,6 +552,56 @@ def global_candidate_observations(
     return tuple(observations)
 
 
+def contig_comparison_observations(gene) -> dict[str, tuple[EvidenceObservation, ...]]:
+    """Describe candidate containment/overlap from pairwise MegaBLAST HSPs."""
+    by_candidate: dict[str, list[EvidenceObservation]] = {c.id: [] for c in gene.candidates}
+    for result in gene.contig_dotplots:
+        if result.query_coverage >= 0.95 and result.target_coverage < 0.90:
+            by_candidate[result.query_id].append(EvidenceObservation(
+                observation_type="candidate_contained_within_alternative",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description=f"{result.query_id} is largely contained within {result.target_id}.",
+                attributes={"other_candidate": result.target_id, "coverage": result.query_coverage},
+            ))
+            by_candidate[result.target_id].append(EvidenceObservation(
+                observation_type="candidate_extends_alternative",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description=f"{result.target_id} extends the aligned sequence of {result.query_id}.",
+                attributes={"other_candidate": result.query_id, "other_coverage": result.query_coverage},
+            ))
+        elif result.target_coverage >= 0.95 and result.query_coverage < 0.90:
+            by_candidate[result.target_id].append(EvidenceObservation(
+                observation_type="candidate_contained_within_alternative",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description=f"{result.target_id} is largely contained within {result.query_id}.",
+                attributes={"other_candidate": result.query_id, "coverage": result.target_coverage},
+            ))
+            by_candidate[result.query_id].append(EvidenceObservation(
+                observation_type="candidate_extends_alternative",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description=f"{result.query_id} extends the aligned sequence of {result.target_id}.",
+                attributes={"other_candidate": result.target_id, "other_coverage": result.target_coverage},
+            ))
+        elif result.query_coverage >= 0.80 and result.target_coverage >= 0.80:
+            for current, other in ((result.query_id, result.target_id), (result.target_id, result.query_id)):
+                by_candidate[current].append(EvidenceObservation(
+                    observation_type="substantial_candidate_overlap",
+                    source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                    description=f"{current} overlaps substantially with {other}.",
+                    attributes={"other_candidate": other},
+                ))
+        elif result.available:
+            for current, other in ((result.query_id, result.target_id), (result.target_id, result.query_id)):
+                by_candidate[current].append(EvidenceObservation(
+                    observation_type="limited_candidate_overlap",
+                    source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                    description=f"{current} has limited structural overlap with {other}.",
+                    severity="review",
+                    attributes={"other_candidate": other},
+                ))
+    return {key: tuple(value) for key, value in by_candidate.items()}
+
+
 def attach_observation_intervals(
     sample: Sample,
     *,
@@ -526,6 +610,7 @@ def attach_observation_intervals(
     """Attach spatial and global evidence observations to candidates."""
 
     for gene in sample.genes.values():
+        comparative = contig_comparison_observations(gene)
         for candidate in gene.candidates:
             alignment = candidate.analysis.orf_alignment
             protein_observations = (
@@ -541,4 +626,5 @@ def attach_observation_intervals(
                 )
                 + orf_structure_observations(candidate)
                 + global_candidate_observations(candidate)
+                + comparative.get(candidate.id, ())
             )

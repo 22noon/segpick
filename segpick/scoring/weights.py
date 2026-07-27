@@ -8,9 +8,10 @@ class ScoringWeights:
 
     protein_confidence: float = 0.20
     length_plausibility: float = 0.08
-    containment: float = 0.16
-    identity: float = 0.08
-    fragmentation: float = 0.08
+    structural_integrity: float = 0.32
+    containment: float = 0.0  # deprecated compatibility
+    identity: float = 0.0  # deprecated compatibility
+    fragmentation: float = 0.0  # deprecated compatibility
     coverage_sufficiency: float = 0.04
     coverage_integrity: float = 0.04
     orf_quality: float = 0.12
@@ -35,6 +36,7 @@ class ScoringWeights:
         return ScoringWeights(
             protein_confidence=self.protein_confidence / total,
             length_plausibility=self.length_plausibility / total,
+            structural_integrity=self.structural_integrity / total,
             containment=self.containment / total,
             identity=self.identity / total,
             fragmentation=self.fragmentation / total,
@@ -59,6 +61,9 @@ class ScoringWeights:
         return replace(self, **valid)
 
     def to_dict(self) -> dict[str, float]:
-        """Return weights as a plain dictionary."""
+        """Return active weights as a plain dictionary."""
 
-        return asdict(self)
+        values = asdict(self)
+        for name in ("containment", "identity", "fragmentation"):
+            values.pop(name, None)
+        return values

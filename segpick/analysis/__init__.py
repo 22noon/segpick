@@ -1,4 +1,3 @@
-from .containment import analyse_gene, summarise_alignments
 from .status import classify_status
 
 from .orf import attach_orf_metrics, calculate_orf_metrics, find_orfs
@@ -45,3 +44,5 @@ from .contig_dotplot import (
     parse_contig_megablast_tsv,
     run_contig_pair_megablast,
 )
+
+from .structural_integrity import attach_structural_integrity, structural_integrity_from_dotplot

@@ -91,36 +91,13 @@ def test_length_plausibility_uses_gaussian_penalty() -> None:
     )
 
 
-def test_containment_combines_both_coverages() -> None:
+def test_legacy_alignment_metrics_can_seed_structural_integrity() -> None:
     candidate = make_candidate(
-        "candidate",
-        confidence=100,
-        z=0,
-        query_coverage=0.8,
-        anchor_coverage=0.5,
-        identity=0.99,
-        fragmentation=0,
+        "candidate", confidence=100, z=0, query_coverage=0.8,
+        anchor_coverage=0.5, identity=0.99, fragmentation=0.25,
     )
-
     evidence = build_evidence(candidate, [candidate])
-
-    assert evidence.containment == pytest.approx(0.4)
-
-
-def test_fragmentation_is_converted_to_positive_evidence() -> None:
-    candidate = make_candidate(
-        "candidate",
-        confidence=100,
-        z=0,
-        query_coverage=1,
-        anchor_coverage=1,
-        identity=1,
-        fragmentation=0.25,
-    )
-
-    evidence = build_evidence(candidate, [candidate])
-
-    assert evidence.fragmentation == pytest.approx(0.75)
+    assert evidence.structural_integrity == pytest.approx(0.8 * 0.5 * 0.75)
 
 
 def test_missing_z_score_is_unavailable() -> None:

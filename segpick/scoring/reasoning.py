@@ -13,9 +13,7 @@ if TYPE_CHECKING:
 CHANNEL_LABELS = {
     "protein_confidence": "Protein confidence",
     "length_plausibility": "Length plausibility",
-    "containment": "Containment",
-    "identity": "Reference identity",
-    "fragmentation": "Fragmentation",
+    "structural_integrity": "Structural integrity",
     "coverage_sufficiency": "ORF coverage sufficiency",
     "coverage_integrity": "ORF coverage integrity",
     "orf_quality": "ORF quality",

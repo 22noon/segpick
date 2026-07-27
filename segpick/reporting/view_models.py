@@ -249,12 +249,12 @@ class CandidateView:
     confidence: float
     z: float | None
     cluster: str
-    query_coverage: float
-    anchor_coverage: float
-    identity: float
-    fragmentation: float
-    structural_score: float
-    status: str
+    candidate_coverage: float | None
+    reference_coverage: float | None
+    block_count: int | None
+    largest_reference_gap: int | None
+    structural_integrity: float | None
+    structural_status: str
     recommended: bool
     read_support: ReadSupportView
     orf: ORFView
@@ -424,12 +424,12 @@ def build_gene_page_view(
             confidence=float(candidate.metadata.confidence),
             z=candidate.metadata.z,
             cluster=str(candidate.metadata.cluster),
-            query_coverage=candidate.analysis.containment.query_coverage,
-            anchor_coverage=candidate.analysis.containment.anchor_coverage,
-            identity=candidate.analysis.containment.identity,
-            fragmentation=candidate.analysis.containment.fragmentation,
-            structural_score=candidate.analysis.containment.structural_score,
-            status=candidate.analysis.containment.status,
+            candidate_coverage=(candidate.analysis.structural_integrity.candidate_coverage if candidate.analysis.structural_integrity is not None else None),
+            reference_coverage=(candidate.analysis.structural_integrity.reference_coverage if candidate.analysis.structural_integrity is not None else None),
+            block_count=(candidate.analysis.structural_integrity.block_count if candidate.analysis.structural_integrity is not None else None),
+            largest_reference_gap=(candidate.analysis.structural_integrity.largest_reference_gap if candidate.analysis.structural_integrity is not None else None),
+            structural_integrity=(candidate.analysis.structural_integrity.score if candidate.analysis.structural_integrity is not None else None),
+            structural_status=(candidate.analysis.structural_integrity.status if candidate.analysis.structural_integrity is not None else "UNAVAILABLE"),
             recommended=candidate.id == recommended_id,
             read_support=build_read_support_view(candidate),
             orf=build_orf_view(candidate),

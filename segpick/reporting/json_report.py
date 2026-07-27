@@ -69,7 +69,7 @@ def write_gene_json_reports(
                         if c.analysis.protein_relatedness is not None
                         else None
                     ),
-                    "containment": c.analysis.containment.to_dict(),
+                    "structural_integrity": (c.analysis.structural_integrity.to_dict() if c.analysis.structural_integrity is not None else None),
                     "reference_dotplot": (
                         c.analysis.reference_dotplot.to_dict()
                         if c.analysis.reference_dotplot is not None
@@ -116,7 +116,6 @@ def write_gene_json_reports(
                     "id": r.accession,
                     "description": r.description,
                     "length": r.length,
-                    "containment": r.containment.to_dict(),
                 }
             )
         (outdir / f"{safe_name(name)}.json").write_text(json.dumps(payload, indent=2))

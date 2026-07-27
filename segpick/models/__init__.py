@@ -21,6 +21,7 @@ from .protein_continuity import ProteinContinuity
 from .protein_relatedness import ProteinRelatedness
 from .reference import ReferenceSequence
 from .reference_dotplot import BlastNHSP, ReferenceDotplot
+from .structural_integrity import StructuralIntegrity
 from .rule_evaluation import RuleEvaluation
 from .sample import Sample
 from .read_support import ReadSupportMetrics
@@ -35,6 +36,7 @@ __all__ = [
     "ReferenceSequence",
     "BlastNHSP",
     "ReferenceDotplot",
+    "StructuralIntegrity",
     "RuleEvaluation",
     "ContigMetadata",
     "AnalysisManifest",

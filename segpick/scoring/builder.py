@@ -62,29 +62,20 @@ def length_plausibility_evidence(
     return clamp01(math.exp(-0.5 * float(z) ** 2))
 
 
-def containment_evidence(candidate: CandidateContig) -> float:
-    """Combine query and anchor coverage into one containment value."""
+def structural_integrity_evidence(candidate: CandidateContig) -> float | None:
+    """Return reference-relative structural integrity from MegaBLAST HSPs."""
 
-    metrics = candidate.analysis.containment
-
-    return clamp01(float(metrics.query_coverage) * float(metrics.anchor_coverage))
-
-
-def identity_evidence(candidate: CandidateContig) -> float:
-    """Return alignment identity, already expected to be in the range 0–1."""
-
-    return clamp01(float(candidate.analysis.containment.identity))
-
-
-def fragmentation_evidence(candidate: CandidateContig) -> float:
-    """Convert fragmentation penalty into positive evidence.
-
-    A single continuous alignment has fragmentation 0 and receives evidence
-    1.0. Completely fragmented or unaligned candidates approach 0.0.
-    """
-
-    fragmentation = float(candidate.analysis.containment.fragmentation)
-    return clamp01(1.0 - fragmentation)
+    metrics = candidate.analysis.structural_integrity
+    if metrics is not None:
+        return clamp01(float(metrics.score))
+    legacy = candidate.analysis.containment
+    if legacy.query_length or legacy.anchor_length:
+        return clamp01(
+            float(legacy.query_coverage)
+            * float(legacy.anchor_coverage)
+            * (1.0 - float(legacy.fragmentation))
+        )
+    return None
 
 
 def build_evidence(
@@ -109,9 +100,10 @@ def build_evidence(
             candidate_list,
         ),
         length_plausibility=length_plausibility_evidence(candidate),
-        containment=containment_evidence(candidate),
-        identity=identity_evidence(candidate),
-        fragmentation=fragmentation_evidence(candidate),
+        structural_integrity=structural_integrity_evidence(candidate),
+        containment=None,
+        identity=None,
+        fragmentation=None,
         coverage_sufficiency=coverage_sufficiency_evidence(candidate),
         coverage_integrity=coverage_integrity_evidence(candidate),
         orf_quality=orf_quality_evidence(candidate),

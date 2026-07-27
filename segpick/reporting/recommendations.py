@@ -28,14 +28,10 @@ def write_recommendations_tsv(
         "length",
         "protein_confidence",
         "length_plausibility",
-        "containment",
-        "identity",
-        "fragmentation",
+        "structural_integrity",
         "protein_contribution",
         "length_contribution",
-        "containment_contribution",
-        "identity_contribution",
-        "fragmentation_contribution",
+        "structural_integrity_contribution",
     ]
 
     with path.open("w") as handle:
@@ -63,14 +59,10 @@ def write_recommendations_tsv(
                     str(candidate.length),
                     _format_optional(evidence.get("protein_confidence")),
                     _format_optional(evidence.get("length_plausibility")),
-                    _format_optional(evidence.get("containment")),
-                    _format_optional(evidence.get("identity")),
-                    _format_optional(evidence.get("fragmentation")),
+                    _format_optional(evidence.get("structural_integrity")),
                     _format_optional(contributions.get("protein_confidence")),
                     _format_optional(contributions.get("length_plausibility")),
-                    _format_optional(contributions.get("containment")),
-                    _format_optional(contributions.get("identity")),
-                    _format_optional(contributions.get("fragmentation")),
+                    _format_optional(contributions.get("structural_integrity")),
                 ]
 
                 handle.write("\t".join(row) + "\n")
