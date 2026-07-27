@@ -7,6 +7,7 @@ from .boundary_coverage import BoundaryCoverageAssessment
 from .blastx_anchored_orf import BlastXAnchoredORF
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
+from .scenario import BiologicalScenario
 from .blastx_consistency import BlastXConsistency
 from .convergence import EvidenceConvergence
 from .orf import ORFMetrics
@@ -42,6 +43,7 @@ class ContigAnalysis:
     convergences: tuple[EvidenceConvergence, ...] = ()
     findings: tuple[BiologicalFinding, ...] = ()
     hypotheses: tuple[BiologicalHypothesis, ...] = ()
+    scenarios: tuple[BiologicalScenario, ...] = ()
     rule_evaluations: tuple[RuleEvaluation, ...] = ()
     depth_profile: dict[int, int] = field(default_factory=dict)
     boundary_coverage: tuple[BoundaryCoverageAssessment, ...] = ()

@@ -32,6 +32,7 @@ def write_gene_json_reports(
             ],
             "biological_hypotheses": [hypothesis.to_dict() for hypothesis in g.hypotheses],
             "rule_evaluations": [item.to_dict() for item in g.rule_evaluations],
+            "biological_scenarios": [item.to_dict() for item in g.scenarios],
             "contig_dotplots": [item.to_dict() for item in g.contig_dotplots],
         }
         if recommendations and g.name in recommendations:
@@ -103,6 +104,7 @@ def write_gene_json_reports(
                     ],
                     "biological_hypotheses": [hypothesis.to_dict() for hypothesis in c.analysis.hypotheses],
                     "rule_evaluations": [item.to_dict() for item in c.analysis.rule_evaluations],
+                    "biological_scenarios": [item.to_dict() for item in c.analysis.scenarios],
                     "evidence_convergence": [
                         convergence.to_dict()
                         for convergence in c.analysis.convergences

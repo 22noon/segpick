@@ -48,6 +48,7 @@ class RunConfig:
     blastx_results: Path | None = None
     protein_refs: Path | None = None
     rule_files: tuple[Path, ...] = ()
+    knowledge_files: tuple[Path, ...] = ()
     outdir: Path = Path("results")
     sample_name: str = "sample"
     html: bool = False
@@ -101,6 +102,7 @@ def _flatten_yaml(data: dict[str, Any]) -> dict[str, Any]:
     result["blastx_results"] = input_cfg.get("blastx_results", data.get("blastx_results"))
     result["protein_refs"] = input_cfg.get("protein_refs", data.get("protein_refs"))
     result["rule_files"] = reasoning_cfg.get("rule_files", data.get("rule_files"))
+    result["knowledge_files"] = reasoning_cfg.get("knowledge_files", data.get("knowledge_files"))
     result["outdir"] = data.get("outdir")
     result["sample_name"] = data.get("sample", data.get("sample_name"))
     result["strict"] = data.get("strict")
@@ -244,6 +246,8 @@ def resolve_config(
     merged.update(yaml_flat)
     if "rule_files" in merged:
         merged["rule_files"] = tuple(Path(path) for path in (merged["rule_files"] or ()))
+    if "knowledge_files" in merged:
+        merged["knowledge_files"] = tuple(Path(path) for path in (merged["knowledge_files"] or ()))
     merged["scoring_weights"] = scoring_weights
 
     # CLI values override YAML values.
@@ -342,6 +346,8 @@ def resolve_config(
     cli_clean = {key: value for key, value in cli_values.items() if value is not None and key not in {"align", "use_existing_paf", "preset"}}
     if "rule_files" in cli_clean:
         cli_clean["rule_files"] = tuple(Path(path) for path in cli_clean["rule_files"])
+    if "knowledge_files" in cli_clean:
+        cli_clean["knowledge_files"] = tuple(Path(path) for path in cli_clean["knowledge_files"])
     merged.update(cli_clean)
     for key in (
         "depth_dir",

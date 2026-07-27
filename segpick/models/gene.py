@@ -7,6 +7,7 @@ from .contig import CandidateContig
 from .contig_dotplot import ContigDotplot
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
+from .scenario import BiologicalScenario
 from .reference import ReferenceSequence
 from .rule_evaluation import RuleEvaluation
 
@@ -24,6 +25,7 @@ class Gene:
     recommendation: CandidateContig | None = None
     findings: tuple[BiologicalFinding, ...] = ()
     hypotheses: tuple[BiologicalHypothesis, ...] = ()
+    scenarios: tuple[BiologicalScenario, ...] = ()
     rule_evaluations: tuple[RuleEvaluation, ...] = ()
     contig_dotplots: tuple[ContigDotplot, ...] = ()
 

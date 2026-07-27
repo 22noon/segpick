@@ -24,8 +24,10 @@ from segpick.analysis.reference_dotplot import attach_reference_dotplots
 from segpick.analysis.contig_dotplot import attach_contig_dotplots
 from segpick.analysis.structural_integrity import attach_structural_integrity
 from segpick.analysis.hypotheses import attach_biological_hypotheses
+from segpick.analysis.scenarios import attach_biological_scenarios
 from segpick.config import RunConfig, load_config, resolve_config
 from segpick.reasoning import load_active_rules
+from segpick.knowledge import load_active_scenarios
 from segpick.io.builder import build_sample
 from segpick.provenance import write_provenance
 from segpick.reporting import (
@@ -75,6 +77,10 @@ def _add_run_arguments(parser: argparse.ArgumentParser) -> None:
         action="append",
         default=None,
         help="Additional YAML hypothesis rule file; may be supplied more than once",
+    )
+    parser.add_argument(
+        "--knowledge-file", dest="knowledge_files", action="append", default=None,
+        help="Additional YAML biological scenario file; may be supplied more than once",
     )
     parser.add_argument("--outdir", default=None)
     parser.add_argument("--sample-name", default=None)
@@ -185,6 +191,7 @@ def _cli_override_values(args: argparse.Namespace) -> dict[str, object]:
         "blastx_results",
         "protein_refs",
         "rule_files",
+        "knowledge_files",
         "outdir",
         "sample_name",
         "strict",
@@ -319,6 +326,8 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
         candidate_rules=candidate_rules,
         gene_rules=gene_rules,
     )
+    candidate_modules, gene_modules = load_active_scenarios(config.knowledge_files)
+    attach_biological_scenarios(sample, candidate_modules, gene_modules)
 
     coverage_plot_paths = {}
     if config.html and config.read_support.depth_dir is not None:

@@ -3,12 +3,33 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from segpick.analysis import analyse_protein_continuity
-from segpick.models import BiologicalHypothesis, CandidateContig, Gene, RuleEvaluation
+from segpick.models import BiologicalHypothesis, BiologicalScenario, CandidateContig, Gene, RuleEvaluation
 from segpick.scoring import GeneRecommendation
 
 
 
 
+
+
+@dataclass(frozen=True, slots=True)
+class ScenarioView:
+    scenario_id: str
+    title: str
+    category: str
+    scope: str
+    confidence: str
+    severity: str
+    interpretation: str
+    candidate_ids: tuple[str, ...]
+    matched_required: tuple[str, ...]
+    matched_supporting: tuple[str, ...]
+    matched_conflicting: tuple[str, ...]
+    suggested_actions: tuple[str, ...]
+    source: str
+    references: tuple[str, ...]
+
+def build_scenario_view(item: BiologicalScenario) -> ScenarioView:
+    return ScenarioView(**{name: getattr(item, name) for name in ScenarioView.__dataclass_fields__})
 
 @dataclass(frozen=True, slots=True)
 class RuleEvaluationView:
@@ -313,6 +334,7 @@ class CandidateView:
     convergence_review_required: bool
     hypotheses: tuple[HypothesisView, ...]
     boundary_coverage: tuple[BoundaryCoverageView, ...]
+    scenarios: tuple[ScenarioView, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -326,6 +348,7 @@ class GenePageView:
     protein_continuity: ProteinContinuityView
     hypotheses: tuple[HypothesisView, ...]
     rule_evaluations: tuple[RuleEvaluationView, ...]
+    scenarios: tuple[ScenarioView, ...]
 
 
 def build_recommendation_view(
@@ -584,6 +607,7 @@ def build_gene_page_view(
                 )
                 for item in candidate.analysis.boundary_coverage
             ),
+            scenarios=tuple(build_scenario_view(item) for item in candidate.analysis.scenarios),
         )
         for candidate in gene.candidates
     )
@@ -646,6 +670,7 @@ def build_gene_page_view(
         protein_coordinates=protein_coordinates,
         hypotheses=hypotheses,
         rule_evaluations=tuple(build_rule_evaluation_view(item) for item in gene.rule_evaluations),
+        scenarios=tuple(build_scenario_view(item) for item in gene.scenarios),
         protein_continuity=ProteinContinuityView(
             classification=continuity.classification,
             candidate_count=continuity.candidate_count,

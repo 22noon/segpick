@@ -1,0 +1,63 @@
+version: 1
+scenarios:
+  - id: coverage_supported_assembly_breakpoint
+    title: Coverage-supported assembly breakpoint
+    category: assembly
+    scope: candidate
+    severity: warning
+    base_confidence: high
+    interpretation: A reference-alignment discontinuity coincides with a local read-coverage abnormality, consistent with a possible assembly breakpoint.
+    requires:
+      - observation: reference_structural_discontinuity
+        source: structural_alignment
+      - observation: coverage_drop_at_reference_boundary
+        source: cross_evidence
+    supports:
+      - observation: internal_coverage_interruption
+        source: read_coverage
+    suggested_actions:
+      - Inspect read alignments around the structural boundary.
+      - Compare the same region in alternative candidate contigs.
+  - id: incomplete_terminal_assembly
+    title: Possible incomplete terminal assembly
+    category: completeness
+    scope: candidate
+    severity: review
+    base_confidence: moderate
+    interpretation: Weak terminal read support and an incomplete ORF boundary are consistent with a prematurely terminated assembly.
+    requires:
+      - observation: weak_orf_terminal_support
+        source: read_coverage
+    supports:
+      - observation: partial_orf_start_boundary
+        source: orf_structure
+      - observation: partial_orf_end_boundary
+        source: orf_structure
+    suggested_actions:
+      - Inspect terminal reads and unplaced contigs.
+      - Search for sequence extending the affected terminus.
+  - id: divergent_but_coherent_segment
+    title: Divergent but structurally coherent segment
+    category: divergence
+    scope: candidate
+    severity: informational
+    base_confidence: moderate
+    interpretation: The candidate is structurally coherent despite low relatedness to represented database proteins, consistent with a divergent lineage.
+    requires:
+      - finding: Divergent but structurally supported protein
+      - observation: continuous_reference_structure
+        source: structural_alignment
+    suggested_actions:
+      - Confirm the translated protein with BLASTP or profile-HMM analysis.
+  - id: complementary_fragmented_gene
+    title: Complementary fragmented gene assembly
+    category: assembly
+    scope: gene
+    severity: warning
+    base_confidence: high
+    interpretation: Different contigs recover complementary parts of the expected protein, so selecting a single contig may be biologically inappropriate.
+    requires:
+      - finding: Possible split assembly
+    suggested_actions:
+      - Inspect whether a graph path or targeted reassembly can join the fragments.
+      - Review coverage across the missing interval.

@@ -11,6 +11,7 @@ from .contig_dotplot import ContigDotplot
 from .gene import Gene
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
+from .scenario import BiologicalScenario
 from .metadata import ContigMetadata
 from .manifest import AnalysisManifest
 from .orf import ORFHit, ORFMetrics
@@ -32,6 +33,7 @@ __all__ = [
     "Gene",
     "BiologicalFinding",
     "BiologicalHypothesis",
+    "BiologicalScenario",
     "CandidateContig",
     "ContigDotplot",
     "ReferenceSequence",
