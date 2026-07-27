@@ -35,6 +35,23 @@ def _subtract_interval(
     return [(left, right) for left, right in pieces if right > left]
 
 
+def _merge_intervals(
+    intervals: Iterable[tuple[int, int]],
+    *,
+    maximum_gap: int = 25,
+) -> list[tuple[int, int]]:
+    """Merge overlapping or nearby inclusive intervals."""
+
+    normalised = sorted((min(start, end), max(start, end)) for start, end in intervals)
+    merged: list[list[int]] = []
+    for start, end in normalised:
+        if not merged or start > merged[-1][1] + maximum_gap + 1:
+            merged.append([start, end])
+        else:
+            merged[-1][1] = max(merged[-1][1], end)
+    return [(start, end) for start, end in merged]
+
+
 def _draw_orf_track(
     axis,
     *,
@@ -83,6 +100,9 @@ def write_coverage_plot(
     anchored_orf_end: int | None = None,
     anchored_orf_strand: str | None = None,
     anchored_orf_label: str = "BLASTX-anchored ORF",
+    reference_supported_intervals: Iterable[tuple[int, int]] | None = None,
+    reference_hsp_merge_gap: int = 25,
+    reference_supported_label: str = "Reference-supported regions",
 ) -> Path:
     """Write a per-base coverage plot and return its output path."""
 
@@ -101,9 +121,9 @@ def write_coverage_plot(
     figure, (coverage_axis, track_axis) = plt.subplots(
         2,
         1,
-        figsize=(10, 4.2),
+        figsize=(10, 4.6),
         sharex=True,
-        gridspec_kw={"height_ratios": [4.0, 1.0], "hspace": 0.06},
+        gridspec_kw={"height_ratios": [4.0, 1.35], "hspace": 0.06},
         layout="constrained",
     )
 
@@ -155,8 +175,14 @@ def write_coverage_plot(
             max(anchored_orf_start, anchored_orf_end),
         )
 
-    selected_y = 1.35
-    anchored_y = 0.55
+    reference_intervals = _merge_intervals(
+        reference_supported_intervals or (),
+        maximum_gap=reference_hsp_merge_gap,
+    )
+
+    selected_y = 2.15
+    anchored_y = 1.35
+    reference_y = 0.45
     if selected_interval and anchored_interval:
         for left, right in _subtract_interval(selected_interval, anchored_interval):
             track_axis.plot(
@@ -215,7 +241,35 @@ def write_coverage_plot(
             )
         )
 
-    track_axis.set_ylim(0.0, 1.9)
+    if reference_intervals:
+        for start, end in reference_intervals:
+            track_axis.plot(
+                [start, end],
+                [reference_y, reference_y],
+                linewidth=7,
+                color="tab:green",
+                solid_capstyle="butt",
+            )
+        for left, right in zip(reference_intervals, reference_intervals[1:]):
+            for boundary in (left[1], right[0]):
+                coverage_axis.axvline(
+                    boundary,
+                    linestyle=":",
+                    linewidth=0.8,
+                    color="tab:green",
+                    alpha=0.55,
+                )
+        legend_handles.append(
+            Line2D(
+                [0],
+                [0],
+                color="tab:green",
+                linewidth=5.0,
+                label=reference_supported_label,
+            )
+        )
+
+    track_axis.set_ylim(0.0, 2.7)
     track_axis.set_yticks([])
     track_axis.set_xlabel("Contig position")
     track_axis.spines["left"].set_visible(False)
@@ -305,6 +359,14 @@ def write_sample_coverage_plots(
                     f"BLASTX-anchored ORF ({anchored_orf.strand})"
                     if anchored_orf
                     else "BLASTX-anchored ORF"
+                ),
+                reference_supported_intervals=(
+                    [
+                        (hsp.query_start, hsp.query_end)
+                        for hsp in candidate.analysis.reference_dotplot.hsps
+                    ]
+                    if candidate.analysis.reference_dotplot is not None
+                    else None
                 ),
             )
             plot_paths[candidate.id] = output_path
