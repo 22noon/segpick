@@ -50,3 +50,34 @@ def test_blastx_conflict_lowers_confidence():
     assert agreement.confidence == "low"
     assert agreement.strong_conflicts == ("blastx_consistency",)
     assert agreement.channel_winners["blastx_consistency"] == ("b",)
+
+
+def test_agreement_distinguishes_unique_shared_and_conflicting_channels():
+    from segpick.scoring import CandidateRecommendation, Evidence, ScoringWeights, assess_evidence_agreement, score_evidence
+
+    def candidate(candidate_id, protein, length, structure):
+        evidence = Evidence(
+            protein_confidence=protein,
+            length_plausibility=length,
+            structural_integrity=structure,
+        )
+        return CandidateRecommendation(
+            candidate_id=candidate_id,
+            length=100,
+            protein_confidence_raw=protein,
+            evidence=evidence,
+            scored=score_evidence(evidence, ScoringWeights()),
+        )
+
+    candidates = (
+        candidate("a", 0.9, 0.8, 0.5),
+        candidate("b", 0.7, 0.8, 0.9),
+    )
+    agreement = assess_evidence_agreement(candidates, "a")
+    statuses = {item.channel: item.status for item in agreement.channel_assessments}
+
+    assert statuses["protein_confidence"] == "supports"
+    assert statuses["length_plausibility"] == "shared"
+    assert statuses["structural_integrity"] == "conflicts"
+    assert agreement.unique_supporting_channels == ("protein_confidence",)
+    assert agreement.shared_supporting_channels == ("length_plausibility",)

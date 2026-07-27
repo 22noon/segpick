@@ -401,6 +401,53 @@
     }
 
 
+
+    .agreement-summary {
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .agreement-summary h3 { margin-top: 0; }
+
+    .agreement-table {
+      margin-top: 0.75rem;
+      font-size: 0.86rem;
+    }
+
+    .agreement-status {
+      display: inline-block;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .agreement-supports { background: #dcfce7; color: #166534; }
+    .agreement-shared { background: #e0f2fe; color: #075985; }
+    .agreement-conflicts { background: #fef3c7; color: #92400e; }
+
+    .alternative-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .alternative-card {
+      padding: 1rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .alternative-card.close-alternative { border-left: 5px solid #f59e0b; }
+    .alternative-card h4 { margin: 0 0 0.45rem; }
+
     .reasoning-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -789,7 +836,7 @@
         </div>
         <div class="summary-item {% if view.recommendation.confidence == 'low' %}summary-warning{% else %}summary-good{% endif %}">
           <span class="summary-label">Confidence</span>
-          <span class="summary-value">{{ view.recommendation.confidence|upper }}</span>
+          <span class="summary-value">{{ view.recommendation.confidence|replace("_", " ")|upper }}</span>
         </div>
         <div class="summary-item {% if view.recommendation.manual_review %}summary-warning{% else %}summary-good{% endif %}">
           <span class="summary-label">Manual review</span>
@@ -811,6 +858,32 @@
         {% else %}
           <p>The available evidence supports this candidate without a major conflict.</p>
         {% endif %}
+      </div>
+
+      <div class="agreement-summary">
+        <h3>Recommendation agreement</h3>
+        <p><strong>{{ view.recommendation.recommendation_finding|replace("_", " ")|title }}</strong></p>
+        <p>{{ view.recommendation.agreement_summary }}</p>
+        <table class="agreement-table">
+          <thead>
+            <tr>
+              <th>Evidence channel</th>
+              <th>Relationship to recommendation</th>
+              <th>Favoured candidate</th>
+              <th>Recommended value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in view.recommendation.channel_assessments %}
+            <tr>
+              <td>{{ item.name|replace("_", " ")|title }}</td>
+              <td><span class="agreement-status agreement-{{ item.status }}">{{ item.status|replace("_", " ") }}</span></td>
+              <td>{{ item.winners|join(", ") }}</td>
+              <td>{% if item.recommended_value is none %}—{% else %}{{ "%.3f"|format(item.recommended_value) }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
 
       <div class="reasoning-grid">
@@ -880,6 +953,17 @@
         </div>
       {% endif %}
 
+      {% if view.recommendation.unresolved_questions %}
+        <div class="reasoning-panel">
+          <h3>Outstanding questions</h3>
+          <ul class="traffic-list">
+            {% for message in view.recommendation.unresolved_questions %}
+              <li class="traffic-warning"><span class="traffic-icon">?</span><span>{{ message }}</span></li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
       {% if view.recommendation.manual_review %}
         <div class="manual-review-status manual-review-required">
           Manual review recommended.
@@ -922,28 +1006,35 @@
           {% endif %}
         </div>
 
+        {% if view.recommendation.comparisons %}
         <div class="reasoning-panel runner-up-reasoning">
-          <h3>Why not the runner-up?</h3>
-          {% if view.recommendation.runner_up_reasons %}
-            <ul class="traffic-list">
-              {% for message in view.recommendation.runner_up_reasons %}
-                <li class="traffic-good"><span class="traffic-icon">✓</span><span>{{ message }}</span></li>
-              {% endfor %}
-            </ul>
-          {% else %}
-            <p class="recommendation-note">No clear evidence difference was identified.</p>
-          {% endif %}
-
-          {% if view.recommendation.runner_up_advantages %}
-            <p class="runner-up-note"><strong>Evidence favouring the runner-up</strong></p>
-            <ul class="traffic-list">
-              {% for message in view.recommendation.runner_up_advantages %}
-                <li class="traffic-warning"><span class="traffic-icon">⚠</span><span>{{ message }}</span></li>
-              {% endfor %}
-            </ul>
-          {% endif %}
+          <h3>Why not the runner-up? And what about the others?</h3>
+          <div class="alternative-grid">
+            {% for comparison in view.recommendation.comparisons %}
+            <div class="alternative-card{% if comparison.close_alternative %} close-alternative{% endif %}">
+              <h4>{{ comparison.candidate_id }}</h4>
+              <p class="runner-up-note">Score {{ "%.3f"|format(comparison.score) }} · gap {{ "%.3f"|format(comparison.score_gap) }}{% if comparison.close_alternative %} · close alternative{% endif %}</p>
+              <p><strong>Why it ranked lower</strong></p>
+              <ul class="traffic-list">
+                {% for message in comparison.reasons_not_selected %}
+                  <li class="traffic-good"><span class="traffic-icon">✓</span><span>{{ message }}</span></li>
+                {% endfor %}
+              </ul>
+              {% if comparison.alternative_advantages %}
+                <p><strong>Evidence favouring this alternative</strong></p>
+                <ul class="traffic-list">
+                  {% for message in comparison.alternative_advantages %}
+                    <li class="traffic-warning"><span class="traffic-icon">⚠</span><span>{{ message }}</span></li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
         </div>
+        {% endif %}
     {% endif %}
+
 
       <h3>Evidence summary</h3>
       <div class="evidence-list">

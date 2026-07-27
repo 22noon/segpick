@@ -70,6 +70,8 @@ def rank_gene(
         if candidate.id == ranked[0].candidate_id
     )
 
+    comparisons = build_candidate_comparisons(ranked)
+
     return GeneRecommendation(
         gene=gene.name,
         recommended=ranked[0],
@@ -80,6 +82,7 @@ def rank_gene(
             agreement,
             protein_continuity,
             selected_candidate.analysis.convergences,
+            comparisons,
         ),
-        comparisons=build_candidate_comparisons(ranked),
+        comparisons=comparisons,
     )

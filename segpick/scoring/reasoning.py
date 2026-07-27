@@ -60,6 +60,10 @@ class RecommendationReport:
     convergence_review_required: bool
     convergence_evidence: tuple[str, ...]
     summary: str
+    recommendation_finding: str = "consensus_recommendation"
+    agreement_summary: str = ""
+    competing_candidates: tuple[str, ...] = ()
+    unresolved_questions: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -74,6 +78,10 @@ class RecommendationReport:
             "convergence_review_required": self.convergence_review_required,
             "convergence_evidence": list(self.convergence_evidence),
             "summary": self.summary,
+            "recommendation_finding": self.recommendation_finding,
+            "agreement_summary": self.agreement_summary,
+            "competing_candidates": list(self.competing_candidates),
+            "unresolved_questions": list(self.unresolved_questions),
         }
 
 
@@ -82,6 +90,7 @@ def build_recommendation_report(
     agreement: EvidenceAgreement,
     protein_continuity: "ProteinContinuity | None" = None,
     convergences: "tuple[EvidenceConvergence, ...]" = (),
+    comparisons: tuple[CandidateComparison, ...] = (),
 ) -> RecommendationReport:
     """Convert evidence agreement into an initial explanation report."""
 
@@ -130,16 +139,58 @@ def build_recommendation_report(
         for convergence in convergences
     )
 
+    close_competitors = tuple(
+        comparison.candidate_id
+        for comparison in comparisons
+        if comparison.close_alternative
+    )
+    unresolved_questions: list[str] = []
+    unresolved_questions.extend(opposing)
+    unresolved_questions.extend(conflicts)
+    unresolved_questions.extend(assembly_level_evidence)
+    unresolved_questions.extend(convergence_evidence)
+    if close_competitors:
+        unresolved_questions.append(
+            "A competing candidate has a similar weighted evidence score: "
+            + _format_winners(close_competitors)
+            + "."
+        )
+
     manual_review = (
         bool(agreement.strong_conflicts)
         or agreement.confidence == "low"
         or assembly_review_required
         or convergence_review_required
+        or bool(close_competitors)
     )
-    confidence = (
-        "low"
-        if assembly_review_required or convergence_review_required
-        else agreement.confidence
+
+    if assembly_review_required or convergence_review_required or agreement.strong_conflicts:
+        confidence = "low"
+        recommendation_finding = "evidence_conflict"
+    elif close_competitors:
+        confidence = "moderate"
+        recommendation_finding = "competing_candidates_remain"
+    elif comparisons and not agreement.disagreeing_channels and agreement.channel_winners:
+        confidence = "very_high"
+        recommendation_finding = "strong_consensus"
+    elif agreement.confidence == "high":
+        confidence = "high"
+        recommendation_finding = "consensus_recommendation"
+    elif agreement.confidence == "medium":
+        confidence = "moderate"
+        recommendation_finding = "weak_consensus"
+    else:
+        confidence = "low"
+        recommendation_finding = "weak_recommendation"
+
+    available_count = len(agreement.channel_winners)
+    supporting_count = len(agreement.supporting_channels)
+    conflicting_count = len(agreement.disagreeing_channels)
+    agreement_summary = (
+        f"{supporting_count} of {available_count} available evidence channels support "
+        f"the recommendation; {conflicting_count} favour another candidate."
+        if available_count
+        else "No comparable evidence channels were available."
     )
 
     if protein_continuity is not None and protein_continuity.classification == "complementary_fragments":
@@ -162,7 +213,7 @@ def build_recommendation_report(
             f"{recommended_candidate} is the weighted recommendation, but conflicting "
             "evidence warrants manual review."
         )
-    elif confidence == "medium":
+    elif confidence == "moderate":
         summary = (
             f"{recommended_candidate} is recommended, although some evidence favours "
             "an alternative candidate."
@@ -185,6 +236,10 @@ def build_recommendation_report(
         convergence_review_required=convergence_review_required,
         convergence_evidence=convergence_evidence,
         summary=summary,
+        recommendation_finding=recommendation_finding,
+        agreement_summary=agreement_summary,
+        competing_candidates=close_competitors,
+        unresolved_questions=tuple(dict.fromkeys(unresolved_questions)),
     )
 
 

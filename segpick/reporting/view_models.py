@@ -215,6 +215,28 @@ class EvidenceView:
     effective_weight: float | None
 
 
+
+
+@dataclass(frozen=True, slots=True)
+class RecommendationChannelView:
+    name: str
+    status: str
+    winners: tuple[str, ...]
+    recommended_value: float | None
+    best_value: float
+
+
+@dataclass(frozen=True, slots=True)
+class CandidateComparisonView:
+    candidate_id: str
+    score: float
+    score_gap: float
+    reasons_not_selected: tuple[str, ...]
+    alternative_advantages: tuple[str, ...]
+    strongest_difference: str
+    close_alternative: bool
+
+
 @dataclass(frozen=True, slots=True)
 class RecommendationView:
     candidate_id: str
@@ -236,6 +258,13 @@ class RecommendationView:
     assembly_level_evidence: tuple[str, ...]
     convergence_review_required: bool
     convergence_evidence: tuple[str, ...]
+    recommendation_finding: str
+    agreement_summary: str
+    agreement_fraction: float
+    channel_assessments: tuple[RecommendationChannelView, ...]
+    comparisons: tuple[CandidateComparisonView, ...]
+    competing_candidates: tuple[str, ...]
+    unresolved_questions: tuple[str, ...]
     summary: str | None
     runner_up_reasons: tuple[str, ...]
     runner_up_advantages: tuple[str, ...]
@@ -327,9 +356,13 @@ def build_recommendation_view(
         score_gap=score_gap,
         runner_up_strength=runner_up_strength,
         confidence=(
-            recommendation.agreement.confidence
-            if recommendation.agreement is not None
-            else "unknown"
+            recommendation.report.confidence
+            if recommendation.report is not None
+            else (
+                recommendation.agreement.confidence
+                if recommendation.agreement is not None
+                else "unknown"
+            )
         ),
         supporting_channels=(
             recommendation.agreement.supporting_channels
@@ -383,6 +416,57 @@ def build_recommendation_view(
         ),
         convergence_evidence=(
             recommendation.report.convergence_evidence
+            if recommendation.report is not None
+            else ()
+        ),
+        recommendation_finding=(
+            recommendation.report.recommendation_finding
+            if recommendation.report is not None
+            else "unavailable"
+        ),
+        agreement_summary=(
+            recommendation.report.agreement_summary
+            if recommendation.report is not None
+            else ""
+        ),
+        agreement_fraction=(
+            recommendation.agreement.agreement_fraction
+            if recommendation.agreement is not None
+            else 0.0
+        ),
+        channel_assessments=tuple(
+            RecommendationChannelView(
+                name=item.channel,
+                status=item.status,
+                winners=item.winners,
+                recommended_value=item.recommended_value,
+                best_value=item.best_value,
+            )
+            for item in (
+                recommendation.agreement.channel_assessments
+                if recommendation.agreement is not None
+                else ()
+            )
+        ),
+        comparisons=tuple(
+            CandidateComparisonView(
+                candidate_id=item.candidate_id,
+                score=item.score,
+                score_gap=item.score_gap,
+                reasons_not_selected=item.reasons_not_selected,
+                alternative_advantages=item.alternative_advantages,
+                strongest_difference=item.strongest_difference,
+                close_alternative=item.close_alternative,
+            )
+            for item in recommendation.comparisons
+        ),
+        competing_candidates=(
+            recommendation.report.competing_candidates
+            if recommendation.report is not None
+            else ()
+        ),
+        unresolved_questions=(
+            recommendation.report.unresolved_questions
             if recommendation.report is not None
             else ()
         ),

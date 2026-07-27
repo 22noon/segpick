@@ -200,3 +200,37 @@ def test_strong_convergence_requires_manual_review():
     assert report.convergence_review_required is True
     assert report.confidence == "low"
     assert "strong local evidence convergence" in report.summary
+
+
+def test_close_competitor_reduces_recommendation_confidence():
+    from segpick.scoring import CandidateComparison
+
+    agreement = EvidenceAgreement(
+        channel_winners={"protein_confidence": ("contig_a",)},
+        supporting_channels=("protein_confidence",),
+        disagreeing_channels=(),
+        strong_conflicts=(),
+        agreement_fraction=1.0,
+        confidence="high",
+    )
+    comparison = CandidateComparison(
+        candidate_id="contig_b",
+        score=0.79,
+        score_gap=0.01,
+        reasons_not_selected=("Protein evidence is slightly weaker.",),
+        alternative_advantages=(),
+        strongest_difference="Protein evidence is slightly weaker.",
+        close_alternative=True,
+    )
+
+    report = build_recommendation_report(
+        "contig_a",
+        agreement,
+        comparisons=(comparison,),
+    )
+
+    assert report.confidence == "moderate"
+    assert report.recommendation_finding == "competing_candidates_remain"
+    assert report.competing_candidates == ("contig_b",)
+    assert report.manual_review is True
+    assert "similar weighted evidence score" in report.unresolved_questions[0]
