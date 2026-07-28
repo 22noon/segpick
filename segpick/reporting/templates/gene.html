@@ -821,6 +821,45 @@
     </details>
   {%- endmacro %}
 
+  {% macro scenario_hypothesis_card(hypothesis) -%}
+    <details class="hypothesis-item scenario-hypothesis-item">
+      <summary>
+        <span class="hypothesis-title">{{ hypothesis.title }}</span>
+        <span class="hypothesis-badge confidence-{{ hypothesis.confidence }}">{{ hypothesis.confidence|upper }}</span>
+        <span class="hypothesis-scope muted">{{ hypothesis.scope|title }} explanation</span>
+      </summary>
+      <div class="hypothesis-detail">
+        <p>{{ hypothesis.explanation }}</p>
+        <div class="hypothesis-trace">
+          <div>
+            <h4>Supported by scenarios</h4>
+            {% if hypothesis.supporting_scenario_titles %}<ul>{% for title in hypothesis.supporting_scenario_titles %}<li>{{ title }}</li>{% endfor %}</ul>{% else %}<p class="muted">None recorded.</p>{% endif %}
+          </div>
+          <div>
+            <h4>Conflicting scenarios</h4>
+            {% if hypothesis.conflicting_scenario_titles %}<ul>{% for title in hypothesis.conflicting_scenario_titles %}<li>{{ title }}</li>{% endfor %}</ul>{% else %}<p class="muted">None recognised.</p>{% endif %}
+          </div>
+          <div>
+            <h4>Recommended checks</h4>
+            {% if hypothesis.recommended_actions %}<ul>{% for action in hypothesis.recommended_actions %}<li>{{ action }}</li>{% endfor %}</ul>{% else %}<p class="muted">No additional action specified.</p>{% endif %}
+          </div>
+        </div>
+        <p class="hypothesis-meta">{{ hypothesis.hypothesis_id }} · {{ hypothesis.source }}</p>
+      </div>
+    </details>
+  {%- endmacro %}
+
+  <section class="card hypothesis-card">
+    <h2>Biological hypotheses</h2>
+    <p class="muted">Biological explanations aggregated from recognised scenarios. Hypotheses are descriptive and do not alter candidate ranking.</p>
+    {% if view.scenario_hypotheses %}{% for hypothesis in view.scenario_hypotheses %}{{ scenario_hypothesis_card(hypothesis) }}{% endfor %}{% endif %}
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+      {% if candidate.scenario_hypotheses %}{% for hypothesis in candidate.scenario_hypotheses %}{{ scenario_hypothesis_card(hypothesis) }}{% endfor %}{% else %}<p class="muted">No scenario-supported biological hypothesis was generated for this candidate.</p>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
   <section class="card hypothesis-card">
     <h2>Biological scenarios</h2>
     <p class="muted">Named biological situations inferred from observations and findings. Select a scenario, then an observation, to inspect its evidence provenance. Scenarios are descriptive and do not alter ranking.</p>

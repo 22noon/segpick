@@ -49,3 +49,5 @@ from .contig_dotplot import (
 from .structural_integrity import attach_structural_integrity, structural_integrity_from_dotplot
 
 from .scenarios import attach_biological_scenarios
+
+from .scenario_hypotheses import attach_scenario_hypotheses

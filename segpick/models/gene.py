@@ -8,6 +8,7 @@ from .contig_dotplot import ContigDotplot
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
 from .scenario import BiologicalScenario
+from .scenario_hypothesis import ScenarioHypothesis
 from .reference import ReferenceSequence
 from .rule_evaluation import RuleEvaluation
 
@@ -26,6 +27,7 @@ class Gene:
     findings: tuple[BiologicalFinding, ...] = ()
     hypotheses: tuple[BiologicalHypothesis, ...] = ()
     scenarios: tuple[BiologicalScenario, ...] = ()
+    scenario_hypotheses: tuple[ScenarioHypothesis, ...] = ()
     rule_evaluations: tuple[RuleEvaluation, ...] = ()
     contig_dotplots: tuple[ContigDotplot, ...] = ()
 

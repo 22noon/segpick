@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from segpick.analysis import analyse_protein_continuity
-from segpick.models import BiologicalHypothesis, BiologicalScenario, CandidateContig, Gene, RuleEvaluation
+from segpick.models import BiologicalHypothesis, BiologicalScenario, CandidateContig, Gene, RuleEvaluation, ScenarioHypothesis
 from segpick.scoring import GeneRecommendation
 from segpick.knowledge.vocabulary import ConditionDisplay, describe_condition
 
@@ -81,6 +81,35 @@ def build_scenario_view(item: BiologicalScenario) -> ScenarioView:
         matched_conflicting=tuple(_scenario_evidence_view(value, provenance) for value in item.matched_conflicting),
         suggested_actions=item.suggested_actions,
         source=item.source,
+        references=item.references,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class ScenarioHypothesisView:
+    hypothesis_id: str
+    title: str
+    category: str
+    scope: str
+    confidence: str
+    severity: str
+    explanation: str
+    candidate_ids: tuple[str, ...]
+    supporting_scenario_titles: tuple[str, ...]
+    conflicting_scenario_titles: tuple[str, ...]
+    recommended_actions: tuple[str, ...]
+    source: str
+    references: tuple[str, ...]
+
+
+def build_scenario_hypothesis_view(item: ScenarioHypothesis) -> ScenarioHypothesisView:
+    return ScenarioHypothesisView(
+        hypothesis_id=item.hypothesis_id, title=item.title, category=item.category,
+        scope=item.scope, confidence=item.confidence, severity=item.severity,
+        explanation=item.explanation, candidate_ids=item.candidate_ids,
+        supporting_scenario_titles=item.supporting_scenario_titles,
+        conflicting_scenario_titles=item.conflicting_scenario_titles,
+        recommended_actions=item.recommended_actions, source=item.source,
         references=item.references,
     )
 
@@ -388,6 +417,7 @@ class CandidateView:
     hypotheses: tuple[HypothesisView, ...]
     boundary_coverage: tuple[BoundaryCoverageView, ...]
     scenarios: tuple[ScenarioView, ...]
+    scenario_hypotheses: tuple[ScenarioHypothesisView, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -402,6 +432,7 @@ class GenePageView:
     hypotheses: tuple[HypothesisView, ...]
     rule_evaluations: tuple[RuleEvaluationView, ...]
     scenarios: tuple[ScenarioView, ...]
+    scenario_hypotheses: tuple[ScenarioHypothesisView, ...]
 
 
 def build_recommendation_view(
@@ -661,6 +692,7 @@ def build_gene_page_view(
                 for item in candidate.analysis.boundary_coverage
             ),
             scenarios=tuple(build_scenario_view(item) for item in candidate.analysis.scenarios),
+            scenario_hypotheses=tuple(build_scenario_hypothesis_view(item) for item in candidate.analysis.scenario_hypotheses),
         )
         for candidate in gene.candidates
     )
@@ -724,6 +756,7 @@ def build_gene_page_view(
         hypotheses=hypotheses,
         rule_evaluations=tuple(build_rule_evaluation_view(item) for item in gene.rule_evaluations),
         scenarios=tuple(build_scenario_view(item) for item in gene.scenarios),
+        scenario_hypotheses=tuple(build_scenario_hypothesis_view(item) for item in gene.scenario_hypotheses),
         protein_continuity=ProteinContinuityView(
             classification=continuity.classification,
             candidate_count=continuity.candidate_count,

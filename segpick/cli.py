@@ -25,9 +25,10 @@ from segpick.analysis.contig_dotplot import attach_contig_dotplots
 from segpick.analysis.structural_integrity import attach_structural_integrity
 from segpick.analysis.hypotheses import attach_biological_hypotheses
 from segpick.analysis.scenarios import attach_biological_scenarios
+from segpick.analysis.scenario_hypotheses import attach_scenario_hypotheses
 from segpick.config import RunConfig, load_config, resolve_config
 from segpick.reasoning import load_active_rules
-from segpick.knowledge import load_active_scenarios
+from segpick.knowledge import load_active_hypotheses, load_active_scenarios
 from segpick.io.builder import build_sample
 from segpick.provenance import write_provenance
 from segpick.reporting import (
@@ -328,6 +329,8 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
     )
     candidate_modules, gene_modules = load_active_scenarios(config.knowledge_files)
     attach_biological_scenarios(sample, candidate_modules, gene_modules)
+    candidate_hypotheses, gene_hypotheses = load_active_hypotheses(config.knowledge_files)
+    attach_scenario_hypotheses(sample, candidate_hypotheses, gene_hypotheses)
 
     coverage_plot_paths = {}
     if config.html and config.read_support.depth_dir is not None:
