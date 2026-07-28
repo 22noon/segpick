@@ -51,3 +51,5 @@ from .structural_integrity import attach_structural_integrity, structural_integr
 from .scenarios import attach_biological_scenarios
 
 from .scenario_hypotheses import attach_scenario_hypotheses
+
+from .reference_compatibility import attach_reference_compatibility, reference_compatibility_from_dotplot

@@ -23,6 +23,7 @@ from segpick.analysis.manifest import build_analysis_manifest
 from segpick.analysis.reference_dotplot import attach_reference_dotplots
 from segpick.analysis.contig_dotplot import attach_contig_dotplots
 from segpick.analysis.structural_integrity import attach_structural_integrity
+from segpick.analysis.reference_compatibility import attach_reference_compatibility
 from segpick.analysis.hypotheses import attach_biological_hypotheses
 from segpick.analysis.scenarios import attach_biological_scenarios
 from segpick.analysis.scenario_hypotheses import attach_scenario_hypotheses
@@ -269,6 +270,8 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
         )
         structural_attached = attach_structural_integrity(sample)
         print(f"Structural integrity: {structural_attached} candidates summarised")
+        compatibility_attached = attach_reference_compatibility(sample)
+        print(f"Reference compatibility: {compatibility_attached} candidates summarised")
 
     if config.contig_dotplots.enabled:
         attached, attempted = attach_contig_dotplots(

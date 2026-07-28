@@ -14,6 +14,7 @@ class ObservationSource(StrEnum):
     DIAMOND = "diamond"
     PROTEIN_CONTINUITY = "protein_continuity"
     STRUCTURAL_ALIGNMENT = "structural_alignment"
+    REFERENCE_COMPATIBILITY = "reference_compatibility"
     CROSS_EVIDENCE = "cross_evidence"
 
 

@@ -24,6 +24,7 @@ from .protein_continuity import ProteinContinuity
 from .protein_relatedness import ProteinRelatedness
 from .reference import ReferenceSequence
 from .reference_dotplot import BlastNHSP, ReferenceDotplot
+from .reference_compatibility import ReferenceCompatibility
 from .structural_integrity import StructuralIntegrity
 from .rule_evaluation import RuleEvaluation
 from .sample import Sample
@@ -42,6 +43,7 @@ __all__ = [
     "ReferenceSequence",
     "BlastNHSP",
     "ReferenceDotplot",
+    "ReferenceCompatibility",
     "StructuralIntegrity",
     "RuleEvaluation",
     "ContigMetadata",

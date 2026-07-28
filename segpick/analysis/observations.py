@@ -474,6 +474,57 @@ def global_candidate_observations(
                 attributes={"order_consistency": structural.order_consistency},
             ))
 
+    compatibility = candidate.analysis.reference_compatibility
+    if compatibility is not None:
+        attrs = compatibility.to_dict()
+        if compatibility.status == "REFERENCE_COMPATIBLE":
+            observations.append(EvidenceObservation(
+                observation_type="reference_organisation_compatible",
+                source=ObservationSource.REFERENCE_COMPATIBILITY,
+                description="Candidate organisation is compatible with the closest reference expectation.",
+                attributes=attrs,
+            ))
+        if compatibility.unsupported_internal_candidate_bases > 0:
+            observations.append(EvidenceObservation(
+                observation_type="unsupported_internal_candidate_region",
+                source=ObservationSource.REFERENCE_COMPATIBILITY,
+                description=f"An internal candidate interval of {compatibility.unsupported_internal_candidate_bases} nt lacks closest-reference support.",
+                severity="review",
+                attributes=attrs,
+            ))
+        if compatibility.missing_internal_reference_bases > 0:
+            observations.append(EvidenceObservation(
+                observation_type="missing_expected_reference_region",
+                source=ObservationSource.REFERENCE_COMPATIBILITY,
+                description=f"An expected internal reference interval of {compatibility.missing_internal_reference_bases} nt is not represented continuously.",
+                severity="review",
+                attributes=attrs,
+            ))
+        if compatibility.block_order_compatibility < 0.8:
+            observations.append(EvidenceObservation(
+                observation_type="reference_block_order_disrupted",
+                source=ObservationSource.REFERENCE_COMPATIBILITY,
+                description="Candidate alignment blocks occur in an order that differs from the closest reference.",
+                severity="review",
+                attributes=attrs,
+            ))
+        if compatibility.orientation_compatibility < 0.8:
+            observations.append(EvidenceObservation(
+                observation_type="unexpected_reference_orientation_switch",
+                source=ObservationSource.REFERENCE_COMPATIBILITY,
+                description="Candidate alignment blocks contain an unexpected orientation change relative to the closest reference.",
+                severity="review",
+                attributes=attrs,
+            ))
+        if compatibility.duplicated_reference_bases > 0:
+            observations.append(EvidenceObservation(
+                observation_type="duplicated_reference_mapping",
+                source=ObservationSource.REFERENCE_COMPATIBILITY,
+                description=f"Separate candidate regions map to {compatibility.duplicated_reference_bases} overlapping reference bases.",
+                severity="review",
+                attributes=attrs,
+            ))
+
     read_metrics = candidate.analysis.read_support
     if read_metrics is not None:
         if read_metrics.coverage_sufficiency >= 0.95:

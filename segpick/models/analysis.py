@@ -19,6 +19,7 @@ from .protein_interpretation import ProteinInterpretation
 from .protein_relatedness import ProteinRelatedness
 from .read_support import ReadSupportMetrics
 from .reference_dotplot import ReferenceDotplot
+from .reference_compatibility import ReferenceCompatibility
 from .structural_integrity import StructuralIntegrity
 from .containment import ContainmentMetrics
 from .rule_evaluation import RuleEvaluation
@@ -29,6 +30,7 @@ class ContigAnalysis:
     """Derived analysis values for a candidate contig."""
 
     structural_integrity: StructuralIntegrity | None = None
+    reference_compatibility: ReferenceCompatibility | None = None
     containment: ContainmentMetrics = field(default_factory=ContainmentMetrics)  # legacy data only
     read_support: ReadSupportMetrics | None = None
     reference_dotplot: ReferenceDotplot | None = None

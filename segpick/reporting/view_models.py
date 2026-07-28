@@ -408,6 +408,15 @@ class CandidateView:
     order_consistency: float | None
     structural_integrity: float | None
     structural_status: str
+    reference_compatibility: float | None
+    reference_compatibility_status: str
+    unsupported_internal_candidate_bases: int | None
+    missing_internal_reference_bases: int | None
+    duplicated_reference_bases: int | None
+    expected_reference_completeness: float | None
+    reference_block_order_compatibility: float | None
+    reference_orientation_compatibility: float | None
+    duplication_compatibility: float | None
     recommended: bool
     read_support: ReadSupportView
     orf: ORFView
@@ -649,6 +658,15 @@ def build_gene_page_view(
             order_consistency=(candidate.analysis.structural_integrity.order_consistency if candidate.analysis.structural_integrity is not None else None),
             structural_integrity=(candidate.analysis.structural_integrity.score if candidate.analysis.structural_integrity is not None else None),
             structural_status=(candidate.analysis.structural_integrity.status if candidate.analysis.structural_integrity is not None else "UNAVAILABLE"),
+            reference_compatibility=(candidate.analysis.reference_compatibility.score if candidate.analysis.reference_compatibility is not None else None),
+            reference_compatibility_status=(candidate.analysis.reference_compatibility.status if candidate.analysis.reference_compatibility is not None else "UNAVAILABLE"),
+            unsupported_internal_candidate_bases=(candidate.analysis.reference_compatibility.unsupported_internal_candidate_bases if candidate.analysis.reference_compatibility is not None else None),
+            missing_internal_reference_bases=(candidate.analysis.reference_compatibility.missing_internal_reference_bases if candidate.analysis.reference_compatibility is not None else None),
+            duplicated_reference_bases=(candidate.analysis.reference_compatibility.duplicated_reference_bases if candidate.analysis.reference_compatibility is not None else None),
+            expected_reference_completeness=(candidate.analysis.reference_compatibility.expected_reference_completeness if candidate.analysis.reference_compatibility is not None else None),
+            reference_block_order_compatibility=(candidate.analysis.reference_compatibility.block_order_compatibility if candidate.analysis.reference_compatibility is not None else None),
+            reference_orientation_compatibility=(candidate.analysis.reference_compatibility.orientation_compatibility if candidate.analysis.reference_compatibility is not None else None),
+            duplication_compatibility=(candidate.analysis.reference_compatibility.duplication_compatibility if candidate.analysis.reference_compatibility is not None else None),
             recommended=candidate.id == recommended_id,
             read_support=build_read_support_view(candidate),
             orf=build_orf_view(candidate),

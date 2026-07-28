@@ -1461,6 +1461,38 @@
   </section>
 
   <section class="card">
+    <h2>Reference compatibility</h2>
+    <p class="muted">Expectation-based evidence from the closest reference. This channel measures whether candidate block order, orientation, spacing and representation are compatible with the expected genome structure. Nucleotide identity is excluded, and disagreement is a review signal rather than proof of misassembly.</p>
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail{% if candidate.recommended %} active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+        <h3>{{ candidate.candidate_id }}</h3>
+        {% if candidate.reference_compatibility is not none %}
+          <p><strong>{{ candidate.reference_compatibility_status|replace("_", " ")|title }}</strong></p>
+          <div class="mini-grid">
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.reference_compatibility) }}</strong><span>Reference compatibility</span></div>
+            <div class="mini"><strong>{{ candidate.unsupported_internal_candidate_bases }} nt</strong><span>Unsupported internal candidate sequence</span></div>
+            <div class="mini"><strong>{{ candidate.missing_internal_reference_bases }} nt</strong><span>Missing expected internal reference sequence</span></div>
+            <div class="mini"><strong>{{ candidate.duplicated_reference_bases }} nt</strong><span>Repeated reference mapping</span></div>
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.expected_reference_completeness) }}</strong><span>Expected reference completeness</span></div>
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.reference_block_order_compatibility) }}</strong><span>Block-order compatibility</span></div>
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.reference_orientation_compatibility) }}</strong><span>Orientation compatibility</span></div>
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.duplication_compatibility) }}</strong><span>Duplication compatibility</span></div>
+          </div>
+          <details class="evidence-summary-row">
+            <summary>How this differs from structural integrity</summary>
+            <div class="evidence-detail">
+              <p><strong>Structural integrity</strong> summarises the current candidate-to-reference alignment coherence. <strong>Reference compatibility</strong> asks whether the organisation matches the closest-reference expectation.</p>
+              <p class="muted">A well-supported, internally coherent candidate can therefore have low reference compatibility because of genuine structural variation or because the selected reference is not representative.</p>
+            </div>
+          </details>
+        {% else %}
+          <p class="muted">No closest-reference MegaBLAST alignment was available for this candidate.</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="card">
     <h2>Read evidence</h2>
     {% for candidate in view.candidates %}
       <div

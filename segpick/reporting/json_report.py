@@ -72,6 +72,7 @@ def write_gene_json_reports(
                         else None
                     ),
                     "structural_integrity": (c.analysis.structural_integrity.to_dict() if c.analysis.structural_integrity is not None else None),
+                    "reference_compatibility": (c.analysis.reference_compatibility.to_dict() if c.analysis.reference_compatibility is not None else None),
                     "reference_dotplot": (
                         c.analysis.reference_dotplot.to_dict()
                         if c.analysis.reference_dotplot is not None
