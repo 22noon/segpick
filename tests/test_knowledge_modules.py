@@ -159,3 +159,69 @@ def test_scenario_dashboard_uses_collapsed_nested_provenance(tmp_path):
     assert "Measurements" in html
     assert "Examine evidence" in html
     assert "observation:reference_structural_discontinuity" not in html
+
+
+def test_reference_compatibility_scenarios_distinguish_supported_and_unsupported_insertions():
+    candidate, _ = load_active_scenarios()
+    supported_observations = (
+        EvidenceObservation(
+            observation_type="unsupported_internal_candidate_region",
+            source=ObservationSource.REFERENCE_COMPATIBILITY,
+            description="343 nt absent from reference.",
+            attributes={"unsupported_internal_candidate_bases": 343},
+        ),
+        EvidenceObservation(
+            observation_type="complete_orf_read_coverage",
+            source=ObservationSource.READ_COVERAGE,
+            description="ORF is covered.",
+        ),
+    )
+    supported = evaluate_scenarios(candidate, supported_observations, (), candidate_ids=("c1",))
+    ids = {item.scenario_id for item in supported}
+    assert "reference_unsupported_internal_sequence" in ids
+    assert "coverage_supported_reference_insertion" in ids
+    assert "possible_misassembled_internal_insertion" not in ids
+
+    interrupted_observations = (
+        supported_observations[0],
+        EvidenceObservation(
+            observation_type="internal_coverage_interruption",
+            source=ObservationSource.READ_COVERAGE,
+            description="Coverage interruption inside interval.",
+        ),
+    )
+    interrupted = evaluate_scenarios(candidate, interrupted_observations, (), candidate_ids=("c1",))
+    ids = {item.scenario_id for item in interrupted}
+    assert "possible_misassembled_internal_insertion" in ids
+    generic = next(item for item in interrupted if item.scenario_id == "reference_unsupported_internal_sequence")
+    assert generic.confidence == "low"
+
+
+def test_reference_compatibility_scenarios_cover_order_orientation_duplication_and_loss():
+    candidate, _ = load_active_scenarios()
+    observations = (
+        EvidenceObservation("reference_block_order_disrupted", ObservationSource.REFERENCE_COMPATIBILITY, "order"),
+        EvidenceObservation("unexpected_reference_orientation_switch", ObservationSource.REFERENCE_COMPATIBILITY, "orientation"),
+        EvidenceObservation("duplicated_reference_mapping", ObservationSource.REFERENCE_COMPATIBILITY, "duplication"),
+        EvidenceObservation("missing_expected_reference_region", ObservationSource.REFERENCE_COMPATIBILITY, "loss"),
+    )
+    ids = {
+        item.scenario_id
+        for item in evaluate_scenarios(candidate, observations, (), candidate_ids=("c1",))
+    }
+    assert {
+        "reference_relative_rearrangement",
+        "reference_relative_inversion",
+        "repeated_reference_region",
+        "missing_internal_reference_sequence",
+    } <= ids
+
+
+def test_reference_compatibility_vocabulary_is_loaded():
+    from segpick.knowledge import describe_condition
+
+    condition = describe_condition(
+        "observation:unsupported_internal_candidate_region@reference_compatibility"
+    )
+    assert condition.display_name == "Internal candidate region lacks reference support"
+    assert "closest reference" in condition.description

@@ -61,3 +61,120 @@ scenarios:
     suggested_actions:
       - Inspect whether a graph path or targeted reassembly can join the fragments.
       - Review coverage across the missing interval.
+
+  - id: reference_unsupported_internal_sequence
+    title: Internal sequence absent from the closest reference
+    category: reference_compatibility
+    scope: candidate
+    severity: review
+    base_confidence: moderate
+    interpretation: An internal candidate interval is not represented in the closest reference. This may reflect genuine insertion, divergence, contamination, or assembly error and should be interpreted with read support.
+    requires:
+      - observation: unsupported_internal_candidate_region
+        source: reference_compatibility
+    supports:
+      - observation: complete_orf_read_coverage
+        source: read_coverage
+    conflicts:
+      - observation: internal_coverage_interruption
+        source: read_coverage
+    suggested_actions:
+      - Inspect read alignments across both insertion boundaries.
+      - Compare the interval against additional segment references and contamination databases.
+
+  - id: coverage_supported_reference_insertion
+    title: Read-supported sequence absent from the closest reference
+    category: structural_variation
+    scope: candidate
+    severity: informational
+    base_confidence: moderate
+    interpretation: An internal candidate interval absent from the closest reference is nevertheless supported across the coding region by reads, favouring genuine sequence or reference mismatch over an unsupported assembly insertion.
+    requires:
+      - observation: unsupported_internal_candidate_region
+        source: reference_compatibility
+      - observation: complete_orf_read_coverage
+        source: read_coverage
+    conflicts:
+      - observation: internal_coverage_interruption
+        source: read_coverage
+    suggested_actions:
+      - Confirm reads span both boundaries of the reference-absent interval.
+      - Compare against several related references before interpreting the interval as novel.
+
+  - id: possible_misassembled_internal_insertion
+    title: Possible misassembled internal insertion
+    category: assembly
+    scope: candidate
+    severity: warning
+    base_confidence: high
+    interpretation: An internal candidate interval absent from the closest reference coincides with interrupted read support, increasing concern for a chimeric or incorrectly joined insertion.
+    requires:
+      - observation: unsupported_internal_candidate_region
+        source: reference_compatibility
+      - observation: internal_coverage_interruption
+        source: read_coverage
+    suggested_actions:
+      - Inspect split reads and read pairs at both interval boundaries.
+      - Compare alternative contigs and inspect the assembly graph around the interval.
+
+  - id: reference_relative_rearrangement
+    title: Possible reference-relative rearrangement
+    category: structural_variation
+    scope: candidate
+    severity: warning
+    base_confidence: moderate
+    interpretation: Candidate alignment blocks occur in a different order from the closest reference. This may reflect genuine rearrangement, an unrepresentative reference, or assembly error.
+    requires:
+      - observation: reference_block_order_disrupted
+        source: reference_compatibility
+    supports:
+      - observation: unexpected_reference_orientation_switch
+        source: reference_compatibility
+    suggested_actions:
+      - Inspect read support across each reordered block junction.
+      - Compare block order with additional close references.
+
+  - id: reference_relative_inversion
+    title: Possible reference-relative inversion
+    category: structural_variation
+    scope: candidate
+    severity: warning
+    base_confidence: moderate
+    interpretation: One or more candidate blocks align in an unexpected orientation relative to the closest reference, compatible with inversion, chimera, or assembly error.
+    requires:
+      - observation: unexpected_reference_orientation_switch
+        source: reference_compatibility
+    suggested_actions:
+      - Inspect strand-aware alignments and reads spanning the orientation-switch boundaries.
+      - Verify the pattern against additional references.
+
+  - id: repeated_reference_region
+    title: Possible duplicated or repeated reference region
+    category: structural_variation
+    scope: candidate
+    severity: review
+    base_confidence: moderate
+    interpretation: Separate candidate intervals map to overlapping portions of the closest reference, compatible with duplication, repeat-associated ambiguity, or assembly collapse/expansion.
+    requires:
+      - observation: duplicated_reference_mapping
+        source: reference_compatibility
+    suggested_actions:
+      - Inspect read depth and uniquely mapping reads across the repeated interval.
+      - Examine the assembly graph for repeat-associated alternative paths.
+
+  - id: missing_internal_reference_sequence
+    title: Internal expected reference sequence is absent
+    category: completeness
+    scope: candidate
+    severity: review
+    base_confidence: moderate
+    interpretation: An internal region represented in the closest reference is not continuously represented by the candidate. This may reflect deletion, divergence, reference mismatch, or incomplete assembly.
+    requires:
+      - observation: missing_expected_reference_region
+        source: reference_compatibility
+    supports:
+      - observation: internal_coverage_interruption
+        source: read_coverage
+    suggested_actions:
+      - Inspect reads and alternative contigs spanning the missing expected interval.
+      - Compare the region with additional related references.

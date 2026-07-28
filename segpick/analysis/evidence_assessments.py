@@ -91,7 +91,9 @@ def reference(candidate, recommendation):
     if item.block_order_compatibility < 1:
         findings.append(EvidenceFinding("reference_block_order_disrupted", "Reference alignment blocks occur out of order", "May indicate rearrangement or assembly error.", "warning", 100))
     if item.orientation_compatibility < 1:
-        findings.append(EvidenceFinding("reference_orientation_switch", "Unexpected orientation change relative to reference", "May indicate inversion, chimera, or assembly error.", "warning", 95))
+        findings.append(EvidenceFinding("unexpected_reference_orientation_switch", "Unexpected orientation change relative to reference", "May indicate inversion, chimera, or assembly error.", "warning", 95))
+    if item.duplicated_reference_bases > 0:
+        findings.append(EvidenceFinding("duplicated_reference_mapping", f"Separate candidate regions repeatedly map to the same reference interval ({item.duplicated_reference_bases} nt)", "May indicate duplication, repeat-associated ambiguity, or assembly error.", "warning", 88))
     if not findings:
         findings.append(EvidenceFinding("reference_organisation_compatible", "Reference organisation is compatible with the closest genome", "Expected block order, orientation, and internal continuity are preserved.", "information", 20))
     findings.sort(key=lambda value: value.priority, reverse=True)
@@ -103,6 +105,8 @@ def reference(candidate, recommendation):
             {"name": "missing_internal_reference_bases", "value": item.missing_internal_reference_bases},
             {"name": "block_order_compatibility", "value": item.block_order_compatibility},
             {"name": "orientation_compatibility", "value": item.orientation_compatibility},
+            {"name": "duplicated_reference_bases", "value": item.duplicated_reference_bases},
+            {"name": "duplication_compatibility", "value": item.duplication_compatibility},
         ),
         limitations=confidence.limitations,
         participates_in_ranking=False,

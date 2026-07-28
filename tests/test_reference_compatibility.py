@@ -54,3 +54,21 @@ def test_detects_duplicate_reference_mapping():
     ))
     assert result.duplicated_reference_bases == 500
     assert result.duplication_compatibility < 1.0
+
+
+def test_reference_compatibility_assessment_reports_duplicated_mapping():
+    from types import SimpleNamespace
+    from segpick.analysis.evidence_assessments import reference
+
+    compatibility = reference_compatibility_from_dotplot(dotplot(
+        hsp(1, 1000, 1, 1000), hsp(1501, 2500, 501, 1500)
+    ))
+    candidate = SimpleNamespace(
+        analysis=SimpleNamespace(reference_compatibility=compatibility)
+    )
+    assessment = reference(candidate, SimpleNamespace())
+    finding_ids = {assessment.key_finding.finding_id} | {
+        item.finding_id for item in assessment.supporting_findings
+    }
+    assert "duplicated_reference_mapping" in finding_ids
+    assert any(item["name"] == "duplicated_reference_bases" for item in assessment.measurements)

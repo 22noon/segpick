@@ -21,6 +21,7 @@ def _visualisations(source: str | None) -> tuple[str, ...]:
         "read_coverage": ("coverage_plot",),
         "cross_evidence": ("coverage_plot", "reference_dotplot"),
         "structural_alignment": ("reference_dotplot",),
+        "reference_compatibility": ("reference_dotplot", "coverage_plot"),
         "protein_alignment": ("protein_alignment",),
         "orf_structure": ("orf_summary", "coverage_plot"),
         "protein_continuity": ("protein_continuity",),

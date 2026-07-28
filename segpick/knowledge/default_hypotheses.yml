@@ -54,3 +54,58 @@ hypotheses:
     recommended_actions:
       - Inspect the assembly graph or perform targeted reassembly.
       - Review whether the fragments can be joined without unsupported sequence.
+
+  - id: reference_relative_structural_variation
+    title: Possible reference-relative structural variation
+    category: structural_variation
+    scope: candidate
+    severity: review
+    base_confidence: moderate
+    explanation: The candidate may contain a genuine insertion, deletion, inversion, rearrangement, or duplication relative to the closest available reference.
+    supported_by:
+      - coverage_supported_reference_insertion
+      - reference_relative_rearrangement
+      - reference_relative_inversion
+      - repeated_reference_region
+      - missing_internal_reference_sequence
+    contradicted_by:
+      - possible_misassembled_internal_insertion
+    minimum_support: 1
+    recommended_actions:
+      - Validate the affected junctions using reads that span them.
+      - Compare the candidate with multiple phylogenetically close references.
+
+  - id: possible_reference_relative_misassembly
+    title: Possible reference-relative misassembly
+    category: assembly
+    scope: candidate
+    severity: warning
+    base_confidence: moderate
+    explanation: A departure from expected reference structure is accompanied by evidence that the affected sequence or junction is not fully supported by reads.
+    supported_by:
+      - possible_misassembled_internal_insertion
+      - coverage_supported_assembly_breakpoint
+    contradicted_by:
+      - coverage_supported_reference_insertion
+    minimum_support: 1
+    recommended_actions:
+      - Inspect split reads, paired-read consistency, and local assembly graph paths.
+      - Compare alternative candidate contigs before accepting the affected structure.
+
+  - id: closest_reference_may_be_unrepresentative
+    title: Closest reference may not represent the isolate structure
+    category: reference_context
+    scope: candidate
+    severity: informational
+    base_confidence: moderate
+    explanation: The candidate differs from the closest reference but retains read support, so the reference may not represent the isolate's true structure.
+    supported_by:
+      - coverage_supported_reference_insertion
+      - divergent_but_coherent_segment
+    contradicted_by:
+      - possible_misassembled_internal_insertion
+    minimum_support: 1
+    recommended_actions:
+      - Compare against a broader panel of related segment references.
+      - Treat reference-relative differences as provisional biological variation until junctions are validated.
+
