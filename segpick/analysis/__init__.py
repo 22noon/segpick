@@ -55,3 +55,4 @@ from .scenario_hypotheses import attach_scenario_hypotheses
 from .reference_compatibility import attach_reference_compatibility, reference_compatibility_from_dotplot
 
 from .evidence_assessments import CHANNEL_REGISTRY, build_evidence_assessments, discover_external_channels, register_channel
+from .cross_evidence import attach_cross_evidence

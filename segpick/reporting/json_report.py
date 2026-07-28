@@ -46,7 +46,8 @@ def write_gene_json_reports(
             candidate_recommendation = recommendation_by_id.get(c.id)
             payload["candidates"].append(
                 {
-                    "evidence_assessments": ([item.to_dict() for item in build_evidence_assessments(c, candidate_recommendation)] if candidate_recommendation is not None else []),
+                    "evidence_assessments": [item.to_dict() for item in c.analysis.evidence_assessments] if c.analysis.evidence_assessments else ([item.to_dict() for item in build_evidence_assessments(c, candidate_recommendation)] if candidate_recommendation is not None else []),
+                    "cross_evidence_findings": [item.to_dict() for item in c.analysis.cross_evidence_findings],
                     "id": c.id,
                     "length": c.length,
                     "confidence": c.metadata.confidence,

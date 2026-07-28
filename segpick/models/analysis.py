@@ -23,6 +23,8 @@ from .reference_compatibility import ReferenceCompatibility
 from .structural_integrity import StructuralIntegrity
 from .containment import ContainmentMetrics
 from .rule_evaluation import RuleEvaluation
+from .cross_evidence import CrossEvidenceFinding
+from .evidence_assessment import EvidenceAssessment
 
 
 @dataclass(slots=True)
@@ -48,6 +50,8 @@ class ContigAnalysis:
     hypotheses: tuple[BiologicalHypothesis, ...] = ()
     scenarios: tuple[BiologicalScenario, ...] = ()
     scenario_hypotheses: tuple[ScenarioHypothesis, ...] = ()
+    evidence_assessments: tuple[EvidenceAssessment, ...] = ()
+    cross_evidence_findings: tuple[CrossEvidenceFinding, ...] = ()
     rule_evaluations: tuple[RuleEvaluation, ...] = ()
     depth_profile: dict[int, int] = field(default_factory=dict)
     boundary_coverage: tuple[BoundaryCoverageAssessment, ...] = ()

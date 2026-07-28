@@ -409,6 +409,21 @@ class BoundaryCoverageView:
     severity: str
     summary: str
 
+
+
+@dataclass(frozen=True, slots=True)
+class CrossEvidenceFindingView:
+    finding_id: str
+    title: str
+    description: str
+    confidence: str
+    severity: str
+    rule_id: str
+    rule_version: str
+    source_plugin: str
+    supporting_evidence: tuple[str, ...]
+    limitations: tuple[str, ...]
+
 @dataclass(frozen=True, slots=True)
 class CandidateView:
     candidate_id: str
@@ -447,6 +462,7 @@ class CandidateView:
     boundary_coverage: tuple[BoundaryCoverageView, ...]
     scenarios: tuple[ScenarioView, ...]
     scenario_hypotheses: tuple[ScenarioHypothesisView, ...]
+    cross_evidence_findings: tuple[CrossEvidenceFindingView, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -745,6 +761,21 @@ def build_gene_page_view(
             ),
             scenarios=tuple(build_scenario_view(item) for item in candidate.analysis.scenarios),
             scenario_hypotheses=tuple(build_scenario_hypothesis_view(item) for item in candidate.analysis.scenario_hypotheses),
+            cross_evidence_findings=tuple(
+                CrossEvidenceFindingView(
+                    finding_id=item.finding_id,
+                    title=item.title,
+                    description=item.description,
+                    confidence=item.confidence,
+                    severity=item.severity,
+                    rule_id=item.rule_id,
+                    rule_version=item.rule_version,
+                    source_plugin=item.source_plugin,
+                    supporting_evidence=tuple(ref.title for ref in item.supporting_evidence),
+                    limitations=item.limitations,
+                )
+                for item in candidate.analysis.cross_evidence_findings
+            ),
         )
         for candidate in gene.candidates
     )

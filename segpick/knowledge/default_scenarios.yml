@@ -178,3 +178,17 @@ scenarios:
     suggested_actions:
       - Inspect reads and alternative contigs spanning the missing expected interval.
       - Compare the region with additional related references.
+
+  - id: cross_evidence_supported_reference_absent_sequence
+    title: Cross-evidence supported reference-absent sequence
+    category: structural_variation
+    scope: candidate
+    severity: informational
+    base_confidence: moderate
+    interpretation: Independent reference and read assessments jointly support an internal candidate interval not represented by the closest reference.
+    requires:
+      - finding: Reference-absent sequence is supported by reads
+        source: cross_evidence
+    suggested_actions:
+      - Confirm reads span both interval boundaries.
+      - Compare the interval against additional close references.

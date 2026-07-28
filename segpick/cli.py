@@ -27,6 +27,7 @@ from segpick.analysis.reference_compatibility import attach_reference_compatibil
 from segpick.analysis.hypotheses import attach_biological_hypotheses
 from segpick.analysis.scenarios import attach_biological_scenarios
 from segpick.analysis.scenario_hypotheses import attach_scenario_hypotheses
+from segpick.analysis.cross_evidence import attach_cross_evidence
 from segpick.config import RunConfig, load_config, resolve_config
 from segpick.reasoning import load_active_rules
 from segpick.knowledge import load_active_hypotheses, load_active_scenarios
@@ -331,9 +332,7 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
         gene_rules=gene_rules,
     )
     candidate_modules, gene_modules = load_active_scenarios(config.knowledge_files)
-    attach_biological_scenarios(sample, candidate_modules, gene_modules)
     candidate_hypotheses, gene_hypotheses = load_active_hypotheses(config.knowledge_files)
-    attach_scenario_hypotheses(sample, candidate_hypotheses, gene_hypotheses)
 
     coverage_plot_paths = {}
     if config.html and config.read_support.depth_dir is not None:
@@ -351,6 +350,12 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
             gene,
             config.scoring_weights,
         )
+
+    cross_count = attach_cross_evidence(sample, recommendations)
+    if cross_count:
+        print(f"Cross-evidence reasoning: {cross_count} findings generated")
+    attach_biological_scenarios(sample, candidate_modules, gene_modules)
+    attach_scenario_hypotheses(sample, candidate_hypotheses, gene_hypotheses)
 
     write_summary_tsv(
         sample,

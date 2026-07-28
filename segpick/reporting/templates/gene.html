@@ -861,6 +861,26 @@
   </section>
 
   <section class="card hypothesis-card">
+    <h2>Cross-evidence findings</h2>
+    <p class="muted">Interpretations that emerge only when independent evidence channels are considered together. They are explanatory and do not alter ranking.</p>
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+        {% if candidate.cross_evidence_findings %}
+          {% for item in candidate.cross_evidence_findings %}
+            <details class="reasoning-card">
+              <summary><strong>{{ item.title }}</strong> · confidence {{ item.confidence|upper }}</summary>
+              <p>{{ item.description }}</p>
+              <p><strong>Supporting evidence:</strong> {{ item.supporting_evidence|join("; ") }}</p>
+              <p class="muted">Rule {{ item.rule_id }} v{{ item.rule_version }} · {{ item.source_plugin }}</p>
+              {% if item.limitations %}<p><strong>Limitations:</strong> {{ item.limitations|join(" ") }}</p>{% endif %}
+            </details>
+          {% endfor %}
+        {% else %}<p class="muted">No cross-evidence finding was generated for this candidate.</p>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="card hypothesis-card">
     <h2>Biological scenarios</h2>
     <p class="muted">Named biological situations inferred from observations and findings. Select a scenario, then an observation, to inspect its evidence provenance. Scenarios are descriptive and do not alter ranking.</p>
     {% if view.scenarios %}{% for scenario in view.scenarios %}{{ scenario_card(scenario) }}{% endfor %}{% endif %}
