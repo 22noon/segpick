@@ -65,3 +65,33 @@ scenarios:
     assert args.knowledge_files == [str(path)]
     config = resolve_config({}, {"knowledge_files": args.knowledge_files})
     assert config.knowledge_files == (path,)
+
+
+def test_scenario_view_uses_human_friendly_observation_text():
+    from segpick.models import BiologicalScenario
+    from segpick.reporting.view_models import build_scenario_view
+
+    scenario = BiologicalScenario(
+        scenario_id="incomplete_terminal_assembly",
+        title="Possible incomplete terminal assembly",
+        category="completeness",
+        scope="candidate",
+        confidence="moderate",
+        severity="review",
+        interpretation="Possible truncation.",
+        matched_required=("observation:weak_orf_terminal_support@read_coverage",),
+    )
+    view = build_scenario_view(scenario)
+    condition = view.matched_required[0]
+    assert condition.display_name == "Weak ORF terminal support"
+    assert condition.source_display_name == "Read coverage"
+    assert "predicted coding sequence" in condition.description
+    assert condition.identifier == "observation:weak_orf_terminal_support@read_coverage"
+
+
+def test_unknown_observation_gets_readable_fallback():
+    from segpick.knowledge import describe_condition
+
+    condition = describe_condition("observation:new_laboratory_signal@custom_source")
+    assert condition.display_name == "New laboratory signal"
+    assert condition.source_display_name == "Custom source"

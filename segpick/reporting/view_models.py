@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from segpick.analysis import analyse_protein_continuity
 from segpick.models import BiologicalHypothesis, BiologicalScenario, CandidateContig, Gene, RuleEvaluation
 from segpick.scoring import GeneRecommendation
+from segpick.knowledge.vocabulary import ConditionDisplay, describe_condition
 
 
 
@@ -21,15 +22,30 @@ class ScenarioView:
     severity: str
     interpretation: str
     candidate_ids: tuple[str, ...]
-    matched_required: tuple[str, ...]
-    matched_supporting: tuple[str, ...]
-    matched_conflicting: tuple[str, ...]
+    matched_required: tuple[ConditionDisplay, ...]
+    matched_supporting: tuple[ConditionDisplay, ...]
+    matched_conflicting: tuple[ConditionDisplay, ...]
     suggested_actions: tuple[str, ...]
     source: str
     references: tuple[str, ...]
 
 def build_scenario_view(item: BiologicalScenario) -> ScenarioView:
-    return ScenarioView(**{name: getattr(item, name) for name in ScenarioView.__dataclass_fields__})
+    return ScenarioView(
+        scenario_id=item.scenario_id,
+        title=item.title,
+        category=item.category,
+        scope=item.scope,
+        confidence=item.confidence,
+        severity=item.severity,
+        interpretation=item.interpretation,
+        candidate_ids=item.candidate_ids,
+        matched_required=tuple(describe_condition(value) for value in item.matched_required),
+        matched_supporting=tuple(describe_condition(value) for value in item.matched_supporting),
+        matched_conflicting=tuple(describe_condition(value) for value in item.matched_conflicting),
+        suggested_actions=item.suggested_actions,
+        source=item.source,
+        references=item.references,
+    )
 
 @dataclass(frozen=True, slots=True)
 class RuleEvaluationView:
