@@ -1170,53 +1170,26 @@
 
       <h3>Evidence summary</h3>
       <div class="evidence-list">
-        {% for item in view.recommendation.evidence %}
-          {% if item.value is none %}
-            {% set status_class = "evidence-status-unavailable" %}
-            {% set result_label = "Unavailable" %}
-          {% elif item.value >= 0.85 %}
-            {% set status_class = "evidence-status-good" %}
-            {% set result_label = "Strong support" %}
-          {% elif item.value >= 0.65 %}
-            {% set status_class = "evidence-status-good" %}
-            {% set result_label = "Supportive" %}
-          {% elif item.value >= 0.40 %}
-            {% set status_class = "evidence-status-warning" %}
-            {% set result_label = "Mixed" %}
-          {% else %}
-            {% set status_class = "evidence-status-danger" %}
-            {% set result_label = "Weak" %}
-          {% endif %}
-
+        {% for item in view.recommendation.evidence_assessments %}
+          {% if item.status == "not_assessable" %}{% set status_class = "evidence-status-unavailable" %}
+          {% elif item.status in ("strong", "moderate") %}{% set status_class = "evidence-status-good" %}
+          {% elif item.status == "mixed" %}{% set status_class = "evidence-status-warning" %}
+          {% else %}{% set status_class = "evidence-status-danger" %}{% endif %}
           <details class="evidence-summary-row {{ status_class }}">
             <summary>
               <span class="evidence-status-dot" aria-hidden="true"></span>
-              <span class="evidence-label">{{ item.name|replace("_", " ")|title }}</span>
-              <span class="evidence-result">{{ result_label }}</span>
-              <span class="evidence-score">
-                {% if item.value is none %}—{% else %}{{ "%.3f"|format(item.value) }}{% endif %}
-              </span>
+              <span class="evidence-label">{{ item.channel_title }}</span>
+              <span class="evidence-result">{{ item.status|replace("_", " ")|title }} · {{ item.confidence_level|replace("_", " ")|title }} confidence</span>
+              <span class="evidence-score">{% if item.score is none %}—{% else %}{{ "%.3f"|format(item.score) }}{% endif %}</span>
             </summary>
-
             <div class="evidence-detail">
-              {% if item.value is none %}
-                <div class="evidence-unavailable-note">
-                  This evidence was unavailable, so its weight was redistributed across the available channels.
-                </div>
-              {% else %}
-                <div class="evidence-detail-item">
-                  Evidence score
-                  <strong>{{ "%.3f"|format(item.value) }}</strong>
-                </div>
-                <div class="evidence-detail-item">
-                  Weighted contribution
-                  <strong>{{ "%.3f"|format(item.contribution) }}</strong>
-                </div>
-                <div class="evidence-detail-item">
-                  Effective weight
-                  <strong>{{ "%.1f%%"|format(item.effective_weight * 100) }}</strong>
-                </div>
-              {% endif %}
+              <div class="evidence-detail-item"><strong>Key finding</strong><span>{{ item.key_finding }}</span></div>
+              <div class="evidence-detail-item"><strong>Confidence method</strong><span>{{ item.confidence_method }} v{{ item.confidence_version }}</span></div>
+              {% for factor in item.confidence_factors %}
+                <div class="evidence-detail-item">{{ factor.name|replace("_", " ")|title }}<strong>{{ factor.value }}</strong><span>{{ factor.interpretation }}</span></div>
+              {% endfor %}
+              {% if item.limitations %}<div class="evidence-unavailable-note"><strong>Limitations:</strong> {{ item.limitations|join(" ") }}</div>{% endif %}
+              {% if item.participates_in_ranking %}<div class="evidence-detail-item"><strong>Weighted contribution</strong><span>See ranking calculation in the recommendation JSON.</span></div><div class="evidence-detail-item"><strong>Effective weight</strong><span>See ranking calculation in the recommendation JSON.</span></div>{% else %}<div class="evidence-unavailable-note">Explanatory channel; not used in ranking.</div>{% endif %}
             </div>
           </details>
         {% endfor %}

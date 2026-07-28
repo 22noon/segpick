@@ -66,3 +66,5 @@ __all__ = [
     "ProteinContinuity",
     "ProteinRelatedness",
 ]
+
+from .evidence_assessment import ConfidenceAssessment, ConfidenceFactor, EvidenceAssessment, EvidenceFinding

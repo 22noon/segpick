@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from segpick.analysis import analyse_protein_continuity
+from segpick.analysis import analyse_protein_continuity, build_evidence_assessments
 from segpick.models import BiologicalHypothesis, BiologicalScenario, CandidateContig, Gene, RuleEvaluation, ScenarioHypothesis
 from segpick.scoring import GeneRecommendation
 from segpick.knowledge.vocabulary import ConditionDisplay, describe_condition
@@ -321,6 +321,25 @@ class EvidenceView:
 
 
 @dataclass(frozen=True, slots=True)
+class EvidenceAssessmentView:
+    channel_id: str
+    channel_title: str
+    status: str
+    score: float | None
+    confidence_level: str
+    confidence_score: float | None
+    confidence_method: str
+    confidence_version: str
+    confidence_factors: tuple[dict[str, object], ...]
+    limitations: tuple[str, ...]
+    key_finding: str
+    key_finding_description: str
+    supporting_findings: tuple[str, ...]
+    measurements: tuple[dict[str, object], ...]
+    participates_in_ranking: bool
+
+
+@dataclass(frozen=True, slots=True)
 class RecommendationChannelView:
     name: str
     status: str
@@ -345,6 +364,7 @@ class RecommendationView:
     candidate_id: str
     score: float
     evidence: tuple[EvidenceView, ...]
+    evidence_assessments: tuple[EvidenceAssessmentView, ...]
     runner_up_id: str | None
     runner_up_score: float | None
     score_gap: float | None
@@ -446,6 +466,7 @@ class GenePageView:
 
 def build_recommendation_view(
     recommendation: GeneRecommendation | None,
+    candidate: CandidateContig | None = None,
 ) -> RecommendationView | None:
     if recommendation is None:
         return None
@@ -483,6 +504,19 @@ def build_recommendation_view(
         candidate_id=selected.candidate_id,
         score=selected.score,
         evidence=evidence,
+        evidence_assessments=tuple(
+            EvidenceAssessmentView(
+                channel_id=item.channel_id, channel_title=item.channel_title, status=item.status, score=item.score,
+                confidence_level=item.confidence.level, confidence_score=item.confidence.score,
+                confidence_method=item.confidence.method, confidence_version=item.confidence.version,
+                confidence_factors=tuple(factor.to_dict() for factor in item.confidence.factors),
+                limitations=item.limitations, key_finding=item.key_finding.title,
+                key_finding_description=item.key_finding.description,
+                supporting_findings=tuple(value.title for value in item.supporting_findings),
+                measurements=item.measurements, participates_in_ranking=item.participates_in_ranking,
+            )
+            for item in (build_evidence_assessments(candidate, selected) if candidate is not None else ())
+        ),
         runner_up_id=runner_up.candidate_id if runner_up else None,
         runner_up_score=runner_up.score if runner_up else None,
         score_gap=score_gap,
@@ -768,7 +802,7 @@ def build_gene_page_view(
         gene=gene.name,
         segment=gene.segment,
         anchor=gene.anchor_id,
-        recommendation=build_recommendation_view(recommendation),
+        recommendation=build_recommendation_view(recommendation, next((item for item in gene.candidates if item.id == recommended_id), None)),
         candidates=candidates,
         protein_coordinates=protein_coordinates,
         hypotheses=hypotheses,

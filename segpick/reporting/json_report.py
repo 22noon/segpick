@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from segpick.alignment.export import safe_name
-from segpick.analysis import analyse_protein_continuity
+from segpick.analysis import analyse_protein_continuity, build_evidence_assessments
 from segpick.models import AnalysisManifest, Sample
 from segpick.scoring import GeneRecommendation
 
@@ -41,9 +41,12 @@ def write_gene_json_reports(
         else:
             payload["recommendation"] = None
 
+        recommendation_by_id = {item.candidate_id: item for item in recommendations[g.name].candidates} if recommendations and g.name in recommendations else {}
         for c in g.candidates:
+            candidate_recommendation = recommendation_by_id.get(c.id)
             payload["candidates"].append(
                 {
+                    "evidence_assessments": ([item.to_dict() for item in build_evidence_assessments(c, candidate_recommendation)] if candidate_recommendation is not None else []),
                     "id": c.id,
                     "length": c.length,
                     "confidence": c.metadata.confidence,
