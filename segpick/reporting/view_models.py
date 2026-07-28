@@ -13,6 +13,24 @@ from segpick.knowledge.vocabulary import ConditionDisplay, describe_condition
 
 
 @dataclass(frozen=True, slots=True)
+class ScenarioEvidenceView:
+    identifier: str
+    display_name: str
+    description: str
+    source: str | None
+    source_display_name: str | None
+    kind: str
+    observed_descriptions: tuple[str, ...] = ()
+    measurements: tuple[dict[str, object], ...] = ()
+    regions: tuple[dict[str, object], ...] = ()
+    visualisations: tuple[str, ...] = ()
+
+    @property
+    def has_details(self) -> bool:
+        return bool(self.observed_descriptions or self.measurements or self.regions or self.visualisations)
+
+
+@dataclass(frozen=True, slots=True)
 class ScenarioView:
     scenario_id: str
     title: str
@@ -22,14 +40,33 @@ class ScenarioView:
     severity: str
     interpretation: str
     candidate_ids: tuple[str, ...]
-    matched_required: tuple[ConditionDisplay, ...]
-    matched_supporting: tuple[ConditionDisplay, ...]
-    matched_conflicting: tuple[ConditionDisplay, ...]
+    matched_required: tuple[ScenarioEvidenceView, ...]
+    matched_supporting: tuple[ScenarioEvidenceView, ...]
+    matched_conflicting: tuple[ScenarioEvidenceView, ...]
     suggested_actions: tuple[str, ...]
     source: str
     references: tuple[str, ...]
 
+
+def _scenario_evidence_view(label: str, provenance_by_condition: dict[str, object]) -> ScenarioEvidenceView:
+    display = describe_condition(label)
+    provenance = provenance_by_condition.get(label)
+    return ScenarioEvidenceView(
+        identifier=display.identifier,
+        display_name=display.display_name,
+        description=display.description,
+        source=display.source,
+        source_display_name=display.source_display_name,
+        kind=display.kind,
+        observed_descriptions=tuple(getattr(provenance, "descriptions", ())),
+        measurements=tuple(getattr(provenance, "measurements", ())),
+        regions=tuple(getattr(provenance, "regions", ())),
+        visualisations=tuple(getattr(provenance, "visualisations", ())),
+    )
+
+
 def build_scenario_view(item: BiologicalScenario) -> ScenarioView:
+    provenance = {entry.condition: entry for entry in item.evidence_provenance}
     return ScenarioView(
         scenario_id=item.scenario_id,
         title=item.title,
@@ -39,9 +76,9 @@ def build_scenario_view(item: BiologicalScenario) -> ScenarioView:
         severity=item.severity,
         interpretation=item.interpretation,
         candidate_ids=item.candidate_ids,
-        matched_required=tuple(describe_condition(value) for value in item.matched_required),
-        matched_supporting=tuple(describe_condition(value) for value in item.matched_supporting),
-        matched_conflicting=tuple(describe_condition(value) for value in item.matched_conflicting),
+        matched_required=tuple(_scenario_evidence_view(value, provenance) for value in item.matched_required),
+        matched_supporting=tuple(_scenario_evidence_view(value, provenance) for value in item.matched_supporting),
+        matched_conflicting=tuple(_scenario_evidence_view(value, provenance) for value in item.matched_conflicting),
         suggested_actions=item.suggested_actions,
         source=item.source,
         references=item.references,

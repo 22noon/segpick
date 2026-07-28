@@ -1,6 +1,28 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from typing import Any
+
+
+@dataclass(frozen=True, slots=True)
+class ScenarioEvidenceProvenance:
+    """Trace one matched scenario condition back to observations or findings."""
+
+    condition: str
+    kind: str
+    source: str | None = None
+    descriptions: tuple[str, ...] = ()
+    measurements: tuple[dict[str, Any], ...] = ()
+    regions: tuple[dict[str, Any], ...] = ()
+    visualisations: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, object]:
+        data = asdict(self)
+        data["descriptions"] = list(self.descriptions)
+        data["measurements"] = [dict(item) for item in self.measurements]
+        data["regions"] = [dict(item) for item in self.regions]
+        data["visualisations"] = list(self.visualisations)
+        return data
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,6 +41,7 @@ class BiologicalScenario:
     suggested_actions: tuple[str, ...] = ()
     source: str = "builtin"
     references: tuple[str, ...] = ()
+    evidence_provenance: tuple[ScenarioEvidenceProvenance, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         data = asdict(self)
@@ -27,4 +50,5 @@ class BiologicalScenario:
             "matched_conflicting", "suggested_actions", "references",
         ):
             data[key] = list(data[key])
+        data["evidence_provenance"] = [item.to_dict() for item in self.evidence_provenance]
         return data

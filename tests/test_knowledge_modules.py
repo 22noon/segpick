@@ -95,3 +95,67 @@ def test_unknown_observation_gets_readable_fallback():
     condition = describe_condition("observation:new_laboratory_signal@custom_source")
     assert condition.display_name == "New laboratory signal"
     assert condition.source_display_name == "Custom source"
+
+
+def test_scenario_provenance_records_measurements_regions_and_visualisations():
+    candidate, _ = load_active_scenarios()
+    observations = (
+        EvidenceObservation(
+            observation_type="reference_structural_discontinuity",
+            source=ObservationSource.STRUCTURAL_ALIGNMENT,
+            description="Two alignment blocks are separated by 318 nt.",
+            coordinate_system="candidate:c1",
+            start=1201,
+            end=1518,
+            attributes={"hsp_count": 2, "gap_length": 318},
+        ),
+        EvidenceObservation(
+            observation_type="coverage_drop_at_reference_boundary",
+            source=ObservationSource.CROSS_EVIDENCE,
+            description="Median depth falls from 84x to 11x at the boundary.",
+            attributes={"baseline_depth": 84.0, "boundary_depth": 11.0, "depth_ratio": 0.131},
+        ),
+    )
+    scenario = next(
+        item for item in evaluate_scenarios(candidate, observations, (), candidate_ids=("c1",))
+        if item.scenario_id == "coverage_supported_assembly_breakpoint"
+    )
+    assert len(scenario.evidence_provenance) == 2
+    structural = next(item for item in scenario.evidence_provenance if item.source == "structural_alignment")
+    assert structural.descriptions == ("Two alignment blocks are separated by 318 nt.",)
+    assert {item["name"] for item in structural.measurements} == {"gap_length", "hsp_count"}
+    assert structural.regions[0]["start"] == 1201
+    assert "reference_dotplot" in structural.visualisations
+    payload = scenario.to_dict()
+    assert payload["evidence_provenance"][0]["condition"].startswith("observation:")
+
+
+def test_scenario_dashboard_uses_collapsed_nested_provenance(tmp_path):
+    from segpick.reporting.html_report import write_html_dashboard
+    from tests.test_recommendation_reporting import make_sample
+
+    sample, recommendations = make_sample()
+    candidate, _ = load_active_scenarios()
+    contig = sample.genes["VP2"].candidates[0]
+    contig.analysis.observations = (
+        EvidenceObservation(
+            observation_type="reference_structural_discontinuity",
+            source=ObservationSource.STRUCTURAL_ALIGNMENT,
+            description="Two structural blocks.",
+            attributes={"hsp_count": 2},
+        ),
+        EvidenceObservation(
+            observation_type="coverage_drop_at_reference_boundary",
+            source=ObservationSource.CROSS_EVIDENCE,
+            description="Depth decreases at the boundary.",
+            attributes={"depth_ratio": 0.2},
+        ),
+    )
+    contig.analysis.scenarios = evaluate_scenarios(candidate, contig.analysis.observations, (), candidate_ids=(contig.id,))
+    write_html_dashboard(sample, tmp_path, recommendations)
+    html = (tmp_path / "genes" / "VP2.html").read_text()
+    assert '<details class="hypothesis-item scenario-item">' in html
+    assert '<details class="provenance-item">' in html
+    assert "Measurements" in html
+    assert "Examine evidence" in html
+    assert "observation:reference_structural_discontinuity" not in html

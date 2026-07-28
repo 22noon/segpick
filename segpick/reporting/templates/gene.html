@@ -730,6 +730,23 @@
     .contig-dotplot-controls { display:flex; gap:.75rem; align-items:center; flex-wrap:wrap; margin:.75rem 0 1rem; }
     .contig-dotplot-controls select { min-width:240px; padding:.45rem .6rem; border:1px solid #cbd5e1; border-radius:.45rem; background:white; }
 
+
+    .scenario-summary { display:grid; grid-template-columns:1fr auto; gap:.35rem 1rem; align-items:center; cursor:pointer; padding:.85rem 1rem; }
+    .scenario-summary::-webkit-details-marker, .provenance-summary::-webkit-details-marker { display:none; }
+    .scenario-summary::before, .provenance-summary::before { content:"▸"; margin-right:.45rem; color:#64748b; }
+    details[open] > .scenario-summary::before, details[open] > .provenance-summary::before { content:"▾"; }
+    .scenario-counts { font-size:.85rem; color:#64748b; grid-column:1 / -1; }
+    .scenario-body { padding:0 1rem 1rem; border-top:1px solid #e2e8f0; }
+    .scenario-evidence-list { display:grid; gap:.5rem; margin:.65rem 0 1rem; }
+    .provenance-item { border:1px solid #e2e8f0; border-radius:.55rem; background:#fff; }
+    .provenance-summary { cursor:pointer; padding:.65rem .75rem; display:block; }
+    .provenance-detail { padding:0 .9rem .85rem 2rem; color:#334155; }
+    .provenance-detail h5 { margin:.7rem 0 .25rem; }
+    .provenance-measurements { display:grid; grid-template-columns:minmax(12rem,auto) 1fr; gap:.2rem .9rem; margin:.35rem 0; }
+    .provenance-measurements dt { color:#64748b; }
+    .provenance-measurements dd { margin:0; font-weight:650; }
+    .provenance-links a { margin-right:.8rem; }
+
 </style>
 </head>
 <body>
@@ -739,17 +756,78 @@
   <div class="meta"><span>Segment: {{ gene.segment }}</span><span>Anchor: {{ gene.anchor_id }}</span><span>Candidates: {{ gene.candidates|length }}</span><span>References: {{ gene.references|length }}</span></div>
 
 
+  {% macro evidence_group(title, items) -%}
+    {% if items %}
+      <h4>{{ title }}</h4>
+      <div class="scenario-evidence-list">
+      {% for item in items %}
+        <details class="provenance-item">
+          <summary class="provenance-summary">
+            <strong>{{ item.display_name }}</strong>
+            {% if item.source_display_name %}<span class="muted"> · {{ item.source_display_name }}</span>{% endif %}
+          </summary>
+          <div class="provenance-detail">
+            {% if item.description %}<p>{{ item.description }}</p>{% endif %}
+            {% if item.observed_descriptions %}
+              <h5>Observed evidence</h5>
+              <ul>{% for text in item.observed_descriptions %}<li>{{ text }}</li>{% endfor %}</ul>
+            {% endif %}
+            {% if item.measurements %}
+              <h5>Measurements</h5>
+              <dl class="provenance-measurements">
+              {% for measurement in item.measurements %}
+                <dt>{{ measurement.name|replace('_', ' ')|title }}</dt><dd>{{ measurement.value }}</dd>
+              {% endfor %}
+              </dl>
+            {% endif %}
+            {% if item.regions %}
+              <h5>Regions</h5>
+              <ul>{% for region in item.regions %}<li>{{ region.coordinate_system }}: {{ region.start }}–{{ region.end }}{% if region.length %} ({{ region.length }} units){% endif %}</li>{% endfor %}</ul>
+            {% endif %}
+            {% if item.visualisations %}
+              <h5>View evidence</h5>
+              <p class="provenance-links">
+              {% for target in item.visualisations %}
+                {% if target == 'coverage_plot' %}<a href="#coverage-panel">Coverage plot</a>
+                {% elif target == 'reference_dotplot' %}<a href="#reference-dotplot-panel">Reference dot plot</a>
+                {% elif target == 'protein_alignment' %}<a href="#protein-evidence-panel">Protein alignment</a>
+                {% else %}<span class="muted">{{ target|replace('_', ' ')|title }}</span>{% endif %}
+              {% endfor %}
+              </p>
+            {% endif %}
+            {% if not item.has_details %}<p class="muted">No additional measurement provenance was recorded for this condition.</p>{% endif %}
+          </div>
+        </details>
+      {% endfor %}
+      </div>
+    {% endif %}
+  {%- endmacro %}
+
+  {% macro scenario_card(scenario) -%}
+    <details class="hypothesis-item scenario-item">
+      <summary class="scenario-summary">
+        <span><strong>{{ scenario.title }}</strong></span>
+        <span class="hypothesis-badge confidence-{{ scenario.confidence }}">{{ scenario.confidence|upper }}</span>
+        <span class="scenario-counts">{{ scenario.matched_required|length + scenario.matched_supporting|length }} supporting observations{% if scenario.matched_conflicting %} · {{ scenario.matched_conflicting|length }} conflict{% if scenario.matched_conflicting|length != 1 %}s{% endif %}{% endif %} · Examine evidence</span>
+      </summary>
+      <div class="scenario-body">
+        <p>{{ scenario.interpretation }}</p>
+        {{ evidence_group('Required evidence', scenario.matched_required) }}
+        {{ evidence_group('Supporting evidence', scenario.matched_supporting) }}
+        {{ evidence_group('Conflicting evidence', scenario.matched_conflicting) }}
+        {% if scenario.suggested_actions %}<h4>Suggested checks</h4><ul>{% for action in scenario.suggested_actions %}<li>{{ action }}</li>{% endfor %}</ul>{% endif %}
+        <p class="hypothesis-meta">{{ scenario.scenario_id }} · {{ scenario.source }}</p>
+      </div>
+    </details>
+  {%- endmacro %}
+
   <section class="card hypothesis-card">
     <h2>Biological scenarios</h2>
-    <p class="muted">Named biological situations inferred from observations and findings. Scenarios are descriptive and do not alter ranking.</p>
-    {% if view.scenarios %}{% for scenario in view.scenarios %}
-      <div class="hypothesis-item"><h3>{{ scenario.title }}</h3><p><strong>{{ scenario.confidence|upper }} confidence</strong> · {{ scenario.interpretation }}</p>{% if scenario.matched_required %}<h4>Required evidence</h4><ul>{% for item in scenario.matched_required %}<li><strong>{{ item.display_name }}</strong>{% if item.source_display_name %}<span class="muted"> · {{ item.source_display_name }}</span>{% endif %}{% if item.description %}<div class="muted">{{ item.description }}</div>{% endif %}</li>{% endfor %}</ul>{% endif %}{% if scenario.matched_supporting %}<h4>Supporting evidence</h4><ul>{% for item in scenario.matched_supporting %}<li><strong>{{ item.display_name }}</strong>{% if item.source_display_name %}<span class="muted"> · {{ item.source_display_name }}</span>{% endif %}{% if item.description %}<div class="muted">{{ item.description }}</div>{% endif %}</li>{% endfor %}</ul>{% endif %}{% if scenario.matched_conflicting %}<h4>Conflicting evidence</h4><ul>{% for item in scenario.matched_conflicting %}<li><strong>{{ item.display_name }}</strong>{% if item.source_display_name %}<span class="muted"> · {{ item.source_display_name }}</span>{% endif %}{% if item.description %}<div class="muted">{{ item.description }}</div>{% endif %}</li>{% endfor %}</ul>{% endif %}{% if scenario.suggested_actions %}<h4>Suggested checks</h4><ul>{% for action in scenario.suggested_actions %}<li>{{ action }}</li>{% endfor %}</ul>{% endif %}<p class="hypothesis-meta">{{ scenario.scenario_id }} · {{ scenario.source }}</p></div>
-    {% endfor %}{% endif %}
+    <p class="muted">Named biological situations inferred from observations and findings. Select a scenario, then an observation, to inspect its evidence provenance. Scenarios are descriptive and do not alter ranking.</p>
+    {% if view.scenarios %}{% for scenario in view.scenarios %}{{ scenario_card(scenario) }}{% endfor %}{% endif %}
     {% for candidate in view.candidates %}
       <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
-      {% if candidate.scenarios %}{% for scenario in candidate.scenarios %}
-        <div class="hypothesis-item"><h3>{{ scenario.title }}</h3><p><strong>{{ scenario.confidence|upper }} confidence</strong> · {{ scenario.interpretation }}</p><h4>Required evidence</h4><ul>{% for item in scenario.matched_required %}<li><strong>{{ item.display_name }}</strong>{% if item.source_display_name %}<span class="muted"> · {{ item.source_display_name }}</span>{% endif %}{% if item.description %}<div class="muted">{{ item.description }}</div>{% endif %}</li>{% endfor %}</ul>{% if scenario.matched_supporting %}<h4>Supporting evidence</h4><ul>{% for item in scenario.matched_supporting %}<li><strong>{{ item.display_name }}</strong>{% if item.source_display_name %}<span class="muted"> · {{ item.source_display_name }}</span>{% endif %}{% if item.description %}<div class="muted">{{ item.description }}</div>{% endif %}</li>{% endfor %}</ul>{% endif %}{% if scenario.matched_conflicting %}<h4>Conflicting evidence</h4><ul>{% for item in scenario.matched_conflicting %}<li><strong>{{ item.display_name }}</strong>{% if item.source_display_name %}<span class="muted"> · {{ item.source_display_name }}</span>{% endif %}{% if item.description %}<div class="muted">{{ item.description }}</div>{% endif %}</li>{% endfor %}</ul>{% endif %}{% if scenario.suggested_actions %}<h4>Suggested checks</h4><ul>{% for action in scenario.suggested_actions %}<li>{{ action }}</li>{% endfor %}</ul>{% endif %}<p class="hypothesis-meta">{{ scenario.scenario_id }} · {{ scenario.source }}</p></div>
-      {% endfor %}{% else %}<p class="muted">No biological scenario was recognised for this candidate.</p>{% endif %}
+      {% if candidate.scenarios %}{% for scenario in candidate.scenarios %}{{ scenario_card(scenario) }}{% endfor %}{% else %}<p class="muted">No biological scenario was recognised for this candidate.</p>{% endif %}
       </div>
     {% endfor %}
   </section>
@@ -1112,7 +1190,7 @@
 </section>
 {% endif %}
 
-  <section class="card reference-dotplot-panel">
+  <section id="reference-dotplot-panel" class="card reference-dotplot-panel">
     <h2>Candidate-to-candidate structural comparison</h2>
     <p class="muted">MegaBLAST HSPs provide a granular view of containment, terminal differences, internal gaps, inversions and alternative assembly structure. The selected candidate is compared with another candidate from the same gene.</p>
     <div class="contig-dotplot-controls">
