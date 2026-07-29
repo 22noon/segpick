@@ -1211,6 +1211,17 @@
               {% for factor in item.confidence_factors %}
                 <div class="evidence-detail-item">{{ factor.name|replace("_", " ")|title }}<strong>{{ factor.value }}</strong><span>{{ factor.interpretation }}</span></div>
               {% endfor %}
+              {% if item.diagnostics and (item.status == "not_assessable" or item.diagnostics.has_failure) %}
+                <div class="evidence-unavailable-note"><strong>Assessment diagnostics</strong></div>
+                {% for check in item.diagnostics.checks %}
+                  <div class="evidence-detail-item">
+                    <strong>{% if check.status == "pass" %}✓{% elif check.status == "warn" %}⚠{% elif check.status == "fail" %}✗{% else %}○{% endif %} {{ check.title }}</strong>
+                    <span>{{ check.status|replace("_", " ")|title }}{% if check.value is not none %} · {{ check.value }}{% endif %}</span>
+                    {% if check.detail %}<span>{{ check.detail }}</span>{% endif %}
+                  </div>
+                {% endfor %}
+                {% if item.diagnostics.stop_reason %}<div class="evidence-unavailable-note"><strong>Assessment stopped because:</strong> {{ item.diagnostics.stop_reason }}</div>{% endif %}
+              {% endif %}
               {% if item.limitations %}<div class="evidence-unavailable-note"><strong>Limitations:</strong> {{ item.limitations|join(" ") }}</div>{% endif %}
               {% if item.participates_in_ranking %}<div class="evidence-detail-item"><strong>Weighted contribution</strong><span>See ranking calculation in the recommendation JSON.</span></div><div class="evidence-detail-item"><strong>Effective weight</strong><span>See ranking calculation in the recommendation JSON.</span></div>{% else %}<div class="evidence-unavailable-note">Explanatory channel; not used in ranking.</div>{% endif %}
             </div>

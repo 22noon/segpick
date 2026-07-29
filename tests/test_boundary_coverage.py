@@ -43,3 +43,28 @@ def test_boundary_coverage_detects_continuous_coverage():
     depths = {position: 20 for position in range(1, 201)}
     result = assess_reference_boundaries(_candidate(depths), minimum_depth=3)
     assert result[0].classification == "continuous_coverage"
+
+
+def test_boundary_coverage_detects_supported_sequence_with_left_junction_drop():
+    depths = {}
+    for position in range(1, 201):
+        if 81 <= position <= 90:
+            depths[position] = 3
+        else:
+            depths[position] = 20
+    result = assess_reference_boundaries(_candidate(depths), minimum_depth=3)
+    item = result[0]
+    assert item.regional_sequence_supported is True
+    assert item.left_junction_smooth is False
+    assert item.right_junction_smooth is True
+    assert item.classification == "supported_with_junction_discontinuity"
+    assert item.placement_interpretation == "sequence_supported_placement_uncertain"
+
+
+def test_boundary_coverage_reports_smooth_junction_ratios():
+    depths = {position: 20 for position in range(1, 201)}
+    item = assess_reference_boundaries(_candidate(depths), minimum_depth=3)[0]
+    assert item.left_junction_ratio == 1.0
+    assert item.right_junction_ratio == 1.0
+    assert item.both_junctions_smooth is True
+    assert item.placement_interpretation == "placement_depth_supported"

@@ -88,3 +88,47 @@ def test_partial_reasoner_can_emit_incomplete_match():
     assert finding.match_status == "partial"
     assert finding.evidence_completeness == 0.5
     assert finding.missing_contributions[0].channel_id == "read_evidence"
+
+
+def test_supported_sequence_with_discontinuous_junction_suggests_misplacement():
+    context = CrossEvidenceContext((
+        assessment("reference_compatibility", "unsupported_internal_candidate_region", "high"),
+        assessment("read_evidence", "read_region_supported", "high"),
+        assessment("junction_read_support", "reference_absent_sequence_supported_junction_discontinuous", "high"),
+    ), "contig_a", "VP2")
+    findings = evaluate_cross_evidence(context)
+    by_id = {item.finding_id: item for item in findings}
+    result = by_id["segpick:genuine_sequence_possible_misplacement"]
+    assert result.match_status == "complete"
+    assert result.severity == "review"
+    assert result.confidence_score is not None
+
+
+def test_discontinuous_junction_generates_misplacement_without_global_read_support():
+    """The junction finding already includes regional sequence support."""
+    context = CrossEvidenceContext((
+        assessment("reference_compatibility", "unsupported_internal_candidate_region", "high"),
+        assessment("junction_read_support", "reference_absent_sequence_supported_junction_discontinuous", "high"),
+    ), "contig_a", "VP2")
+
+    findings = evaluate_cross_evidence(context)
+    by_id = {item.finding_id: item for item in findings}
+
+    result = by_id["segpick:genuine_sequence_possible_misplacement"]
+    assert result.match_status == "complete"
+    assert result.rule_version == "1.1"
+    assert {item.channel_id for item in result.support_contributions} == {
+        "reference_compatibility",
+        "junction_read_support",
+    }
+
+
+def test_smooth_both_junctions_supports_assembled_placement():
+    context = CrossEvidenceContext((
+        assessment("reference_compatibility", "unsupported_internal_candidate_region", "high"),
+        assessment("read_evidence", "read_region_supported", "high"),
+        assessment("junction_read_support", "reference_absent_interval_smooth_both_junctions", "high"),
+    ), "contig_a", "VP2")
+    findings = evaluate_cross_evidence(context)
+    ids = {item.finding_id for item in findings}
+    assert "segpick:reference_absent_interval_placement_depth_supported" in ids

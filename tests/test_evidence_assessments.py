@@ -19,7 +19,7 @@ def candidate():
 
 
 def test_registry_contains_first_class_channels():
-    assert tuple(CHANNEL_REGISTRY) == ("protein_confidence", "read_evidence", "structural_integrity", "reference_compatibility", "length_plausibility")
+    assert tuple(CHANNEL_REGISTRY) == ("protein_confidence", "read_evidence", "junction_read_support", "structural_integrity", "reference_compatibility", "length_plausibility")
 
 
 def test_reference_assessment_has_documented_confidence_and_finding():
@@ -29,3 +29,18 @@ def test_reference_assessment_has_documented_confidence_and_finding():
     assert item.confidence.method == "reference_compatibility_confidence"
     assert item.confidence.version == "1.0"
     assert "120 nt" in item.key_finding.title
+
+
+def test_junction_not_assessable_explains_missing_prerequisite():
+    items = {item.channel_id: item for item in build_evidence_assessments(candidate(), recommendation())}
+    item = items["junction_read_support"]
+    assert item.status == "not_assessable"
+    assert item.diagnostics is not None
+    assert item.diagnostics.has_failure is True
+    assert item.diagnostics.stop_reason
+    checks = {check.check_id: check for check in item.diagnostics.checks}
+    assert checks["reference_dotplot_available"].status == "fail"
+    assert checks["depth_profile_available"].status == "fail"
+    assert "dot plot" in item.diagnostics.stop_reason.lower()
+    payload = item.to_dict()
+    assert payload["diagnostics"]["has_failure"] is True

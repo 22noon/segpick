@@ -4,6 +4,41 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
+class DiagnosticCheck:
+    check_id: str
+    title: str
+    status: str
+    detail: str = ""
+    value: object | None = None
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "id": self.check_id,
+            "title": self.title,
+            "status": self.status,
+            "detail": self.detail,
+            "value": self.value,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class AssessmentDiagnostics:
+    checks: tuple[DiagnosticCheck, ...] = ()
+    stop_reason: str | None = None
+
+    @property
+    def has_failure(self) -> bool:
+        return any(check.status == "fail" for check in self.checks)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "checks": [check.to_dict() for check in self.checks],
+            "stop_reason": self.stop_reason,
+            "has_failure": self.has_failure,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class ConfidenceFactor:
     name: str
     value: float | int | str | bool | None
@@ -70,6 +105,7 @@ class EvidenceAssessment:
     measurements: tuple[dict[str, object], ...] = ()
     limitations: tuple[str, ...] = ()
     participates_in_ranking: bool = False
+    diagnostics: AssessmentDiagnostics | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -84,4 +120,5 @@ class EvidenceAssessment:
             "measurements": list(self.measurements),
             "limitations": list(self.limitations),
             "participates_in_ranking": self.participates_in_ranking,
+            "diagnostics": self.diagnostics.to_dict() if self.diagnostics is not None else None,
         }

@@ -28,8 +28,13 @@ class CrossEvidenceContext:
         assessment = self.assessment(channel_id)
         if assessment is None:
             return None
+        aliases = {
+            ("read_evidence", "read_region_supported"): ("read_region_supported", "read_evidence_summary"),
+            ("read_evidence", "read_evidence_summary"): ("read_evidence_summary", "read_region_supported"),
+        }
+        accepted = aliases.get((channel_id, finding_id), (finding_id,))
         for item in (assessment.key_finding, *assessment.supporting_findings):
-            if item.finding_id == finding_id:
+            if item.finding_id in accepted:
                 return EvidenceReference(channel_id, finding_id, item.title)
         return None
 
@@ -124,7 +129,7 @@ class StructuredCrossEvidenceRule:
         completeness = support_weight / all_positive_weight if all_positive_weight else 1.0
         confidence_score = max(0.0, min(1.0, support_strength * completeness - self.contradiction_penalty * contradiction_strength))
         confidence = "high" if confidence_score >= 0.75 else "moderate" if confidence_score >= 0.45 else "low"
-        status = "complete" if required_fraction == 1.0 and not missing else "partial"
+        status = "complete" if required_fraction == 1.0 else "partial"
         if present_contradictions:
             status = "contested"
 

@@ -337,6 +337,7 @@ class EvidenceAssessmentView:
     supporting_findings: tuple[str, ...]
     measurements: tuple[dict[str, object], ...]
     participates_in_ranking: bool
+    diagnostics: dict[str, object] | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -537,6 +538,7 @@ def build_recommendation_view(
                 key_finding_description=item.key_finding.description,
                 supporting_findings=tuple(value.title for value in item.supporting_findings),
                 measurements=item.measurements, participates_in_ranking=item.participates_in_ranking,
+                diagnostics=item.diagnostics.to_dict() if item.diagnostics is not None else None,
             )
             for item in (build_evidence_assessments(candidate, selected) if candidate is not None else ())
         ),

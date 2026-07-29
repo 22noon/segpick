@@ -67,7 +67,9 @@ __all__ = [
     "ProteinRelatedness",
 ]
 
-from .evidence_assessment import ConfidenceAssessment, ConfidenceFactor, EvidenceAssessment, EvidenceFinding
+from .evidence_assessment import AssessmentDiagnostics, DiagnosticCheck, ConfidenceAssessment, ConfidenceFactor, EvidenceAssessment, EvidenceFinding
 
 from .cross_evidence import CrossEvidenceFinding, EvidenceContribution, EvidenceReference
 __all__.extend(["CrossEvidenceFinding", "EvidenceContribution", "EvidenceReference"])
+
+__all__.extend(["AssessmentDiagnostics", "DiagnosticCheck", "ConfidenceAssessment", "ConfidenceFactor", "EvidenceAssessment", "EvidenceFinding"])
