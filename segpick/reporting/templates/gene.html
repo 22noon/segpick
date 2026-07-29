@@ -747,6 +747,51 @@
     .provenance-measurements dd { margin:0; font-weight:650; }
     .provenance-links a { margin-right:.8rem; }
 
+    .dashboard-tabs {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      gap: .35rem;
+      overflow-x: auto;
+      margin: 0 0 .8rem;
+      padding: .45rem;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(248,250,252,.96);
+      backdrop-filter: blur(8px);
+    }
+    .dashboard-tab {
+      flex: 0 0 auto;
+      margin: 0;
+      background: transparent;
+      color: #475569;
+      font-weight: 700;
+    }
+    .dashboard-tab:hover { background: #e2e8f0; }
+    .dashboard-tab.active { background: var(--blue); color: #fff; }
+    .dashboard-panel[hidden] { display: none !important; }
+    .candidate-switcher {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 1rem;
+      padding: .75rem;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+    .candidate-switcher-label { color: var(--muted); font-size: .82rem; font-weight: 750; text-transform: uppercase; letter-spacing: .04em; }
+    .candidate-switcher-items { display: flex; gap: .45rem; flex-wrap: wrap; }
+    .candidate-switch { margin: 0; background: #e2e8f0; color: #334155; font-weight: 700; }
+    .candidate-switch:hover { background: #cbd5e1; }
+    .candidate-switch.active { background: #dbeafe; color: #1d4ed8; box-shadow: inset 0 0 0 1px #93c5fd; }
+    .tab-empty-state { padding: 2rem; text-align: center; color: var(--muted); border: 1px dashed #cbd5e1; border-radius: 12px; background: #fff; }
+    @media (max-width: 680px) {
+      main { padding: .85rem; }
+      .candidate-switcher { align-items: flex-start; flex-direction: column; }
+    }
+
 </style>
 </head>
 <body>
@@ -754,6 +799,25 @@
   <a class="back" href="../index.html">← All genes</a>
   <h1>{{ gene.name }}</h1>
   <div class="meta"><span>Segment: {{ gene.segment }}</span><span>Anchor: {{ gene.anchor_id }}</span><span>Candidates: {{ gene.candidates|length }}</span><span>References: {{ gene.references|length }}</span></div>
+
+  <nav class="dashboard-tabs" aria-label="Gene analysis sections">
+    <button type="button" class="dashboard-tab active" data-tab-target="summary" aria-selected="true">Summary</button>
+    <button type="button" class="dashboard-tab" data-tab-target="evidence" aria-selected="false">Evidence</button>
+    <button type="button" class="dashboard-tab" data-tab-target="reasoning" aria-selected="false">Biological reasoning</button>
+    <button type="button" class="dashboard-tab" data-tab-target="plots" aria-selected="false">Plots</button>
+    <button type="button" class="dashboard-tab" data-tab-target="details" aria-selected="false">Details</button>
+  </nav>
+
+  <section class="candidate-switcher" aria-label="Candidate selection">
+    <span class="candidate-switcher-label">Candidate</span>
+    <div class="candidate-switcher-items">
+      {% for candidate in view.candidates %}
+        <button type="button" class="candidate-switch {% if candidate.recommended %}active{% endif %}" data-candidate-id="{{ candidate.candidate_id }}" aria-pressed="{% if candidate.recommended %}true{% else %}false{% endif %}">
+          {% if candidate.recommended %}<span aria-hidden="true">★</span>{% endif %} {{ candidate.candidate_id }}
+        </button>
+      {% endfor %}
+    </div>
+  </section>
 
 
   {% macro evidence_group(title, items) -%}
@@ -1831,7 +1895,85 @@ function traceSequence(trace){return trace.meta&&trace.meta.sequence_id?trace.me
 function highlightPlot(divId,id){const div=document.getElementById(divId);if(!div||!div.data)return;const op=div.data.map(t=>!id||traceSequence(t)===id?1:0.16);const widths=div.data.map(t=>{const w=(t.line&&t.line.width)||4;return !id||traceSequence(t)===id?Math.max(w,6):Math.max(2,w*.55);});Plotly.restyle(div,{opacity:op,"line.width":widths});}
 function clearSelection(){DashboardState.selectedCandidate=null;document.querySelectorAll(".selected,.candidate-detail.active").forEach(x=>x.classList.remove("selected","active"));}
 function bindPlotClick(id){const div=document.getElementById(id);if(div&&div.on)div.on("plotly_click",e=>{const sid=e.points&&e.points[0]&&e.points[0].customdata;if(sid)selectCandidate(sid);});}
+const DashboardTabs = {
+  summary: new Set(["Recommended candidate"]),
+  evidence: new Set(["Evidence table", "Structural integrity", "Reference compatibility", "Read evidence", "ORF structural evidence"]),
+  reasoning: new Set(["Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Biological interpretation"]),
+  plots: new Set(["Candidate-to-candidate structural comparison", "Candidates aligned to shared nucleotide reference", "Candidate versus closest nucleotide reference", "Protein coordinate map", "Read coverage"]),
+  details: new Set(["Rule explorer", "Download selected sequences", "Selected candidate sequence"])
+};
+
+function classifyDashboardSections() {
+  const assigned = new Set();
+  document.querySelectorAll("main > section.card").forEach((section) => {
+    const heading = section.querySelector(":scope > h2");
+    if (!heading) return;
+    const title = heading.textContent.trim();
+    for (const [tab, headings] of Object.entries(DashboardTabs)) {
+      if (headings.has(title)) {
+        section.dataset.dashboardTab = tab;
+        section.classList.add("dashboard-panel");
+        assigned.add(section);
+        break;
+      }
+    }
+    if (!assigned.has(section)) {
+      section.dataset.dashboardTab = "details";
+      section.classList.add("dashboard-panel");
+    }
+  });
+}
+
+function activateDashboardTab(tabName, updateHash=true) {
+  document.querySelectorAll(".dashboard-tab").forEach((button) => {
+    const active = button.dataset.tabTarget === tabName;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  let visibleCount = 0;
+  document.querySelectorAll(".dashboard-panel").forEach((section) => {
+    const visible = section.dataset.dashboardTab === tabName;
+    section.hidden = !visible;
+    if (visible) visibleCount += 1;
+  });
+  if (updateHash) history.replaceState(null, "", `#tab-${tabName}`);
+  window.dispatchEvent(new Event("resize"));
+}
+
+function tabForTarget(target) {
+  const panel = target && target.closest ? target.closest(".dashboard-panel") : null;
+  return panel ? panel.dataset.dashboardTab : null;
+}
+
+function initialiseDashboardTabs() {
+  classifyDashboardSections();
+  document.querySelectorAll(".dashboard-tab").forEach((button) => {
+    button.addEventListener("click", () => activateDashboardTab(button.dataset.tabTarget));
+  });
+  document.querySelectorAll("a[href^='#']").forEach((link) => {
+    link.addEventListener("click", () => {
+      const target = document.querySelector(link.getAttribute("href"));
+      const tab = tabForTarget(target);
+      if (tab) activateDashboardTab(tab);
+    });
+  });
+  const requested = location.hash.startsWith("#tab-") ? location.hash.slice(5) : "summary";
+  activateDashboardTab(DashboardTabs[requested] ? requested : "summary", false);
+}
+
+function updateCandidateSwitcher(candidateId) {
+  document.querySelectorAll(".candidate-switch").forEach((button) => {
+    const active = button.dataset.candidateId === candidateId;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
 window.addEventListener("load",()=>{
+  initialiseDashboardTabs();
+  document.querySelectorAll(".candidate-switch").forEach((button) => {
+    button.addEventListener("click", () => selectCandidate(button.dataset.candidateId));
+  });
   bindPlotClick("dotplot");
   document.querySelectorAll("[data-protein-action]").forEach((button)=>{
     button.addEventListener("click",()=>handleProteinAction(button));
@@ -1983,6 +2125,7 @@ const DashboardState = {
 
 function selectCandidate(candidateId) {
   DashboardState.selectedCandidate = candidateId;
+  updateCandidateSwitcher(candidateId);
 
   document.querySelectorAll(".candidate-row").forEach((row) => {
     row.classList.toggle("selected", row.dataset.sequenceId === candidateId);

@@ -216,6 +216,15 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     html = (tmp_path / "genes" / "VP2.html").read_text()
 
     assert "Recommended candidate" in html
+    assert 'data-tab-target="summary"' in html
+    assert 'data-tab-target="evidence"' in html
+    assert 'data-tab-target="reasoning"' in html
+    assert 'data-tab-target="plots"' in html
+    assert 'data-tab-target="details"' in html
+    assert "Biological reasoning" in html
+    assert 'class="candidate-switch active"' in html
+    assert 'data-candidate-id="contig_a"' in html
+    assert "initialiseDashboardTabs" in html
     assert "Why this candidate?" in html
     assert "Evidence requiring review" in html
     assert "Overall assessment" in html
