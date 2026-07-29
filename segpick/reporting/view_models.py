@@ -417,11 +417,18 @@ class CrossEvidenceFindingView:
     title: str
     description: str
     confidence: str
+    confidence_score: float | None
+    match_status: str
+    evidence_completeness: float | None
     severity: str
     rule_id: str
     rule_version: str
     source_plugin: str
     supporting_evidence: tuple[str, ...]
+    conflicting_evidence: tuple[str, ...]
+    missing_evidence: tuple[str, ...]
+    confidence_method: str
+    confidence_method_version: str
     limitations: tuple[str, ...]
 
 @dataclass(frozen=True, slots=True)
@@ -767,11 +774,18 @@ def build_gene_page_view(
                     title=item.title,
                     description=item.description,
                     confidence=item.confidence,
+                    confidence_score=item.confidence_score,
+                    match_status=item.match_status,
+                    evidence_completeness=item.evidence_completeness,
                     severity=item.severity,
                     rule_id=item.rule_id,
                     rule_version=item.rule_version,
                     source_plugin=item.source_plugin,
                     supporting_evidence=tuple(ref.title for ref in item.supporting_evidence),
+                    conflicting_evidence=tuple(ref.title for ref in item.conflicting_evidence),
+                    missing_evidence=tuple(item.title for item in item.missing_contributions),
+                    confidence_method=item.confidence_method,
+                    confidence_method_version=item.confidence_method_version,
                     limitations=item.limitations,
                 )
                 for item in candidate.analysis.cross_evidence_findings

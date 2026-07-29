@@ -69,5 +69,5 @@ __all__ = [
 
 from .evidence_assessment import ConfidenceAssessment, ConfidenceFactor, EvidenceAssessment, EvidenceFinding
 
-from .cross_evidence import CrossEvidenceFinding, EvidenceReference
-__all__.extend(["CrossEvidenceFinding", "EvidenceReference"])
+from .cross_evidence import CrossEvidenceFinding, EvidenceContribution, EvidenceReference
+__all__.extend(["CrossEvidenceFinding", "EvidenceContribution", "EvidenceReference"])

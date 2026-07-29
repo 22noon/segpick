@@ -868,10 +868,13 @@
         {% if candidate.cross_evidence_findings %}
           {% for item in candidate.cross_evidence_findings %}
             <details class="reasoning-card">
-              <summary><strong>{{ item.title }}</strong> · confidence {{ item.confidence|upper }}</summary>
+              <summary><strong>{{ item.title }}</strong> · confidence {{ item.confidence|upper }} · {{ item.match_status|upper }}</summary>
               <p>{{ item.description }}</p>
+              {% if item.confidence_score is not none %}<p><strong>Calculated confidence:</strong> {{ "%.2f"|format(item.confidence_score) }}{% if item.evidence_completeness is not none %} · evidence completeness {{ "%.0f%%"|format(item.evidence_completeness) }}{% endif %}</p>{% endif %}
               <p><strong>Supporting evidence:</strong> {{ item.supporting_evidence|join("; ") }}</p>
-              <p class="muted">Rule {{ item.rule_id }} v{{ item.rule_version }} · {{ item.source_plugin }}</p>
+              {% if item.conflicting_evidence %}<p><strong>Contradictory evidence:</strong> {{ item.conflicting_evidence|join("; ") }}</p>{% endif %}
+              {% if item.missing_evidence %}<p><strong>Missing evidence:</strong> {{ item.missing_evidence|join("; ") }}</p>{% endif %}
+              <p class="muted">Rule {{ item.rule_id }} v{{ item.rule_version }} · {{ item.source_plugin }} · {{ item.confidence_method }} v{{ item.confidence_method_version }}</p>
               {% if item.limitations %}<p><strong>Limitations:</strong> {{ item.limitations|join(" ") }}</p>{% endif %}
             </details>
           {% endfor %}
