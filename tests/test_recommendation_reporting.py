@@ -220,7 +220,11 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert 'data-tab-target="evidence"' in html
     assert 'data-tab-target="reasoning"' in html
     assert 'data-tab-target="plots"' in html
-    assert 'data-tab-target="details"' in html
+    assert 'data-tab-target="downloads"' in html
+    assert 'data-tab-target="expert"' in html
+    assert 'data-tab-target="details"' not in html
+    assert 'downloads: new Set(["Download selected sequences", "Selected candidate sequence"])' in html
+    assert 'expert: new Set(["Rule explorer"])' in html
     assert "Biological reasoning" in html
     assert 'class="candidate-switch active"' in html
     assert 'data-candidate-id="contig_a"' in html

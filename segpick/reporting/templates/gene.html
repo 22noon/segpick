@@ -805,7 +805,8 @@
     <button type="button" class="dashboard-tab" data-tab-target="evidence" aria-selected="false">Evidence</button>
     <button type="button" class="dashboard-tab" data-tab-target="reasoning" aria-selected="false">Biological reasoning</button>
     <button type="button" class="dashboard-tab" data-tab-target="plots" aria-selected="false">Plots</button>
-    <button type="button" class="dashboard-tab" data-tab-target="details" aria-selected="false">Details</button>
+    <button type="button" class="dashboard-tab" data-tab-target="downloads" aria-selected="false">Downloads</button>
+    <button type="button" class="dashboard-tab" data-tab-target="expert" aria-selected="false">Expert</button>
   </nav>
 
   <section class="candidate-switcher" aria-label="Candidate selection">
@@ -1900,7 +1901,8 @@ const DashboardTabs = {
   evidence: new Set(["Evidence table", "Structural integrity", "Reference compatibility", "Read evidence", "ORF structural evidence"]),
   reasoning: new Set(["Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Biological interpretation"]),
   plots: new Set(["Candidate-to-candidate structural comparison", "Candidates aligned to shared nucleotide reference", "Candidate versus closest nucleotide reference", "Protein coordinate map", "Read coverage"]),
-  details: new Set(["Rule explorer", "Download selected sequences", "Selected candidate sequence"])
+  downloads: new Set(["Download selected sequences", "Selected candidate sequence"]),
+  expert: new Set(["Rule explorer"])
 };
 
 function classifyDashboardSections() {
@@ -1918,7 +1920,7 @@ function classifyDashboardSections() {
       }
     }
     if (!assigned.has(section)) {
-      section.dataset.dashboardTab = "details";
+      section.dataset.dashboardTab = "expert";
       section.classList.add("dashboard-panel");
     }
   });
