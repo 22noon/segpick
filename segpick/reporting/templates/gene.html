@@ -948,7 +948,7 @@
               <p class="provenance-links">
               {% for target in item.visualisations %}
                 {% if target == 'coverage_plot' %}<a href="#coverage-panel">Coverage plot</a>
-                {% elif target == 'reference_dotplot' %}<a href="#closest-reference-panel">Reference dot plot</a>
+                {% elif target == 'reference_dotplot' %}<a href="#closest-reference-panel" class="structural-alignment-link">Reference dot plot · repeated mappings highlighted</a>
                 {% elif target == 'protein_alignment' %}<a href="#protein-evidence-panel">Protein alignment</a>
                 {% else %}<span class="muted">{{ target|replace('_', ' ')|title }}</span>{% endif %}
               {% endfor %}
@@ -1469,7 +1469,7 @@
 
   <section id="closest-reference-panel" class="card reference-dotplot-panel">
     <h2>Candidate versus closest nucleotide reference</h2>
-    <p class="muted">MegaBLAST alignment blocks are drawn as diagonal segments. Upward slopes indicate forward orientation; downward slopes indicate reverse-complement alignment.</p>
+    <p class="muted">MegaBLAST alignment blocks are drawn as diagonal segments. Upward slopes indicate forward orientation; downward slopes indicate reverse-complement alignment. Distinct candidate blocks that map to overlapping reference coordinates are drawn last as orange dashed lines, with the shared reference interval shaded. A separate HSP track prevents shorter blocks from being hidden by drawing order.</p>
     <div id="reference-dotplot-placeholder" class="reference-dotplot-placeholder">
       Select a candidate to view its structural alignment to the closest nucleotide reference.
     </div>
@@ -2284,6 +2284,8 @@ function updateReferenceDotplot(candidateId) {
   summary.innerHTML = [
     `<span><strong>Reference:</strong> ${item.reference_id}</span>`,
     `<span><strong>Blocks:</strong> ${item.block_count}</span>`,
+    `<span><strong>Repeated-reference pairs:</strong> ${item.repeated_reference_pair_count || 0}</span>`,
+    `<span><strong>Repeated reference span:</strong> ${(item.duplicated_reference_bases || 0).toLocaleString()} bp</span>`,
     `<span><strong>Candidate covered:</strong> ${formatPercent(item.query_coverage)}</span>`,
     `<span><strong>Reference covered:</strong> ${formatPercent(item.reference_coverage)}</span>`,
     `<span><strong>Identity:</strong> ${identity}</span>`,

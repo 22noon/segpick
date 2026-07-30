@@ -3,6 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+def _interval_overlap(a: tuple[int, int], b: tuple[int, int]) -> tuple[int, int] | None:
+    left = max(min(a), min(b))
+    right = min(max(a), max(b))
+    return (left, right) if right >= left else None
+
+
 @dataclass(frozen=True, slots=True)
 class BlastNHSP:
     query_id: str
@@ -82,6 +88,51 @@ class ReferenceDotplot:
     def block_count(self) -> int:
         return len(self.hsps)
 
+    def repeated_reference_pairs(self) -> tuple[dict[str, object], ...]:
+        """Return distinct query-block pairs that overlap on the reference.
+
+        A pair is diagnostic only when its query intervals do not overlap but
+        its reference intervals do. This is the same structural pattern used
+        by the reference-compatibility duplication assessment.
+        """
+
+        pairs: list[dict[str, object]] = []
+        for left_index, left in enumerate(self.hsps):
+            for right_index in range(left_index + 1, len(self.hsps)):
+                right = self.hsps[right_index]
+                query_overlap = _interval_overlap(
+                    (left.query_start, left.query_end),
+                    (right.query_start, right.query_end),
+                )
+                if query_overlap is not None:
+                    continue
+                reference_overlap = _interval_overlap(
+                    (left.subject_start, left.subject_end),
+                    (right.subject_start, right.subject_end),
+                )
+                if reference_overlap is None:
+                    continue
+                pairs.append(
+                    {
+                        "left_hsp_index": left_index,
+                        "right_hsp_index": right_index,
+                        "left_query_interval": (min(left.query_start, left.query_end), max(left.query_start, left.query_end)),
+                        "right_query_interval": (min(right.query_start, right.query_end), max(right.query_start, right.query_end)),
+                        "reference_interval": reference_overlap,
+                        "overlap_bases": reference_overlap[1] - reference_overlap[0] + 1,
+                    }
+                )
+        return tuple(pairs)
+
+    @property
+    def repeated_reference_hsp_indices(self) -> tuple[int, ...]:
+        indices = {
+            int(pair[key])
+            for pair in self.repeated_reference_pairs()
+            for key in ("left_hsp_index", "right_hsp_index")
+        }
+        return tuple(sorted(indices))
+
     @property
     def orientation(self) -> str:
         strands = {hsp.strand for hsp in self.hsps}
@@ -131,6 +182,8 @@ class ReferenceDotplot:
             "identity_min": self.identity_min,
             "identity_max": self.identity_max,
             "block_count": self.block_count,
+            "repeated_reference_pairs": list(self.repeated_reference_pairs()),
+            "repeated_reference_hsp_indices": list(self.repeated_reference_hsp_indices),
             "orientation": self.orientation,
             "forward_support": self.forward_support,
             "reverse_support": self.reverse_support,

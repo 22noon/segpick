@@ -49,6 +49,6 @@ observations:
     category: Reference compatibility
     description: Candidate alignment blocks switch orientation relative to the closest reference expectation.
   duplicated_reference_mapping:
-    display_name: Candidate repeatedly maps to the same reference region
+    display_name: Separate candidate regions map to overlapping reference coordinates
     category: Reference compatibility
     description: Separate candidate regions align to overlapping parts of the closest reference, compatible with duplication or repeat-related misassembly.

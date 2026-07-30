@@ -72,3 +72,56 @@ def test_existing_non_empty_pair_file_is_reused_without_blastn(tmp_path: Path):
     assert result.reused_existing is True
     assert result.output_path == str(output)
     assert result.block_count == 1
+
+
+def test_repeated_reference_pairs_preserve_distinct_query_blocks(tmp_path: Path):
+    path = tmp_path / "repeated.tsv"
+    path.write_text(
+        "q\ts\t3000\t3000\t95.0\t1000\t0\t0\t1\t1000\t1\t1000\t1e-20\t100\n"
+        "q\ts\t3000\t3000\t94.0\t1000\t0\t0\t1501\t2500\t501\t1500\t1e-18\t90\n"
+    )
+    result = parse_megablast_tsv(
+        path,
+        candidate_id="q",
+        reference_id="s",
+        query_length=3000,
+        reference_length=3000,
+        reused_existing=True,
+    )
+
+    pairs = result.repeated_reference_pairs()
+    assert len(pairs) == 1
+    assert pairs[0]["left_query_interval"] == (1, 1000)
+    assert pairs[0]["right_query_interval"] == (1501, 2500)
+    assert pairs[0]["reference_interval"] == (501, 1000)
+    assert pairs[0]["overlap_bases"] == 500
+    assert result.repeated_reference_hsp_indices == (0, 1)
+
+
+def test_reference_dotplot_highlights_repeated_mapping_blocks(tmp_path: Path):
+    from segpick.visualization.reference_dotplot import make_reference_dotplot
+
+    path = tmp_path / "repeated.tsv"
+    path.write_text(
+        "q\ts\t3000\t3000\t95.0\t1000\t0\t0\t1\t1000\t1\t1000\t1e-20\t100\n"
+        "q\ts\t3000\t3000\t94.0\t1000\t0\t0\t1501\t2500\t501\t1500\t1e-18\t90\n"
+    )
+    result = parse_megablast_tsv(
+        path,
+        candidate_id="q",
+        reference_id="s",
+        query_length=3000,
+        reference_length=3000,
+        reused_existing=True,
+    )
+
+    figure = make_reference_dotplot(result)
+    diagnostic_traces = [
+        trace for trace in figure.data
+        if trace.line.color == "#c2410c"
+    ]
+    assert len(diagnostic_traces) == 4  # two dot-plot traces and two mapping-track traces
+    assert all(trace.line.dash == "dash" for trace in diagnostic_traces)
+    assert len(figure.layout.shapes) == 1
+    assert figure.layout.shapes[0].y0 == 501
+    assert figure.layout.shapes[0].y1 == 1000
