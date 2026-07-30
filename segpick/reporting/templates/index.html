@@ -5,10 +5,26 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ sample.name }} — SegPick</title>
   <style>
-    :root { color-scheme: light; --bg:#f8fafc; --card:#fff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --blue:#2563eb; }
+    :root {
+      color-scheme: light;
+      --bg:#f8fafc;
+      --card:#fff;
+      --ink:#0f172a;
+      --muted:#64748b;
+      --line:#e2e8f0;
+      --blue:#2563eb;
+      --good-bg:#dcfce7;
+      --good-ink:#166534;
+      --warn-bg:#fef3c7;
+      --warn-ink:#92400e;
+      --bad-bg:#fee2e2;
+      --bad-ink:#991b1b;
+      --neutral-bg:#e2e8f0;
+      --neutral-ink:#334155;
+    }
     * { box-sizing: border-box; }
     body { font-family: Inter, ui-sans-serif, system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--ink); }
-    main { max-width: 1250px; margin: auto; padding: 2rem; }
+    main { max-width: 1350px; margin: auto; padding: 2rem; }
     h1 { margin: 0 0 .25rem; }
     .sub { color: var(--muted); margin-bottom: 1.5rem; }
     .summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:.8rem; margin-bottom:1.2rem; }
@@ -16,47 +32,120 @@
     .metric strong { display:block; font-size:1.55rem; }
     .metric span { color:var(--muted); font-size:.9rem; }
     .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow:hidden; }
+    .provenance { margin-bottom:1.2rem; padding:1rem 1.1rem; }
+    .provenance h2 { margin:0 0 .75rem; font-size:1.05rem; }
+    .provenance-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.65rem 1rem; }
+    .provenance-item strong { display:block; font-size:.82rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+    .provenance-item span { display:block; margin-top:.15rem; overflow-wrap:anywhere; }
+    details.rule-sources { margin-top:.8rem; }
+    .table-wrap { overflow-x:auto; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { padding: .8rem; border-bottom: 1px solid var(--line); text-align: left; }
-    th { background: #f1f5f9; }
+    th, td { padding: .8rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: #f1f5f9; white-space: nowrap; }
     tr:hover td { background:#f8fafc; }
     a { color: var(--blue); text-decoration: none; font-weight: 650; }
-    .pill,.badge { display:inline-block; padding:.24rem .6rem; border-radius:999px; font-size:.78rem; font-weight:700; }
-    .pill { background:#e2e8f0; }
-    .status-COMPLETE,.status-ANCHOR { background:#dcfce7; color:#166534; }
-    .status-PARTIAL { background:#fef3c7; color:#92400e; }
-    .status-FRAGMENTED { background:#ffedd5; color:#9a3412; }
-    .status-POOR,.status-NO_ALIGNMENT,.status-NO_CANDIDATE { background:#fee2e2; color:#991b1b; }
+    .badge { display:inline-block; padding:.24rem .6rem; border-radius:999px; font-size:.78rem; font-weight:700; white-space:nowrap; }
+    .confidence-high,.review-no { background:var(--good-bg); color:var(--good-ink); }
+    .confidence-medium { background:var(--warn-bg); color:var(--warn-ink); }
+    .confidence-low,.review-yes { background:var(--bad-bg); color:var(--bad-ink); }
+    .confidence-unknown { background:var(--neutral-bg); color:var(--neutral-ink); }
+    .assessment { min-width: 280px; max-width: 520px; color:#334155; line-height:1.4; }
+    .muted { color:var(--muted); }
     footer { color:var(--muted); font-size:.8rem; margin-top:1rem; }
   </style>
 </head>
 <body>
 <main>
   <h1>{{ sample.name }}</h1>
-  <div class="sub">Interactive BTV candidate-contig curation dashboard</div>
+  <div class="sub">Segment-level assembly curation summary</div>
   <div class="summary">
     <div class="metric"><strong>{{ genes|length }}</strong><span>Genes</span></div>
-    <div class="metric"><strong>{{ genes|selectattr('overall_status','equalto','COMPLETE')|list|length }}</strong><span>Genes with complete candidate</span></div>
-    <div class="metric"><strong>{{ genes|map(attribute='gene')|map(attribute='candidates')|map('length')|sum }}</strong><span>Total candidates</span></div>
+    <div class="metric"><strong>{{ genes|selectattr('recommended_candidate')|list|length }}</strong><span>Genes with recommendation</span></div>
+    <div class="metric"><strong>{{ genes|selectattr('manual_review')|list|length }}</strong><span>Manual review required</span></div>
+    <div class="metric"><strong>{{ genes|selectattr('confidence', 'equalto', 'high')|list|length }}</strong><span>High-confidence segments</span></div>
   </div>
-  <div class="card">
-  <table>
-    <thead><tr><th>Gene</th><th>Segment</th><th>Candidates</th><th>References</th><th>Anchor</th><th>Suggested candidate</th><th>Status</th></tr></thead>
-    <tbody>
-      {% for item in genes %}
-      {% set gene = item.gene %}
-      <tr>
-        <td><a href="{{ item.page }}">{{ gene.name }}</a></td>
-        <td>{{ gene.segment }}</td>
-        <td>{{ gene.candidates|length }}</td>
-        <td>{{ gene.references|length }}</td>
-        <td><span class="pill">{{ gene.anchor_id }}</span></td>
-        <td>{{ item.recommendation.id if item.recommendation else "—" }}</td>
-        <td><span class="badge status-{{ item.overall_status }}">{{ item.overall_status }}</span></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <section class="card provenance">
+    <h2>Analysis provenance</h2>
+    {% if manifest %}
+      <div class="provenance-grid">
+        <div class="provenance-item"><strong>SegPick</strong><span>{{ manifest.segpick_version }}</span></div>
+        <div class="provenance-item"><strong>Git commit</strong><span>{{ manifest.git_commit[:12] if manifest.git_commit else 'Unavailable' }}</span></div>
+        <div class="provenance-item"><strong>Rule schema</strong><span>Version {{ manifest.rule_schema_version }}</span></div>
+        <div class="provenance-item"><strong>Active rules</strong><span>{{ manifest.total_rule_count }} total · {{ manifest.builtin_rule_count }} built-in · {{ manifest.user_rule_count }} user</span></div>
+        <div class="provenance-item"><strong>Reasoning output</strong><span>{{ manifest.observation_count }} observations · {{ manifest.finding_count }} findings · {{ manifest.hypothesis_count }} hypotheses</span></div>
+        <div class="provenance-item"><strong>Review status</strong><span>{{ manifest.manual_review_count }} of {{ manifest.recommended_gene_count }} recommended genes require review</span></div>
+      </div>
+      <details class="rule-sources">
+        <summary>Loaded rule sources</summary>
+        <ul>
+          {% for source in manifest.rule_sources %}<li><code>{{ source }}</code></li>{% endfor %}
+        </ul>
+      </details>
+    {% else %}
+      <div class="muted">Run-level provenance metadata was not supplied for this dashboard.</div>
+    {% endif %}
+  </section>
+  <div class="card table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Gene</th>
+          <th>Segment</th>
+          <th>Recommended candidate</th>
+          <th>Confidence</th>
+          <th>Manual review</th>
+          <th>Assessment</th>
+          <th>Protein continuity</th>
+          <th>Candidates</th>
+          <th>References</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in genes %}
+        <tr>
+          <td><a href="{{ item.page }}">{{ item.gene }}</a></td>
+          <td>{{ item.segment }}</td>
+          <td>{{ item.recommended_candidate or '—' }}</td>
+          <td>
+            <span class="badge confidence-{{ item.confidence }}">
+              {{ item.confidence|upper }}
+            </span>
+          </td>
+          <td>
+            {% if item.manual_review %}
+              <span class="badge review-yes">Required</span>
+            {% else %}
+              <span class="badge review-no">Not required</span>
+            {% endif %}
+          </td>
+          <td class="assessment">
+            {% if item.summary %}
+              {{ item.summary }}
+              {% if item.conflict_count %}
+                <div class="muted">{{ item.conflict_count }} strong conflict{% if item.conflict_count != 1 %}s{% endif %} recorded.</div>
+              {% endif %}
+            {% else %}
+              <span class="muted">No recommendation reasoning available.</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.protein_continuity == "complete_single_candidate" %}
+              <span class="badge review-no">Single-contig recovery</span>
+            {% elif item.protein_continuity == "complementary_fragments" %}
+              <span class="badge review-yes">Possible split assembly</span>
+            {% elif item.protein_continuity == "incomplete_recovery" %}
+              <span class="badge confidence-medium">Incomplete recovery</span>
+            {% else %}
+              <span class="badge confidence-unknown">Unavailable</span>
+            {% endif %}
+            <div class="muted">{{ item.protein_continuity_summary }}</div>
+          </td>
+          <td>{{ item.candidate_count }}</td>
+          <td>{{ item.reference_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
   <footer>Generated by SegPick {{ package_version }}</footer>
 </main>

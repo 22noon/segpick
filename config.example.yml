@@ -14,3 +14,19 @@ alignment:
 
 dashboard:
   html: true
+
+scoring:
+  weights:
+    protein_confidence: 0.30
+    length_plausibility: 0.15
+    containment: 0.25
+    identity: 0.15
+    fragmentation: 0.15
+
+read_support:
+  depth_dir: null
+  suffix: ".depth.txt"
+  minimum_depth: 3
+  terminal_fraction: 0.05
+  minimum_terminal_bases: 50
+  strict: false

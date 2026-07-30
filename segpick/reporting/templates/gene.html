@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ gene.name }} — SegPick</title>
+  <script src="../assets/plotly.min.js"></script>
   <style>
     :root { --bg:#f8fafc; --card:#fff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --blue:#2563eb; }
     * { box-sizing:border-box; }
@@ -39,8 +40,824 @@
     .progress > span { display:block; height:100%; background:#2563eb; }
     .muted { color:var(--muted); }
     footer { color:var(--muted); font-size:.8rem; margin-top:1rem; }
+
+    .subcard { margin-top:1rem; padding:.85rem; border:1px solid var(--line); border-radius:10px; background:#f8fafc; }
+    .metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:.55rem; margin:.7rem 0; }
+    .metric-grid > div { padding:.55rem; border-radius:8px; background:white; border:1px solid var(--line); }
+    .metric-grid span { display:block; color:var(--muted); font-size:.75rem; }
+    .metric-grid strong { display:block; margin-top:.15rem; }
+    .protein-actions { display:flex; gap:.45rem; flex-wrap:wrap; margin-top:.65rem; }
+
+    .convergence-panel {
+      margin-top: 1rem;
+      padding: 0.9rem;
+      border: 1px solid #f59e0b;
+      border-radius: 10px;
+      background: #fffbeb;
+    }
+
+    .convergence-panel.convergence-strong {
+      border-color: #dc2626;
+      background: #fef2f2;
+    }
+
+    .convergence-item + .convergence-item {
+      margin-top: 0.8rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid #fed7aa;
+    }
+
+    .convergence-meta {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin: 0.4rem 0;
+    }
+
+    .convergence-chip {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      background: #fff7ed;
+      color: #9a3412;
+      font-size: 0.78rem;
+      font-weight: 650;
+    }
+
+    .convergence-actions a {
+      display: inline-block;
+      margin-right: 0.75rem;
+      color: #2563eb;
+      font-weight: 650;
+      text-decoration: none;
+    }
+
+
+
+    .hypothesis-card {
+      border-left: 5px solid #f59e0b;
+    }
+
+    .hypothesis-card.hypothesis-warning {
+      border-left-color: #dc2626;
+    }
+
+    .hypothesis-card.hypothesis-informational {
+      border-left-color: #16a34a;
+    }
+
+    .hypothesis-grid {
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .hypothesis-item {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .hypothesis-item summary {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) auto auto;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.85rem;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .hypothesis-item summary::-webkit-details-marker { display: none; }
+    .hypothesis-item summary:hover { background: #f8fafc; }
+
+    .hypothesis-title { font-weight: 750; }
+    .hypothesis-badge {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 750;
+      background: #e2e8f0;
+      color: #334155;
+    }
+
+    .hypothesis-badge.confidence-high { background: #dcfce7; color: #166534; }
+    .hypothesis-badge.confidence-moderate { background: #fef3c7; color: #92400e; }
+    .hypothesis-badge.confidence-low { background: #fee2e2; color: #991b1b; }
+
+    .hypothesis-detail {
+      padding: 0 0.85rem 0.9rem;
+      border-top: 1px solid #e2e8f0;
+      background: #f8fafc;
+    }
+
+    .hypothesis-trace {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+
+    .hypothesis-trace > div {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0.65rem;
+    }
+
+    .hypothesis-trace h4 { margin: 0 0 0.4rem; }
+    .hypothesis-trace ul { margin: 0; padding-left: 1.1rem; }
+    .hypothesis-meta { color: #64748b; font-size: 0.82rem; }
+
+    @media (max-width: 760px) {
+      .hypothesis-item summary { grid-template-columns: 1fr auto; }
+      .hypothesis-item summary .hypothesis-scope { grid-column: 1 / -1; }
+      .hypothesis-trace { grid-template-columns: 1fr; }
+    }
+
     @media(max-width:800px){ .recommend{grid-template-columns:1fr;} }
-  </style>
+    .recommendation-card {
+        border-left: 6px solid #2563eb;
+    }
+
+    .recommended-id {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .recommendation-score {
+        font-size: 1.05rem;
+    }
+
+    .recommendation-note {
+    color: #64748b;
+           margin-bottom: 0;
+    }
+
+    .evidence-value {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .unavailable {
+      color: #64748b;
+      font-style: italic;
+    }
+
+
+    .evidence-list {
+      margin-top: 1.25rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .evidence-summary-row + .evidence-summary-row {
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .evidence-summary-row summary {
+      display: grid;
+      grid-template-columns: 1.1rem minmax(180px, 1fr) minmax(130px, auto) 5rem;
+      gap: 0.7rem;
+      align-items: center;
+      padding: 0.72rem 0.85rem;
+      cursor: pointer;
+      list-style: none;
+      background: #fff;
+    }
+
+    .evidence-summary-row summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .evidence-summary-row summary:hover {
+      background: #f8fafc;
+    }
+
+    .evidence-summary-row[open] summary {
+      background: #f8fafc;
+    }
+
+    .evidence-status-dot {
+      width: 0.7rem;
+      height: 0.7rem;
+      border-radius: 999px;
+      background: #94a3b8;
+    }
+
+    .evidence-status-good .evidence-status-dot { background: #16a34a; }
+    .evidence-status-warning .evidence-status-dot { background: #f59e0b; }
+    .evidence-status-danger .evidence-status-dot { background: #dc2626; }
+    .evidence-status-unavailable .evidence-status-dot { background: #94a3b8; }
+
+    .evidence-label {
+      font-weight: 650;
+    }
+
+    .evidence-result {
+      color: #475569;
+      font-size: 0.88rem;
+    }
+
+    .evidence-score {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 650;
+    }
+
+    .evidence-detail {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(110px, 1fr));
+      gap: 0.75rem;
+      padding: 0.75rem 0.85rem 0.9rem 2.65rem;
+      background: #f8fafc;
+    }
+
+    .evidence-detail-item {
+      color: #475569;
+      font-size: 0.86rem;
+    }
+
+    .evidence-detail-item strong {
+      display: block;
+      margin-top: 0.12rem;
+      color: #0f172a;
+      font-size: 0.95rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .evidence-unavailable-note {
+      grid-column: 1 / -1;
+      color: #64748b;
+      font-style: italic;
+    }
+
+    @media (max-width: 680px) {
+      .evidence-summary-row summary {
+        grid-template-columns: 1.1rem 1fr auto;
+      }
+
+      .evidence-result {
+        grid-column: 2 / -1;
+      }
+
+      .evidence-detail {
+        grid-template-columns: 1fr;
+      }
+    }
+    .candidate-row {
+      cursor: pointer;
+      transition:
+      background-color 0.15s ease,
+      box-shadow 0.15s ease;
+    }
+
+    .candidate-row:hover {
+      background: #eff6ff;
+    }
+
+    .candidate-row.selected {
+      background: #dbeafe;
+      box-shadow: inset 4px 0 0 #2563eb;
+    }
+
+    .candidate-detail {
+      display: none;
+    }
+
+    .candidate-detail.active {
+      display: block;
+    }
+
+
+    .protein-alignment {
+      overflow-x: auto;
+      padding: 0.9rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 0.82rem;
+      line-height: 1.45;
+      white-space: pre;
+    }
+
+    details.alignment-viewer {
+      margin-top: 1rem;
+    }
+
+    details.alignment-viewer summary {
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .protein-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .protein-actions button {
+      margin: 0;
+    }
+
+    .runner-up {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+    }
+
+    .runner-up-close {
+      border-left: 5px solid #f59e0b;
+    }
+
+    .runner-up-secondary {
+      border-left: 5px solid #94a3b8;
+    }
+
+    .runner-up-weak {
+      opacity: 0.55;
+      filter: grayscale(0.65);
+    }
+
+    .runner-up-label {
+      display: block;
+      color: #64748b;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .runner-up-note {
+      margin-top: 0.4rem;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+
+
+
+    .agreement-summary {
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .agreement-summary h3 { margin-top: 0; }
+
+    .agreement-table {
+      margin-top: 0.75rem;
+      font-size: 0.86rem;
+    }
+
+    .agreement-status {
+      display: inline-block;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .agreement-supports { background: #dcfce7; color: #166534; }
+    .agreement-shared { background: #e0f2fe; color: #075985; }
+    .agreement-conflicts { background: #fef3c7; color: #92400e; }
+
+    .alternative-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .alternative-card {
+      padding: 1rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .alternative-card.close-alternative { border-left: 5px solid #f59e0b; }
+    .alternative-card h4 { margin: 0 0 0.45rem; }
+
+    .reasoning-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .reasoning-panel {
+      padding: 1rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .reasoning-panel h3 {
+      margin-top: 0;
+    }
+
+    .reasoning-list {
+      margin: 0;
+      padding-left: 1.2rem;
+    }
+
+    .reasoning-list li + li {
+      margin-top: 0.45rem;
+    }
+
+    .manual-review-status {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    .manual-review-required {
+      border-left: 5px solid #dc2626;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .manual-review-not-required {
+      border-left: 5px solid #16a34a;
+      background: #f0fdf4;
+      color: #166534;
+    }
+
+
+
+    .candidate-summary {
+      display: grid;
+      grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(120px, 0.7fr));
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+
+    .summary-item {
+      padding: 0.85rem 1rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .summary-label {
+      display: block;
+      margin-bottom: 0.3rem;
+      color: #64748b;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .summary-value {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .summary-good {
+      border-left: 5px solid #16a34a;
+      background: #f0fdf4;
+    }
+
+    .summary-warning {
+      border-left: 5px solid #f59e0b;
+      background: #fffbeb;
+    }
+
+    .overall-assessment {
+      margin: 1rem 0;
+      padding: 1rem;
+      border-left: 5px solid #2563eb;
+      border-radius: 8px;
+      background: #eff6ff;
+    }
+
+    .overall-assessment h3 {
+      margin: 0 0 0.4rem;
+    }
+
+    .traffic-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .traffic-list li {
+      display: grid;
+      grid-template-columns: 1.25rem 1fr;
+      gap: 0.55rem;
+      align-items: start;
+    }
+
+    .traffic-list li + li {
+      margin-top: 0.55rem;
+    }
+
+    .traffic-icon {
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .traffic-good .traffic-icon {
+      color: #16a34a;
+    }
+
+    .traffic-warning .traffic-icon {
+      color: #d97706;
+    }
+
+    .traffic-danger .traffic-icon {
+      color: #dc2626;
+    }
+
+    @media (max-width: 760px) {
+      .candidate-summary {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+
+    .protein-coordinate-map {
+      margin-top: 1rem;
+    }
+
+    .protein-coordinate-scale {
+      display: grid;
+      grid-template-columns: 0 minmax(0, 1fr) 0;
+      align-items: end;
+      margin-left: min(18rem, 38%);
+      color: #64748b;
+      font-size: 0.78rem;
+    }
+
+    .protein-coordinate-scale span:nth-child(2) {
+      text-align: center;
+    }
+
+    .protein-coordinate-scale span:last-child {
+      text-align: right;
+    }
+
+    .protein-coordinate-row {
+      display: grid;
+      grid-template-columns: minmax(11rem, 18rem) minmax(0, 1fr);
+      gap: 0.8rem;
+      align-items: center;
+      margin-top: 0.65rem;
+    }
+
+    .protein-coordinate-label {
+      min-width: 0;
+    }
+
+    .protein-coordinate-label strong,
+    .protein-coordinate-label span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .protein-coordinate-label span {
+      color: #64748b;
+      font-size: 0.78rem;
+    }
+
+    .protein-coordinate-track {
+      position: relative;
+      height: 1.15rem;
+      overflow: hidden;
+      border: 1px solid #cbd5e1;
+      border-radius: 999px;
+      background: #f1f5f9;
+    }
+
+    .protein-coordinate-segment {
+      position: absolute;
+      top: 0.12rem;
+      bottom: 0.12rem;
+      min-width: 0.25rem;
+      border-radius: 999px;
+      background: #94a3b8;
+    }
+
+    .protein-coordinate-segment.recommended {
+      background: #2563eb;
+    }
+
+    .protein-coordinate-note {
+      margin-top: 0.9rem;
+      color: #64748b;
+      font-size: 0.84rem;
+    }
+
+    @media (max-width: 700px) {
+      .protein-coordinate-row {
+        grid-template-columns: 1fr;
+        gap: 0.35rem;
+      }
+
+      .protein-coordinate-scale {
+        margin-left: 0;
+      }
+    }
+
+    .coverage-panel figure {
+      margin: 0;
+    }
+
+    .coverage-panel img {
+      display: block;
+      width: 100%;
+      max-width: 1100px;
+      height: auto;
+    }
+
+    .coverage-placeholder {
+      padding: 1.5rem;
+      text-align: center;
+      color: #64748b;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+
+    #coverage-caption {
+      margin-top: 0.5rem;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+
+    .rule-explorer table { width:100%; border-collapse:collapse; }
+    .rule-explorer th,.rule-explorer td { padding:.55rem; border-bottom:1px solid #e2e8f0; text-align:left; vertical-align:top; }
+    .rule-status { font-weight:750; } .rule-status.triggered { color:#166534; } .rule-status.not-triggered { color:#64748b; }
+    .condition-ok { color:#166534; } .condition-missing { color:#991b1b; }
+  
+    .reference-dotplot-panel { min-height: 620px; }
+    .reference-dotplot-placeholder {
+      border: 1px dashed #cbd5e1;
+      border-radius: 10px;
+      padding: 2rem;
+      text-align: center;
+      color: #64748b;
+      background: #f8fafc;
+    }
+    .reference-dotplot-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .6rem 1.25rem;
+      margin: .8rem 0 1rem;
+      color: #475569;
+      font-size: .92rem;
+    }
+    .reference-dotplot-summary strong { color: #0f172a; }
+    #reference-dotplot { width: 100%; min-height: 560px; }
+    .reference-overview-panel { min-height: auto; }
+    .reference-overview-group + .reference-overview-group { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid #e2e8f0; }
+    .reference-overview-group h3 { margin-bottom: .25rem; }
+    .reference-overview-plot { width: 100%; overflow-x: auto; }
+    #contig-dotplot { width: 100%; min-height: 560px; }
+    .contig-dotplot-controls { display:flex; gap:.75rem; align-items:center; flex-wrap:wrap; margin:.75rem 0 1rem; }
+    .contig-dotplot-controls select { min-width:240px; padding:.45rem .6rem; border:1px solid #cbd5e1; border-radius:.45rem; background:white; }
+
+
+    .scenario-summary { display:grid; grid-template-columns:1fr auto; gap:.35rem 1rem; align-items:center; cursor:pointer; padding:.85rem 1rem; }
+    .scenario-summary::-webkit-details-marker, .provenance-summary::-webkit-details-marker { display:none; }
+    .scenario-summary::before, .provenance-summary::before { content:"▸"; margin-right:.45rem; color:#64748b; }
+    details[open] > .scenario-summary::before, details[open] > .provenance-summary::before { content:"▾"; }
+    .scenario-counts { font-size:.85rem; color:#64748b; grid-column:1 / -1; }
+    .scenario-body { padding:0 1rem 1rem; border-top:1px solid #e2e8f0; }
+    .scenario-evidence-list { display:grid; gap:.5rem; margin:.65rem 0 1rem; }
+    .provenance-item { border:1px solid #e2e8f0; border-radius:.55rem; background:#fff; }
+    .provenance-summary { cursor:pointer; padding:.65rem .75rem; display:block; }
+    .provenance-detail { padding:0 .9rem .85rem 2rem; color:#334155; }
+    .provenance-detail h5 { margin:.7rem 0 .25rem; }
+    .provenance-measurements { display:grid; grid-template-columns:minmax(12rem,auto) 1fr; gap:.2rem .9rem; margin:.35rem 0; }
+    .provenance-measurements dt { color:#64748b; }
+    .provenance-measurements dd { margin:0; font-weight:650; }
+    .provenance-links a { margin-right:.8rem; }
+
+    .dashboard-tabs {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      gap: .35rem;
+      overflow-x: auto;
+      margin: 0 0 .8rem;
+      padding: .45rem;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(248,250,252,.96);
+      backdrop-filter: blur(8px);
+    }
+    .dashboard-tab {
+      flex: 0 0 auto;
+      margin: 0;
+      background: transparent;
+      color: #475569;
+      font-weight: 700;
+    }
+    .dashboard-tab:hover { background: #e2e8f0; }
+    .dashboard-tab.active { background: var(--blue); color: #fff; }
+    .dashboard-panel[hidden] { display: none !important; }
+    .candidate-switcher {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 1rem;
+      padding: .75rem;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+    .candidate-switcher-label { color: var(--muted); font-size: .82rem; font-weight: 750; text-transform: uppercase; letter-spacing: .04em; }
+    .candidate-switcher-items { display: flex; gap: .45rem; flex-wrap: wrap; }
+    .candidate-switch { margin: 0; background: #e2e8f0; color: #334155; font-weight: 700; }
+    .candidate-switch:hover { background: #cbd5e1; }
+    .candidate-switch.active { background: #dbeafe; color: #1d4ed8; box-shadow: inset 0 0 0 1px #93c5fd; }
+    .tab-empty-state { padding: 2rem; text-align: center; color: var(--muted); border: 1px dashed #cbd5e1; border-radius: 12px; background: #fff; }
+    @media (max-width: 680px) {
+      main { padding: .85rem; }
+      .candidate-switcher { align-items: flex-start; flex-direction: column; }
+    }
+
+    .section-nav {
+      position: sticky;
+      top: 5.4rem;
+      float: left;
+      width: 220px;
+      margin: 0 1rem 1rem 0;
+      padding: .85rem;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      z-index: 4;
+    }
+    .section-nav h2 { margin: 0 0 .65rem; font-size: 1rem; }
+    .section-nav a {
+      display: block;
+      padding: .48rem .55rem;
+      border-radius: 8px;
+      color: #334155;
+      text-decoration: none;
+      font-weight: 650;
+      font-size: .88rem;
+    }
+    .section-nav a:hover, .section-nav a.active { background: #dbeafe; color: #1d4ed8; }
+    .section-panel { margin-left: 236px; scroll-margin-top: 6.5rem; }
+    .section-panel::after { content: ""; display: table; clear: both; }
+    .explanatory-details { width: 100%; box-sizing: border-box; }
+    .explanatory-details summary {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .visualization-nav {
+      position: sticky;
+      top: 5.4rem;
+      float: left;
+      width: 220px;
+      margin: 0 1rem 1rem 0;
+      padding: .85rem;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      z-index: 4;
+    }
+    .visualization-nav h2 { margin: 0 0 .65rem; font-size: 1rem; }
+    .visualization-nav a {
+      display: block;
+      padding: .48rem .55rem;
+      border-radius: 8px;
+      color: #334155;
+      text-decoration: none;
+      font-weight: 650;
+      font-size: .88rem;
+    }
+    .visualization-nav a:hover, .visualization-nav a.active { background: #dbeafe; color: #1d4ed8; }
+    .plot-panel { margin-left: 236px; scroll-margin-top: 6.5rem; }
+    .plot-panel::after { content: ""; display: table; clear: both; }
+    .view-visualization-link { display: inline-block; margin-top: .7rem; color: #2563eb; font-weight: 700; text-decoration: none; }
+    @media (max-width: 900px) {
+      .section-nav, .visualization-nav { position: static; float: none; width: auto; margin-right: 0; display: flex; gap: .4rem; overflow-x: auto; }
+      .section-nav h2, .visualization-nav h2 { display: none; }
+      .section-nav a, .visualization-nav a { flex: 0 0 auto; white-space: nowrap; }
+      .section-panel, .plot-panel { margin-left: 0; }
+    }
+
+</style>
 </head>
 <body>
 <main>
@@ -48,71 +865,1427 @@
   <h1>{{ gene.name }}</h1>
   <div class="meta"><span>Segment: {{ gene.segment }}</span><span>Anchor: {{ gene.anchor_id }}</span><span>Candidates: {{ gene.candidates|length }}</span><span>References: {{ gene.references|length }}</span></div>
 
-  {% if recommendation %}
-  <section class="card recommend">
-    <div>
-      <div class="muted">Provisional curation suggestion</div>
-      <div class="rec-name">{{ recommendation.id }}</div>
-      <span class="badge status-{{ recommendation.status }}">{{ recommendation.status }}</span>
-      <p><button onclick="selectSequence('{{ recommendation.id }}')">Highlight candidate</button></p>
+  <nav class="dashboard-tabs" aria-label="Gene analysis sections">
+    <button type="button" class="dashboard-tab active" data-tab-target="summary" aria-selected="true">Summary</button>
+    <button type="button" class="dashboard-tab" data-tab-target="comparison" aria-selected="false">Comparison</button>
+    <button type="button" class="dashboard-tab" data-tab-target="evidence" aria-selected="false">Evidence</button>
+    <button type="button" class="dashboard-tab" data-tab-target="reasoning" aria-selected="false">Biological reasoning</button>
+    <button type="button" class="dashboard-tab" data-tab-target="plots" aria-selected="false">Plots</button>
+    <button type="button" class="dashboard-tab" data-tab-target="downloads" aria-selected="false">Downloads</button>
+    <button type="button" class="dashboard-tab" data-tab-target="expert" aria-selected="false">Expert</button>
+  </nav>
+
+  <section class="candidate-switcher" aria-label="Candidate selection">
+    <span class="candidate-switcher-label">Candidate</span>
+    <div class="candidate-switcher-items">
+      {% for candidate in view.candidates %}
+        <button type="button" class="candidate-switch {% if candidate.recommended %}active{% endif %}" data-candidate-id="{{ candidate.candidate_id }}" aria-pressed="{% if candidate.recommended %}true{% else %}false{% endif %}">
+          {% if candidate.recommended %}<span aria-hidden="true">★</span>{% endif %} {{ candidate.candidate_id }}
+        </button>
+      {% endfor %}
     </div>
-    <div>
-      <div class="mini-grid">
-        <div class="mini"><strong>{{ "%.3f"|format(recommendation.confidence) }}</strong><span>Protein confidence</span></div>
-        <div class="mini"><strong>{{ "%.3f"|format(recommendation.structural_score) }}</strong><span>Structural score</span></div>
-        <div class="mini"><strong>{{ "%.1f%%"|format(recommendation.query_coverage*100) }}</strong><span>Sequence coverage</span></div>
-        <div class="mini"><strong>{{ "%.2f%%"|format(recommendation.identity*100) }}</strong><span>Identity</span></div>
+  </section>
+
+
+  {% macro evidence_group(title, items) -%}
+    {% if items %}
+      <h4>{{ title }}</h4>
+      <div class="scenario-evidence-list">
+      {% for item in items %}
+        <details class="provenance-item">
+          <summary class="provenance-summary">
+            <strong>{{ item.display_name }}</strong>
+            {% if item.source_display_name %}<span class="muted"> · {{ item.source_display_name }}</span>{% endif %}
+          </summary>
+          <div class="provenance-detail">
+            {% if item.description %}<p>{{ item.description }}</p>{% endif %}
+            {% if item.observed_descriptions %}
+              <h5>Observed evidence</h5>
+              <ul>{% for text in item.observed_descriptions %}<li>{{ text }}</li>{% endfor %}</ul>
+            {% endif %}
+            {% if item.measurements %}
+              <h5>Measurements</h5>
+              <dl class="provenance-measurements">
+              {% for measurement in item.measurements %}
+                <dt>{{ measurement.name|replace('_', ' ')|title }}</dt><dd>{{ measurement.value }}</dd>
+              {% endfor %}
+              </dl>
+            {% endif %}
+            {% if item.regions %}
+              <h5>Regions</h5>
+              <ul>{% for region in item.regions %}<li>{{ region.coordinate_system }}: {{ region.start }}–{{ region.end }}{% if region.length %} ({{ region.length }} units){% endif %}</li>{% endfor %}</ul>
+            {% endif %}
+            {% if item.visualisations %}
+              <h5>View evidence</h5>
+              <p class="provenance-links">
+              {% for target in item.visualisations %}
+                {% if target == 'coverage_plot' %}<a href="#coverage-panel">Coverage plot</a>
+                {% elif target == 'reference_dotplot' %}<a href="#reference-dotplot-panel">Reference dot plot</a>
+                {% elif target == 'protein_alignment' %}<a href="#protein-evidence-panel">Protein alignment</a>
+                {% else %}<span class="muted">{{ target|replace('_', ' ')|title }}</span>{% endif %}
+              {% endfor %}
+              </p>
+            {% endif %}
+            {% if not item.has_details %}<p class="muted">No additional measurement provenance was recorded for this condition.</p>{% endif %}
+          </div>
+        </details>
+      {% endfor %}
       </div>
-      <ul>{% for reason in recommendation.reason %}<li>{{ reason }}</li>{% endfor %}</ul>
-      <div class="muted">This is a transparent heuristic, not the later configurable-weight recommendation engine.</div>
+    {% endif %}
+  {%- endmacro %}
+
+  {% macro scenario_card(scenario) -%}
+    <details class="hypothesis-item scenario-item">
+      <summary class="scenario-summary">
+        <span><strong>{{ scenario.title }}</strong></span>
+        <span class="hypothesis-badge confidence-{{ scenario.confidence }}">{{ scenario.confidence|upper }}</span>
+        <span class="scenario-counts">{{ scenario.matched_required|length + scenario.matched_supporting|length }} supporting observations{% if scenario.matched_conflicting %} · {{ scenario.matched_conflicting|length }} conflict{% if scenario.matched_conflicting|length != 1 %}s{% endif %}{% endif %} · Examine evidence</span>
+      </summary>
+      <div class="scenario-body">
+        <p>{{ scenario.interpretation }}</p>
+        {{ evidence_group('Required evidence', scenario.matched_required) }}
+        {{ evidence_group('Supporting evidence', scenario.matched_supporting) }}
+        {{ evidence_group('Conflicting evidence', scenario.matched_conflicting) }}
+        {% if scenario.suggested_actions %}<h4>Suggested checks</h4><ul>{% for action in scenario.suggested_actions %}<li>{{ action }}</li>{% endfor %}</ul>{% endif %}
+        <p class="hypothesis-meta">{{ scenario.scenario_id }} · {{ scenario.source }}</p>
+      </div>
+    </details>
+  {%- endmacro %}
+
+  {% macro scenario_hypothesis_card(hypothesis) -%}
+    <details class="hypothesis-item scenario-hypothesis-item">
+      <summary>
+        <span class="hypothesis-title">{{ hypothesis.title }}</span>
+        <span class="hypothesis-badge confidence-{{ hypothesis.confidence }}">{{ hypothesis.confidence|upper }}</span>
+        <span class="hypothesis-scope muted">{{ hypothesis.scope|title }} explanation</span>
+      </summary>
+      <div class="hypothesis-detail">
+        <p>{{ hypothesis.explanation }}</p>
+        <div class="hypothesis-trace">
+          <div>
+            <h4>Supported by scenarios</h4>
+            {% if hypothesis.supporting_scenario_titles %}<ul>{% for title in hypothesis.supporting_scenario_titles %}<li>{{ title }}</li>{% endfor %}</ul>{% else %}<p class="muted">None recorded.</p>{% endif %}
+          </div>
+          <div>
+            <h4>Conflicting scenarios</h4>
+            {% if hypothesis.conflicting_scenario_titles %}<ul>{% for title in hypothesis.conflicting_scenario_titles %}<li>{{ title }}</li>{% endfor %}</ul>{% else %}<p class="muted">None recognised.</p>{% endif %}
+          </div>
+          <div>
+            <h4>Recommended checks</h4>
+            {% if hypothesis.recommended_actions %}<ul>{% for action in hypothesis.recommended_actions %}<li>{{ action }}</li>{% endfor %}</ul>{% else %}<p class="muted">No additional action specified.</p>{% endif %}
+          </div>
+        </div>
+        <p class="hypothesis-meta">{{ hypothesis.hypothesis_id }} · {{ hypothesis.source }}</p>
+      </div>
+    </details>
+  {%- endmacro %}
+
+  <section class="card hypothesis-card">
+    <h2>Biological hypotheses</h2>
+    <p class="muted">Biological explanations aggregated from recognised scenarios. Hypotheses are descriptive and do not alter candidate ranking.</p>
+    {% if view.scenario_hypotheses %}{% for hypothesis in view.scenario_hypotheses %}{{ scenario_hypothesis_card(hypothesis) }}{% endfor %}{% endif %}
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+      {% if candidate.scenario_hypotheses %}{% for hypothesis in candidate.scenario_hypotheses %}{{ scenario_hypothesis_card(hypothesis) }}{% endfor %}{% else %}<p class="muted">No scenario-supported biological hypothesis was generated for this candidate.</p>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="card hypothesis-card">
+    <h2>Cross-evidence findings</h2>
+    <p class="muted">Interpretations that emerge only when independent evidence channels are considered together. They are explanatory and do not alter ranking.</p>
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+        {% if candidate.cross_evidence_findings %}
+          {% for item in candidate.cross_evidence_findings %}
+            <details class="reasoning-card">
+              <summary><strong>{{ item.title }}</strong> · confidence {{ item.confidence|upper }} · {{ item.match_status|upper }}</summary>
+              <p>{{ item.description }}</p>
+              {% if item.confidence_score is not none %}<p><strong>Calculated confidence:</strong> {{ "%.2f"|format(item.confidence_score) }}{% if item.evidence_completeness is not none %} · evidence completeness {{ "%.0f%%"|format(item.evidence_completeness) }}{% endif %}</p>{% endif %}
+              <p><strong>Supporting evidence:</strong> {{ item.supporting_evidence|join("; ") }}</p>
+              {% if item.conflicting_evidence %}<p><strong>Contradictory evidence:</strong> {{ item.conflicting_evidence|join("; ") }}</p>{% endif %}
+              {% if item.missing_evidence %}<p><strong>Missing evidence:</strong> {{ item.missing_evidence|join("; ") }}</p>{% endif %}
+              <p class="muted">Rule {{ item.rule_id }} v{{ item.rule_version }} · {{ item.source_plugin }} · {{ item.confidence_method }} v{{ item.confidence_method_version }}</p>
+              {% if item.limitations %}<p><strong>Limitations:</strong> {{ item.limitations|join(" ") }}</p>{% endif %}
+            </details>
+          {% endfor %}
+        {% else %}<p class="muted">No cross-evidence finding was generated for this candidate.</p>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="card hypothesis-card">
+    <h2>Biological scenarios</h2>
+    <p class="muted">Named biological situations inferred from observations and findings. Select a scenario, then an observation, to inspect its evidence provenance. Scenarios are descriptive and do not alter ranking.</p>
+    {% if view.scenarios %}{% for scenario in view.scenarios %}{{ scenario_card(scenario) }}{% endfor %}{% endif %}
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+      {% if candidate.scenarios %}{% for scenario in candidate.scenarios %}{{ scenario_card(scenario) }}{% endfor %}{% else %}<p class="muted">No biological scenario was recognised for this candidate.</p>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="card hypothesis-card">
+    <h2>Biological interpretation</h2>
+    {% if view.hypotheses %}
+      <p class="muted">Hypotheses generated by transparent rules from the available observations and findings.</p>
+      <div class="hypothesis-grid">
+        {% for hypothesis in view.hypotheses %}
+          <details class="hypothesis-item">
+            <summary>
+              <span class="hypothesis-title">{{ hypothesis.title }}</span>
+              <span class="hypothesis-badge confidence-{{ hypothesis.confidence }}">{{ hypothesis.confidence|upper }}</span>
+              <span class="hypothesis-scope muted">{{ hypothesis.scope|title }}</span>
+            </summary>
+            <div class="hypothesis-detail">
+              <p>{{ hypothesis.summary }}</p>
+              {% if hypothesis.rule_description %}<p class="muted">{{ hypothesis.rule_description }}</p>{% endif %}
+              <div class="hypothesis-trace">
+                <div>
+                  <h4>Required matches</h4>
+                  {% if hypothesis.matched_required %}
+                    <ul>{% for item in hypothesis.matched_required %}<li>{{ item }}</li>{% endfor %}</ul>
+                  {% else %}<p class="muted">None recorded.</p>{% endif %}
+                </div>
+                <div>
+                  <h4>Supporting matches</h4>
+                  {% if hypothesis.matched_supporting %}
+                    <ul>{% for item in hypothesis.matched_supporting %}<li>{{ item }}</li>{% endfor %}</ul>
+                  {% else %}<p class="muted">None.</p>{% endif %}
+                </div>
+                <div>
+                  <h4>Conflicting matches</h4>
+                  {% if hypothesis.matched_conflicting %}
+                    <ul>{% for item in hypothesis.matched_conflicting %}<li>{{ item }}</li>{% endfor %}</ul>
+                  {% else %}<p class="muted">None.</p>{% endif %}
+                </div>
+              </div>
+              <p class="hypothesis-meta">Rule: {{ hypothesis.rule_id }} · Source: {{ hypothesis.rule_source }}</p>
+              {% if hypothesis.rule_references %}
+                <p class="hypothesis-meta">References: {{ hypothesis.rule_references|join(', ') }}</p>
+              {% endif %}
+            </div>
+          </details>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p><strong>No rule-based biological hypotheses were generated.</strong></p>
+      <p class="muted">No current hypothesis rule matched the available observations and findings.</p>
+    {% endif %}
+  </section>
+
+  <section class="card rule-explorer">
+    <h2>Rule explorer</h2>
+    <p class="muted">Diagnostic evaluation of every active gene-level rule. Rules that did not trigger show their missing required conditions.</p>
+    {% if view.rule_evaluations %}
+      {% for rule in view.rule_evaluations %}
+      <details class="hypothesis-item">
+        <summary>
+          <span class="hypothesis-title">{{ rule.title }}</span>
+          <span class="rule-status {% if rule.triggered %}triggered{% else %}not-triggered{% endif %}">{% if rule.triggered %}Triggered{% else %}Not triggered{% endif %}</span>
+          <span class="hypothesis-scope muted">{{ rule.scope|title }}</span>
+        </summary>
+        <div class="hypothesis-detail">
+          {% if rule.rule_description %}<p>{{ rule.rule_description }}</p>{% endif %}
+          <div class="hypothesis-trace">
+            <div><h4>Required</h4><ul>
+              {% for item in rule.matched_required %}<li class="condition-ok">✓ {{ item }}</li>{% endfor %}
+              {% for item in rule.missing_required %}<li class="condition-missing">✕ {{ item }}</li>{% endfor %}
+            </ul></div>
+            <div><h4>Supporting</h4><ul>
+              {% for item in rule.matched_supporting %}<li class="condition-ok">✓ {{ item }}</li>{% endfor %}
+              {% for item in rule.missing_supporting %}<li class="muted">○ {{ item }}</li>{% endfor %}
+            </ul></div>
+            <div><h4>Conflicting matches</h4>
+              {% if rule.matched_conflicting %}<ul>{% for item in rule.matched_conflicting %}<li class="condition-missing">⚠ {{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">None.</p>{% endif %}
+            </div>
+          </div>
+          <p class="hypothesis-meta">Rule: {{ rule.rule_id }} · Source: {{ rule.rule_source }}{% if rule.confidence %} · Resulting confidence: {{ rule.confidence|upper }}{% endif %}</p>
+        </div>
+      </details>
+      {% endfor %}
+    {% else %}<p class="muted">No gene-level rules were loaded.</p>{% endif %}
+  </section>
+
+    {% if view.recommendation is not none %}
+    <section class="card recommendation-card">
+      <h2>Recommended candidate</h2>
+
+      <div class="candidate-summary">
+        <div class="summary-item summary-good">
+          <span class="summary-label">Candidate</span>
+          <span class="summary-value">{{ view.recommendation.candidate_id }}</span>
+        </div>
+        <div class="summary-item summary-good">
+          <span class="summary-label">Status</span>
+          <span class="summary-value">Recommended</span>
+        </div>
+        <div class="summary-item {% if view.recommendation.confidence == 'low' %}summary-warning{% else %}summary-good{% endif %}">
+          <span class="summary-label">Confidence</span>
+          <span class="summary-value">{{ view.recommendation.confidence|replace("_", " ")|upper }}</span>
+        </div>
+        <div class="summary-item {% if view.recommendation.manual_review %}summary-warning{% else %}summary-good{% endif %}">
+          <span class="summary-label">Manual review</span>
+          <span class="summary-value">{% if view.recommendation.manual_review %}Recommended{% else %}Not required{% endif %}</span>
+        </div>
+      </div>
+
+      <div class="recommendation-score">
+        Overall evidence score:
+        <strong>{{ "%.3f"|format(view.recommendation.score) }}</strong>
+      </div>
+
+      <div class="overall-assessment">
+        <h3>Overall assessment</h3>
+        {% if view.recommendation.summary %}
+          <p>{{ view.recommendation.summary }}</p>
+        {% elif view.recommendation.manual_review %}
+          <p>The available evidence contains conflicts that should be reviewed manually.</p>
+        {% else %}
+          <p>The available evidence supports this candidate without a major conflict.</p>
+        {% endif %}
+      </div>
+
+      <div class="agreement-summary">
+        <h3>Recommendation agreement</h3>
+        <p><strong>{{ view.recommendation.recommendation_finding|replace("_", " ")|title }}</strong></p>
+        <p>{{ view.recommendation.agreement_summary }}</p>
+        <table class="agreement-table">
+          <thead>
+            <tr>
+              <th>Evidence channel</th>
+              <th>Relationship to recommendation</th>
+              <th>Favoured candidate</th>
+              <th>Recommended value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in view.recommendation.channel_assessments %}
+            <tr>
+              <td>{{ item.name|replace("_", " ")|title }}</td>
+              <td><span class="agreement-status agreement-{{ item.status }}">{{ item.status|replace("_", " ") }}</span></td>
+              <td>{{ item.winners|join(", ") }}</td>
+              <td>{% if item.recommended_value is none %}—{% else %}{{ "%.3f"|format(item.recommended_value) }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="reasoning-grid">
+        <div class="reasoning-panel">
+          <h3>Why this candidate?</h3>
+          {% if view.recommendation.supporting_evidence %}
+            <ul class="traffic-list">
+              {% for message in view.recommendation.supporting_evidence %}
+                <li class="traffic-good"><span class="traffic-icon">✓</span><span>{{ message }}</span></li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="recommendation-note">
+              No individual evidence channel uniquely favours this candidate.
+            </p>
+          {% endif %}
+        </div>
+
+        <div class="reasoning-panel">
+          <h3>Evidence requiring review</h3>
+          {% if view.recommendation.opposing_evidence or view.recommendation.evidence_conflicts %}
+            <ul class="traffic-list">
+              {% for message in view.recommendation.opposing_evidence %}
+                <li class="traffic-warning"><span class="traffic-icon">⚠</span><span>{{ message }}</span></li>
+              {% endfor %}
+              {% for message in view.recommendation.evidence_conflicts %}
+                {% if message not in view.recommendation.opposing_evidence %}
+                  <li class="traffic-danger"><span class="traffic-icon">✕</span><span>{{ message }}</span></li>
+                {% endif %}
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="recommendation-note">
+              No major evidence conflicts detected.
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if view.recommendation.assembly_level_evidence %}
+        <div class="reasoning-panel assembly-level-review">
+          <h3>Assembly-level review</h3>
+          <ul class="traffic-list">
+            {% for message in view.recommendation.assembly_level_evidence %}
+              <li class="{% if view.recommendation.assembly_review_required %}traffic-danger{% else %}traffic-warning{% endif %}">
+                <span class="traffic-icon">{% if view.recommendation.assembly_review_required %}✕{% else %}⚠{% endif %}</span>
+                <span>{{ message }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+
+      {% if view.recommendation.convergence_evidence %}
+        <div class="reasoning-panel convergence-panel{% if view.recommendation.convergence_review_required %} convergence-strong{% endif %}">
+          <h3>Local evidence convergence</h3>
+          <ul class="traffic-list">
+            {% for message in view.recommendation.convergence_evidence %}
+              <li class="{% if view.recommendation.convergence_review_required %}traffic-danger{% else %}traffic-warning{% endif %}">
+                <span class="traffic-icon">{% if view.recommendation.convergence_review_required %}✕{% else %}⚠{% endif %}</span>
+                <span>{{ message }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+          <p class="muted">Moderate convergence is shown for inspection. Strong or very strong convergence triggers manual review.</p>
+        </div>
+      {% endif %}
+
+      {% if view.recommendation.unresolved_questions %}
+        <div class="reasoning-panel">
+          <h3>Outstanding questions</h3>
+          <ul class="traffic-list">
+            {% for message in view.recommendation.unresolved_questions %}
+              <li class="traffic-warning"><span class="traffic-icon">?</span><span>{{ message }}</span></li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if view.recommendation.manual_review %}
+        <div class="manual-review-status manual-review-required">
+          Manual review recommended.
+        </div>
+      {% else %}
+        <div class="manual-review-status manual-review-not-required">
+          Manual review not currently required.
+        </div>
+      {% endif %}
+
+      {% if view.recommendation.runner_up_id %}
+        <div class="runner-up runner-up-{{ view.recommendation.runner_up_strength }}">
+          <div>
+            <span class="runner-up-label">Runner-up</span>
+            <strong>{{ view.recommendation.runner_up_id }}</strong>
+          </div>
+
+          <div>
+            Score:
+            {{ "%.3f"|format(view.recommendation.runner_up_score) }}
+          </div>
+
+          <div>
+            Score gap:
+            {{ "%.3f"|format(view.recommendation.score_gap) }}
+          </div>
+
+          {% if view.recommendation.runner_up_strength == "close" %}
+            <div class="runner-up-note">
+              Close alternative — manual review may be useful.
+            </div>
+          {% elif view.recommendation.runner_up_strength == "secondary" %}
+            <div class="runner-up-note">
+              Plausible secondary candidate.
+            </div>
+          {% else %}
+            <div class="runner-up-note">
+              Substantially weaker than the recommended candidate.
+            </div>
+          {% endif %}
+        </div>
+
+        {% if view.recommendation.comparisons %}
+        <div class="reasoning-panel runner-up-reasoning">
+          <h3>Why not the runner-up? And what about the others?</h3>
+          <div class="alternative-grid">
+            {% for comparison in view.recommendation.comparisons %}
+            <div class="alternative-card{% if comparison.close_alternative %} close-alternative{% endif %}">
+              <h4>{{ comparison.candidate_id }}</h4>
+              <p class="runner-up-note">Score {{ "%.3f"|format(comparison.score) }} · gap {{ "%.3f"|format(comparison.score_gap) }}{% if comparison.close_alternative %} · close alternative{% endif %}</p>
+              <p><strong>Why it ranked lower</strong></p>
+              <ul class="traffic-list">
+                {% for message in comparison.reasons_not_selected %}
+                  <li class="traffic-good"><span class="traffic-icon">✓</span><span>{{ message }}</span></li>
+                {% endfor %}
+              </ul>
+              {% if comparison.alternative_advantages %}
+                <p><strong>Evidence favouring this alternative</strong></p>
+                <ul class="traffic-list">
+                  {% for message in comparison.alternative_advantages %}
+                    <li class="traffic-warning"><span class="traffic-icon">⚠</span><span>{{ message }}</span></li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+    {% endif %}
+
+
+      <h3>Evidence summary</h3>
+      <div class="evidence-list">
+        {% for item in view.recommendation.evidence_assessments %}
+          {% if item.status == "not_assessable" %}{% set status_class = "evidence-status-unavailable" %}
+          {% elif item.status in ("strong", "moderate") %}{% set status_class = "evidence-status-good" %}
+          {% elif item.status == "mixed" %}{% set status_class = "evidence-status-warning" %}
+          {% else %}{% set status_class = "evidence-status-danger" %}{% endif %}
+          <details class="evidence-summary-row {{ status_class }}">
+            <summary>
+              <span class="evidence-status-dot" aria-hidden="true"></span>
+              <span class="evidence-label">{{ item.channel_title }}</span>
+              <span class="evidence-result">{{ item.status|replace("_", " ")|title }} · {{ item.confidence_level|replace("_", " ")|title }} confidence</span>
+              <span class="evidence-score">{% if item.score is none %}—{% else %}{{ "%.3f"|format(item.score) }}{% endif %}</span>
+            </summary>
+            <div class="evidence-detail">
+              <div class="evidence-detail-item"><strong>Key finding</strong><span>{{ item.key_finding }}</span></div>
+              <div class="evidence-detail-item"><strong>Confidence method</strong><span>{{ item.confidence_method }} v{{ item.confidence_version }}</span></div>
+              {% for factor in item.confidence_factors %}
+                <div class="evidence-detail-item">{{ factor.name|replace("_", " ")|title }}<strong>{{ factor.value }}</strong><span>{{ factor.interpretation }}</span></div>
+              {% endfor %}
+              {% if item.diagnostics and (item.status == "not_assessable" or item.diagnostics.has_failure) %}
+                <div class="evidence-unavailable-note"><strong>Assessment diagnostics</strong></div>
+                {% for check in item.diagnostics.checks %}
+                  <div class="evidence-detail-item">
+                    <strong>{% if check.status == "pass" %}✓{% elif check.status == "warn" %}⚠{% elif check.status == "fail" %}✗{% else %}○{% endif %} {{ check.title }}</strong>
+                    <span>{{ check.status|replace("_", " ")|title }}{% if check.value is not none %} · {{ check.value }}{% endif %}</span>
+                    {% if check.detail %}<span>{{ check.detail }}</span>{% endif %}
+                  </div>
+                {% endfor %}
+                {% if item.diagnostics.stop_reason %}<div class="evidence-unavailable-note"><strong>Assessment stopped because:</strong> {{ item.diagnostics.stop_reason }}</div>{% endif %}
+              {% endif %}
+              {% if item.limitations %}<div class="evidence-unavailable-note"><strong>Limitations:</strong> {{ item.limitations|join(" ") }}</div>{% endif %}
+              {% if item.participates_in_ranking %}<div class="evidence-detail-item"><strong>Weighted contribution</strong><span>See ranking calculation in the recommendation JSON.</span></div><div class="evidence-detail-item"><strong>Effective weight</strong><span>See ranking calculation in the recommendation JSON.</span></div>{% else %}<div class="evidence-unavailable-note">Explanatory channel; not used in ranking.</div>{% endif %}
+            </div>
+          </details>
+        {% endfor %}
+      </div>
+  </div>
+
+  <p class="recommendation-note">
+    This recommendation was calculated using the current evidence weights.
+  </p>
+</section>
+{% endif %}
+
+  <aside id="visualization-navigation" class="visualization-nav">
+    <h2>Visualizations</h2>
+    <a href="#candidate-comparison-panel">Candidate comparison</a>
+    <a href="#shared-reference-panel">Shared reference</a>
+    <a href="#closest-reference-panel">Closest reference</a>
+    <a href="#protein-coordinate-panel">Protein coordinates</a>
+    <a href="#protein-relatedness-panel">Protein relatedness</a>
+    <a href="#coverage-panel">Read coverage</a>
+  </aside>
+
+  <section id="candidate-comparison-panel" class="card reference-dotplot-panel">
+    <h2>Candidate-to-candidate structural comparison</h2>
+    <p class="muted">MegaBLAST HSPs provide a granular view of containment, terminal differences, internal gaps, inversions and alternative assembly structure. The selected candidate is compared with another candidate from the same gene.</p>
+    <div class="contig-dotplot-controls">
+      <label for="contig-dotplot-target"><strong>Compare selected candidate with</strong></label>
+      <select id="contig-dotplot-target" disabled>
+        <option value="">Select a candidate first</option>
+      </select>
     </div>
+    <div id="contig-dotplot-placeholder" class="reference-dotplot-placeholder">
+      Select a candidate and comparison target to view their pairwise structural alignment.
+    </div>
+    <div id="contig-dotplot-unavailable" class="reference-dotplot-placeholder" hidden>
+      No candidate-to-candidate dot plot is available for this pair.
+    </div>
+    <div id="contig-dotplot-content" hidden>
+      <div id="contig-dotplot-summary" class="reference-dotplot-summary"></div>
+      <div id="contig-dotplot"></div>
+    </div>
+  </section>
+
+
+
+  {% if reference_overviews %}
+  <section id="shared-reference-panel" class="card reference-overview-panel">
+    <h2>Candidates aligned to shared nucleotide reference</h2>
+    <p class="muted">Candidates sharing the same closest nucleotide reference are stacked in one compact view. Candidate colours distinguish sequences; line opacity reflects nucleotide identity. The recommended candidate is shown first.</p>
+    {% for overview in reference_overviews %}
+      <div class="reference-overview-group">
+        <h3>{{ overview.reference_id }}</h3>
+        <p class="muted">{{ overview.candidate_count }} candidates share this closest reference.</p>
+        <div class="reference-overview-plot">{{ overview.plot_html|safe }}</div>
+      </div>
+    {% endfor %}
   </section>
   {% endif %}
 
-  <section class="card">{{ dotplot|safe }}</section>
-  <section class="card">{{ containment|safe }}</section>
+  <section id="closest-reference-panel" class="card reference-dotplot-panel">
+    <h2>Candidate versus closest nucleotide reference</h2>
+    <p class="muted">MegaBLAST alignment blocks are drawn as diagonal segments. Upward slopes indicate forward orientation; downward slopes indicate reverse-complement alignment.</p>
+    <div id="reference-dotplot-placeholder" class="reference-dotplot-placeholder">
+      Select a candidate to view its structural alignment to the closest nucleotide reference.
+    </div>
+    <div id="reference-dotplot-unavailable" class="reference-dotplot-placeholder" hidden>
+      No nucleotide-reference dot plot is available for this candidate.
+    </div>
+    <div id="reference-dotplot-content" hidden>
+      <div id="reference-dotplot-summary" class="reference-dotplot-summary"></div>
+      <div id="reference-dotplot"></div>
+    </div>
+  </section>
+
+
+  {% if view.protein_coordinates %}
+  <section id="protein-coordinate-panel" class="card">
+    <h2>Protein coordinate map</h2>
+    <p class="muted">Each bar shows where a candidate's best DIAMOND alignment falls along its matched protein, normalised from 0% to 100% so homologous proteins of different lengths can be compared.</p>
+    <div class="protein-coordinate-map">
+      <div class="protein-coordinate-scale" aria-hidden="true">
+        <span>0%</span><span>Expected protein position</span><span>100%</span>
+      </div>
+      {% for coordinate in view.protein_coordinates %}
+        <div class="protein-coordinate-row">
+          <div class="protein-coordinate-label" title="{{ coordinate.subject_id }} — {{ coordinate.subject_title }}">
+            <strong>{{ coordinate.candidate_id }}{% if coordinate.recommended %} ★{% endif %}</strong>
+            <span>{{ coordinate.subject_start }}–{{ coordinate.subject_end }} / {{ coordinate.subject_length }} aa · {{ coordinate.subject_id }}</span>
+          </div>
+          <div class="protein-coordinate-track" title="{{ coordinate.candidate_id }} covers {{ '%.1f'|format(coordinate.start_fraction * 100) }}–{{ '%.1f'|format(coordinate.end_fraction * 100) }}% of {{ coordinate.subject_id }}">
+            <span
+              class="protein-coordinate-segment{% if coordinate.recommended %} recommended{% endif %}"
+              style="left: {{ '%.4f'|format(coordinate.start_fraction * 100) }}%; width: {{ '%.4f'|format((coordinate.end_fraction - coordinate.start_fraction) * 100) }}%;"
+            ></span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="protein-continuity-summary">
+      <h3>Assembly-level protein continuity</h3>
+      <p><strong>{{ view.protein_continuity.summary }}</strong></p>
+      <div class="protein-continuity-metrics">
+        <span>Combined coverage: {{ "%.1f%%"|format(view.protein_continuity.combined_coverage * 100) }}</span>
+        <span>Best single candidate: {{ "%.1f%%"|format(view.protein_continuity.best_single_coverage * 100) }}</span>
+      </div>
+      {% if view.protein_continuity.findings %}
+        <ul>
+        {% for finding in view.protein_continuity.findings %}
+          <li>{{ finding }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+      <p class="muted">This interpretation is based on normalised protein coordinates and is intended as a review aid rather than proof of a split or redundant assembly.</p>
+    </div>
+    <p class="protein-coordinate-note">The blue bar is the recommended candidate. Complementary bars can reveal candidate fragments covering different portions of the expected protein.</p>
+  </section>
+  {% endif %}
 
   <section class="card">
     <h2>Evidence table</h2>
     <div class="scroll">
+
     <table id="evidence-table">
-      <thead><tr>{% for h in ["Sequence","Type","Length","Confidence","z","Cluster","Query cov.","Anchor cov.","Identity","Fragmentation","Blocks","Structural","Status"] %}<th onclick="sortTable({{ loop.index0 }})">{{ h }}</th>{% endfor %}</tr></thead>
+      <thead>
+        <tr>
+          {% for h in [
+            "Sequence",
+            "Length",
+            "Confidence",
+            "z",
+            "Cluster",
+            "Candidate cov.",
+            "Reference cov.",
+            "Blocks",
+            "Largest ref gap",
+            "Structural integrity",
+            "Status",
+            "Read support",
+            "ORF quality"
+          ] %}
+            <th onclick="sortTable({{ loop.index0 }})">
+              {{ h }}
+            </th>
+          {% endfor %}
+        </tr>
+      </thead>
+
       <tbody>
-      {% for row in rows %}
-      <tr data-sequence-id="{{ row.id }}" onclick="selectSequence('{{ row.id }}')">
-        <td>{{ row.id }}{% if row.is_anchor %} ★{% endif %}</td><td>{{ row.type }}</td><td>{{ row.length }}</td>
-        <td>{{ "" if row.confidence is none else "%.3f"|format(row.confidence|float) }}</td>
-        <td>{{ "" if row.z is none else "%.3f"|format(row.z|float) }}</td><td>{{ "" if row.cluster is none else row.cluster }}</td>
-        <td><span>{{ "%.1f%%"|format(row.query_coverage*100) }}</span><div class="progress"><span style="width:{{ row.query_coverage*100 }}%"></span></div></td>
-        <td><span>{{ "%.1f%%"|format(row.anchor_coverage*100) }}</span><div class="progress"><span style="width:{{ row.anchor_coverage*100 }}%"></span></div></td>
-        <td>{{ "%.2f%%"|format(row.identity*100) }}</td><td>{{ "%.3f"|format(row.fragmentation) }}</td><td>{{ row.n_blocks }}</td><td>{{ "%.3f"|format(row.structural_score) }}</td>
-        <td><span class="badge status-{{ row.status }}">{{ row.status }}</span></td>
-      </tr>
+
+      {% for candidate in view.candidates %}
+        <tr
+          class="candidate-row{% if candidate.recommended %} selected{% endif %}"
+          data-sequence-id="{{ candidate.candidate_id }}"
+          data-coverage-plot="{{ candidate.coverage_plot or '' }}"
+          onclick="selectCandidate('{{ candidate.candidate_id }}')"
+        >
+
+          <td>
+            {{ candidate.candidate_id }}
+            {% if candidate.recommended %} ★{% endif %}
+          </td>
+
+          <td>{{ candidate.length }}</td>
+
+          <td>{{ "%.3f"|format(candidate.confidence) }}</td>
+
+          <td>
+            {% if candidate.z is none %}
+              —
+            {% else %}
+              {{ "%.3f"|format(candidate.z) }}
+            {% endif %}
+          </td>
+
+          <td>{{ candidate.cluster }}</td>
+
+          <td>{% if candidate.candidate_coverage is not none %}{{ "%.1f%%"|format(candidate.candidate_coverage * 100) }}{% else %}—{% endif %}</td>
+
+          <td>{% if candidate.reference_coverage is not none %}{{ "%.1f%%"|format(candidate.reference_coverage * 100) }}{% else %}—{% endif %}</td>
+
+          <td>{{ candidate.block_count if candidate.block_count is not none else "—" }}</td>
+
+          <td>{{ candidate.largest_reference_gap if candidate.largest_reference_gap is not none else "—" }}</td>
+
+          <td>{% if candidate.structural_integrity is not none %}{{ "%.3f"|format(candidate.structural_integrity) }}{% else %}—{% endif %}</td>
+
+          <td>{{ candidate.structural_status }}</td>
+
+          <td>
+            {% if candidate.read_support.available %}
+              {{ "%.3f"|format(candidate.read_support.coverage_sufficiency) }} /
+              {{ "%.3f"|format(candidate.read_support.coverage_integrity) }}
+            {% else %}
+              <span class="unavailable">—</span>
+            {% endif %}
+          </td>
+
+          <td>
+            {% if candidate.orf.score is not none %}
+              {{ "%.3f"|format(candidate.orf.score) }}
+            {% else %}
+              <span class="unavailable">—</span>
+            {% endif %}
+          </td>
+
+        </tr>
       {% endfor %}
+
       </tbody>
     </table>
+
     </div>
   </section>
 
-  <section class="card"><h2>Download selected sequences</h2><div class="download-panel">{% for seq in sequences %}<label><input type="checkbox" class="seq-check" value="{{ seq.id }}" checked> {{ seq.id }}</label>{% endfor %}<button onclick="downloadSelected()">Download FASTA</button><button class="secondary" onclick="clearSelection()">Clear highlight</button></div></section>
 
-  <section class="card"><h2>Sequence browser</h2>{% for seq in sequences %}<details class="seq" data-sequence-id="{{ seq.id }}"><summary><strong>{{ seq.id }}</strong> — {{ seq.type }}, {{ seq.length }} bp</summary><p><button onclick="copySequence('{{ seq.id }}')">Copy sequence</button><button onclick="downloadOne('{{ seq.id }}')">Download FASTA</button></p><pre>{{ seq.sequence }}</pre></details>{% endfor %}</section>
+
+  <aside id="evidence-navigation" class="section-nav evidence-nav">
+    <h2>Evidence</h2>
+    <a href="#structural-integrity-panel">Structural integrity</a>
+    <a href="#reference-compatibility-panel">Reference compatibility</a>
+    <a href="#read-evidence-panel">Read evidence</a>
+    <a href="#orf-structural-evidence-panel">ORF structural evidence</a>
+  </aside>
+
+  <section id="structural-integrity-panel" class="card">
+    <h2>Structural integrity</h2>
+    <p class="muted">Reference-relative structural evidence from MegaBLAST. The score excludes nucleotide identity and combines coverage agreement, continuity, orientation consistency and HSP ordering.</p>
+    {% for candidate in view.candidates %}
+      <div
+        class="candidate-detail{% if candidate.recommended %} active{% endif %}"
+        data-sequence-id="{{ candidate.candidate_id }}"
+      >
+        <h3>{{ candidate.candidate_id }}</h3>
+        {% if candidate.structural_integrity is not none %}
+          <p><strong>{{ candidate.structural_status|replace("_", " ")|title }}</strong> relative to {{ candidate.structural_reference_id }}</p>
+          <div class="mini-grid">
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.structural_integrity) }}</strong><span>Structural integrity</span></div>
+            <div class="mini"><strong>{{ "%.1f%%"|format(candidate.candidate_coverage * 100) }}</strong><span>Candidate coverage</span></div>
+            <div class="mini"><strong>{{ "%.1f%%"|format(candidate.reference_coverage * 100) }}</strong><span>Reference coverage</span></div>
+            <div class="mini"><strong>{{ candidate.block_count }}</strong><span>MegaBLAST blocks</span></div>
+            <div class="mini"><strong>{{ "%.1f%%"|format(candidate.longest_block_fraction * 100) }}</strong><span>Longest block</span></div>
+            <div class="mini"><strong>{{ candidate.largest_candidate_gap }} nt</strong><span>Largest candidate gap</span></div>
+            <div class="mini"><strong>{{ candidate.largest_reference_gap }} nt</strong><span>Largest reference gap</span></div>
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.structural_continuity) }}</strong><span>Continuity</span></div>
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.orientation_consistency) }}</strong><span>Orientation consistency</span></div>
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.order_consistency) }}</strong><span>HSP order consistency</span></div>
+          </div>
+          <details class="evidence-summary-row explanatory-details">
+            <summary>How the score is calculated</summary>
+            <div class="evidence-detail">
+              <p><code>sqrt(candidate coverage × reference coverage) × continuity × orientation consistency × order consistency</code></p>
+              <p class="muted">Nucleotide percentage identity is intentionally excluded so structurally coherent divergent lineages are not penalised.</p>
+            </div>
+          </details>
+        {% else %}
+          <p class="muted">No closest-reference MegaBLAST alignment was available for this candidate.</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section id="reference-compatibility-panel" class="card">
+    <h2>Reference compatibility</h2>
+    <p class="muted">Expectation-based evidence from the closest reference. This channel measures whether candidate block order, orientation, spacing and representation are compatible with the expected genome structure. Nucleotide identity is excluded, and disagreement is a review signal rather than proof of misassembly.</p>
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail{% if candidate.recommended %} active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+        <h3>{{ candidate.candidate_id }}</h3>
+        {% if candidate.reference_compatibility is not none %}
+          <p><strong>{{ candidate.reference_compatibility_status|replace("_", " ")|title }}</strong></p>
+          <div class="mini-grid">
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.reference_compatibility) }}</strong><span>Reference compatibility</span></div>
+            <div class="mini"><strong>{{ candidate.unsupported_internal_candidate_bases }} nt</strong><span>Unsupported internal candidate sequence</span></div>
+            <div class="mini"><strong>{{ candidate.missing_internal_reference_bases }} nt</strong><span>Missing expected internal reference sequence</span></div>
+            <div class="mini"><strong>{{ candidate.duplicated_reference_bases }} nt</strong><span>Repeated reference mapping</span></div>
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.expected_reference_completeness) }}</strong><span>Expected reference completeness</span></div>
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.reference_block_order_compatibility) }}</strong><span>Block-order compatibility</span></div>
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.reference_orientation_compatibility) }}</strong><span>Orientation compatibility</span></div>
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.duplication_compatibility) }}</strong><span>Duplication compatibility</span></div>
+          </div>
+          <details class="evidence-summary-row explanatory-details">
+            <summary>How this differs from structural integrity</summary>
+            <div class="evidence-detail">
+              <p><strong>Structural integrity</strong> summarises the current candidate-to-reference alignment coherence. <strong>Reference compatibility</strong> asks whether the organisation matches the closest-reference expectation.</p>
+              <p class="muted">A well-supported, internally coherent candidate can therefore have low reference compatibility because of genuine structural variation or because the selected reference is not representative.</p>
+            </div>
+          </details>
+        {% else %}
+          <p class="muted">No closest-reference MegaBLAST alignment was available for this candidate.</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section id="read-evidence-panel" class="card">
+    <h2>Read evidence</h2>
+    {% for candidate in view.candidates %}
+      <div
+        class="candidate-detail{% if candidate.recommended %} active{% endif %}"
+        data-sequence-id="{{ candidate.candidate_id }}"
+      >
+        {% if candidate.read_support.available %}
+          <p class="muted">Primary region: {{ candidate.read_support.region_source|replace("_", " ") }}; contig coordinates {{ candidate.read_support.region_start + 1 }}–{{ candidate.read_support.region_end }} ({{ candidate.read_support.region_length }} nt).</p>
+          <div class="evidence-list">
+            <details class="evidence-summary-row" open>
+              <summary><span class="evidence-label">Coverage sufficiency</span><span class="evidence-score">{{ "%.3f"|format(candidate.read_support.coverage_sufficiency) }}</span></summary>
+              <div class="evidence-detail">
+                <div class="evidence-detail-item">Median ORF depth <strong>{{ "%.1f"|format(candidate.read_support.median_depth) }}×</strong></div>
+                <div class="evidence-detail-item">ORF breadth ≥ minimum depth <strong>{{ "%.1f%%"|format(candidate.read_support.covered_fraction * 100) }}</strong></div>
+                <div class="evidence-detail-item">ORF breadth with any reads <strong>{{ "%.1f%%"|format(candidate.read_support.any_covered_fraction * 100) }}</strong></div>
+                <div class="evidence-detail-item">Whole-contig breadth ≥ minimum depth <strong>{{ "%.1f%%"|format(candidate.read_support.whole_contig_covered_fraction * 100) }}</strong></div>
+              </div>
+            </details>
+            <details class="evidence-summary-row" open>
+              <summary><span class="evidence-label">Coverage integrity</span><span class="evidence-score">{{ "%.3f"|format(candidate.read_support.coverage_integrity) }}</span></summary>
+              <div class="evidence-detail">
+                <div class="evidence-detail-item">Uniformity <strong>{{ "%.3f"|format(candidate.read_support.uniformity) }}</strong></div>
+                <div class="evidence-detail-item">Longest low-depth interval <strong>{{ candidate.read_support.longest_low_depth_interval }} nt</strong></div>
+                <div class="evidence-detail-item">Internal low-depth interruptions <strong>{{ candidate.read_support.internal_low_depth_interruption_count }}</strong></div>
+                <div class="evidence-detail-item">5′ terminal support <strong>{{ "%.3f"|format(candidate.read_support.left_terminal_support) }}</strong></div>
+                <div class="evidence-detail-item">3′ terminal support <strong>{{ "%.3f"|format(candidate.read_support.right_terminal_support) }}</strong></div>
+              </div>
+            </details>
+          </div>
+        {% else %}
+          <p class="muted">No read-depth data were attached for this candidate.</p>
+        {% endif %}
+
+        {% if candidate.boundary_coverage %}
+          <h4>Coverage at reference-alignment boundaries</h4>
+          <p class="muted">Cross-evidence assessment of read depth across internal gaps between reference-supported regions. These classifications are descriptive and do not affect ranking.</p>
+          <div class="evidence-list">
+            {% for boundary in candidate.boundary_coverage %}
+              <details class="evidence-summary-row"{% if boundary.severity == "review" %} open{% endif %}>
+                <summary>
+                  <span class="evidence-label">{{ boundary.gap_start }}–{{ boundary.gap_end }} ({{ boundary.gap_length }} nt)</span>
+                  <span class="evidence-score">{{ boundary.classification|replace("_", " ")|title }}</span>
+                </summary>
+                <div class="evidence-detail">
+                  <p><strong>{{ boundary.summary }}</strong></p>
+                  <div class="evidence-detail-item">Median depth before gap <strong>{{ "%.1f"|format(boundary.left_median_depth) }}×</strong></div>
+                  <div class="evidence-detail-item">Median depth within gap <strong>{{ "%.1f"|format(boundary.gap_median_depth) }}×</strong></div>
+                  <div class="evidence-detail-item">Median depth after gap <strong>{{ "%.1f"|format(boundary.right_median_depth) }}×</strong></div>
+                  <div class="evidence-detail-item">Gap-to-flank depth ratio <strong>{{ "%.3f"|format(boundary.gap_to_baseline_ratio) if boundary.gap_to_baseline_ratio is not none else "—" }}</strong></div>
+                  <div class="evidence-detail-item">Uncovered bases in gap <strong>{{ "%.1f%%"|format(boundary.zero_fraction * 100) }}</strong></div>
+                </div>
+              </details>
+            {% endfor %}
+          </div>
+        {% elif candidate.read_support.available %}
+          <p class="muted">No internal reference-alignment gaps were available for cross-evidence assessment.</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section id="orf-structural-evidence-panel" class="card">
+    <h2>ORF structural evidence</h2>
+
+    {% for candidate in view.candidates %}
+      <div
+        class="candidate-detail{% if candidate.recommended %} active{% endif %}"
+        data-sequence-id="{{ candidate.candidate_id }}"
+      >
+        <h3>{{ candidate.candidate_id }}</h3>
+
+        {% if candidate.hypotheses %}
+          <div class="hypothesis-grid">
+            {% for hypothesis in candidate.hypotheses %}
+              <details class="hypothesis-item">
+                <summary>
+                  <span class="hypothesis-title">{{ hypothesis.title }}</span>
+                  <span class="hypothesis-badge confidence-{{ hypothesis.confidence }}">{{ hypothesis.confidence|upper }}</span>
+                  <span class="hypothesis-scope muted">Rule interpretation</span>
+                </summary>
+                <div class="hypothesis-detail">
+                  <p>{{ hypothesis.summary }}</p>
+                  <p class="hypothesis-meta">Rule: {{ hypothesis.rule_id }} · Source: {{ hypothesis.rule_source }}</p>
+                </div>
+              </details>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if candidate.convergences %}
+          <div class="convergence-panel{% if candidate.convergence_review_required %} convergence-strong{% endif %}">
+            <h4>Evidence convergence</h4>
+            {% for convergence in candidate.convergences %}
+              <div class="convergence-item">
+                <p><strong>AA {{ convergence.start }}–{{ convergence.end }} · {{ convergence.strength|replace('_', ' ')|title }}</strong></p>
+                <p>{{ convergence.summary }}</p>
+                <div class="convergence-meta">
+                  {% for source in convergence.sources %}
+                    <span class="convergence-chip">{{ source|replace('_', ' ')|title }}</span>
+                  {% endfor %}
+                </div>
+                <ul>
+                  {% for description in convergence.descriptions %}
+                    <li>{{ description }}</li>
+                  {% endfor %}
+                </ul>
+                <div class="convergence-actions">
+                  {% if candidate.orf.alignment_text %}
+                    <a href="#protein-alignment-{{ candidate.candidate_id|replace('|', '_')|replace('.', '_') }}">Inspect protein alignment</a>
+                  {% endif %}
+                  {% if candidate.coverage_plot %}
+                    <a href="#coverage-panel" onclick="selectCandidate('{{ candidate.candidate_id }}')">Inspect read coverage</a>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if not candidate.orf.available %}
+          <p class="unavailable">No ORF evidence is available.</p>
+        {% else %}
+          <div class="mini-grid">
+            <div class="mini"><strong>{{ "%.3f"|format(candidate.orf.score) if candidate.orf.score is not none else "—" }}</strong><span>ORF quality</span></div>
+            <div class="mini"><strong>{{ candidate.orf.protein_length }} aa</strong><span>Protein length</span></div>
+            <div class="mini"><strong>{{ candidate.orf.strand }} / frame {{ candidate.orf.frame }}</strong><span>Strand and frame</span></div>
+            <div class="mini"><strong>{{ candidate.orf.start }}–{{ candidate.orf.end }}</strong><span>Contig coordinates</span></div>
+            <div class="mini"><strong>{{ "Complete" if candidate.orf.complete else "Incomplete" }}</strong><span>ORF completeness</span></div>
+            <div class="mini"><strong>{{ candidate.orf.other_complete_orf_count }}</strong><span>Other complete ORFs</span></div>
+            <div class="mini"><strong>{{ candidate.orf.major_competing_orf_count }}</strong><span>Major competing ORFs</span></div>
+            <div class="mini"><strong>{{ candidate.orf.largest_competing_orf_length ~ " aa" if candidate.orf.largest_competing_orf_length else "—" }}</strong><span>Largest competing ORF</span></div>
+            <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.protein_identity * 100) if candidate.orf.protein_identity is not none else "—" }}</strong><span>Protein identity</span></div>
+            <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.reference_coverage * 100) if candidate.orf.reference_coverage is not none else "—" }}</strong><span>Reference coverage</span></div>
+            <div class="mini"><strong>{{ candidate.orf.internal_deletion_events if candidate.orf.internal_deletion_events is not none else "—" }}</strong><span>Internal deletion events</span></div>
+            <div class="mini"><strong>{{ candidate.orf.internal_insertion_events if candidate.orf.internal_insertion_events is not none else "—" }}</strong><span>Internal insertion events</span></div>
+            <div class="mini"><strong>{{ candidate.orf.largest_internal_gap ~ " aa" if candidate.orf.largest_internal_gap else "—" }}</strong><span>Largest internal indel</span></div>
+          </div>
+
+          {% if candidate.orf.reference_id %}
+            <p class="muted">Reference protein source: {{ candidate.orf.reference_id }}</p>
+          {% endif %}
+
+          {% if candidate.orf.relatedness.available %}
+            <h4>Protein relatedness</h4>
+            <p><strong>{{ candidate.orf.relatedness.summary }}</strong></p>
+            <p class="muted">Closest protein: {{ candidate.orf.relatedness.subject_id }} — {{ candidate.orf.relatedness.subject_title }}</p>
+            <a class="view-visualization-link" href="#protein-relatedness-panel" onclick="selectCandidate('{{ candidate.candidate_id }}')">View protein relatedness →</a>
+          {% elif candidate.orf.alignment_text %}
+            <a class="view-visualization-link" href="#protein-relatedness-panel" onclick="selectCandidate('{{ candidate.candidate_id }}')">View protein alignment →</a>
+          {% endif %}
+
+          {% if candidate.orf.anchored_available %}
+            <div class="subcard blastx-anchored-orf">
+              <h4>BLASTX-anchored coding sequence</h4>
+              <p class="muted">Extended in the DIAMOND strand and frame to plausible start and stop boundaries.</p>
+              <div class="metric-grid">
+                <div><span>Protein length</span><strong>{{ candidate.orf.anchored_protein_length }} aa</strong></div>
+                <div><span>Coordinates</span><strong>{{ candidate.orf.anchored_start }}–{{ candidate.orf.anchored_end }} nt</strong></div>
+                <div><span>Strand / frame</span><strong>{{ candidate.orf.anchored_strand }} / {{ candidate.orf.anchored_frame }}</strong></div>
+                <div><span>Start codon</span><strong>{{ "Present" if candidate.orf.anchored_has_start else "Not found" }}</strong></div>
+                <div><span>Stop codon</span><strong>{{ "Present" if candidate.orf.anchored_has_stop else "Not found" }}</strong></div>
+                <div><span>Matches selected ORF</span><strong>{{ "Yes" if candidate.orf.anchored_matches_selected else "No" }}</strong></div>
+              </div>
+              {% if not candidate.orf.anchored_matches_selected %}
+                <p class="warning-text">
+                  BLASTX-anchored and selected ORF boundaries differ.
+                  {% if candidate.orf.anchored_n_terminal_difference_aa is not none %}
+                    N-terminal difference: {{ "%+d"|format(candidate.orf.anchored_n_terminal_difference_aa) }} aa.
+                  {% endif %}
+                  {% if candidate.orf.anchored_c_terminal_difference_aa is not none %}
+                    C-terminal difference: {{ "%+d"|format(candidate.orf.anchored_c_terminal_difference_aa) }} aa.
+                  {% endif %}
+                </p>
+              {% endif %}
+              <div class="protein-actions">
+                <button type="button" data-protein-action="copy-anchored-protein" data-candidate-id="{{ candidate.candidate_id }}">Copy anchored protein</button>
+                <button type="button" data-protein-action="download-anchored-protein" data-candidate-id="{{ candidate.candidate_id }}">Download anchored protein</button>
+                <button type="button" data-protein-action="copy-anchored-cds" data-candidate-id="{{ candidate.candidate_id }}">Copy anchored CDS</button>
+                <button type="button" data-protein-action="download-anchored-cds" data-candidate-id="{{ candidate.candidate_id }}">Download anchored CDS</button>
+              </div>
+            </div>
+          {% endif %}
+
+          {% if candidate.orf.warnings %}
+            <h4>Review flags</h4>
+            <ul>
+              {% for warning in candidate.orf.warnings %}
+                <li>{{ warning }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p><span class="badge status-COMPLETE">No ORF structural warnings</span></p>
+          {% endif %}
+        {% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section id="protein-relatedness-panel" class="card">
+    <h2>Protein relatedness</h2>
+    <p class="muted">Compare the selected candidate's predicted protein with its closest protein reference and inspect residue-level differences.</p>
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail{% if candidate.recommended %} active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+        <h3>{{ candidate.candidate_id }}</h3>
+        {% if candidate.orf.relatedness.available %}
+          <p><strong>{{ candidate.orf.relatedness.summary }}</strong></p>
+          <div class="mini-grid">
+            <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.percent_identity) }}</strong><span>DIAMOND identity</span></div>
+            <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.subject_coverage * 100) }}</strong><span>Subject coverage</span></div>
+            <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.query_coverage * 100) }}</strong><span>Query coverage</span></div>
+            <div class="mini"><strong>{{ "%.1f%%"|format(candidate.orf.relatedness.top_hit_gene_agreement * 100) if candidate.orf.relatedness.top_hit_gene_agreement is not none else "—" }}</strong><span>Top-hit gene agreement</span></div>
+          </div>
+          <p class="muted">Closest protein: {{ candidate.orf.relatedness.subject_id }} — {{ candidate.orf.relatedness.subject_title }}</p>
+        {% endif %}
+        {% if candidate.orf.difference_summary %}
+          <h4>Protein structural interpretation</h4>
+          {% if candidate.orf.interpretation_summary %}<p><strong>{{ candidate.orf.interpretation_summary }}</strong></p>{% endif %}
+          <ul class="protein-difference-summary">{% for description in candidate.orf.difference_summary %}<li>{{ description }}</li>{% endfor %}</ul>
+          {% if candidate.orf.possible_frameshift_pattern %}<p class="warning-text">Possible frameshift pattern detected; inspect the alignment and read coverage.</p>{% endif %}
+        {% endif %}
+        {% if candidate.orf.alignment_text %}
+          <details id="protein-alignment-{{ candidate.candidate_id|replace('|', '_')|replace('.', '_') }}" class="alignment-viewer" open>
+            <summary>Protein alignment</summary>
+            <p class="muted">| identical residue · . substitution · blank gap</p>
+            <pre class="protein-alignment">{{ candidate.orf.alignment_text }}</pre>
+            <div class="protein-actions">
+              <button type="button" data-protein-action="copy-predicted" data-candidate-id="{{ candidate.candidate_id }}">Copy predicted protein</button>
+              <button type="button" data-protein-action="download-predicted" data-candidate-id="{{ candidate.candidate_id }}">Download predicted protein</button>
+              {% if candidate.orf.reference_protein %}<button type="button" data-protein-action="download-reference" data-candidate-id="{{ candidate.candidate_id }}">Download reference FASTA</button><button type="button" data-protein-action="download-both" data-candidate-id="{{ candidate.candidate_id }}">Download predicted + reference</button>{% endif %}
+              <button type="button" data-protein-action="copy-alignment" data-candidate-id="{{ candidate.candidate_id }}">Copy alignment</button>
+            </div>
+          </details>
+        {% elif candidate.orf.relatedness.available %}
+          <p class="muted">No residue-level pairwise alignment is available for this candidate.</p>
+        {% else %}
+          <p class="muted">No protein-relatedness visualization is available for this candidate.</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section id="coverage-panel" class="card coverage-panel">
+    <h2>Read coverage</h2>
+
+    <div id="coverage-placeholder" class="coverage-placeholder">
+      Select a candidate to view its coverage profile.
+    </div>
+
+    <div id="coverage-unavailable" class="coverage-placeholder" hidden>
+      No depth profile is available for this candidate.
+    </div>
+
+    <figure id="coverage-figure" hidden>
+      <img id="coverage-image" src="" alt="Candidate read coverage profile">
+      <figcaption id="coverage-caption"></figcaption>
+    </figure>
+  </section>
+
+  <section class="card"><h2>Download selected sequences</h2>
+  <div class="download-panel">{% for seq in sequences %}<label><input type="checkbox" class="seq-check" value="{{ seq.id }}" checked> {{ seq.id }}</label>{% endfor %}<button onclick="downloadSelected()">Download FASTA</button><button class="secondary" onclick="clearSelection()">Clear highlight</button></div>
+  </section>
+
+  <section class="card">
+      <h2>Selected candidate sequence</h2>
+
+      {% for seq in sequences %}
+        {% if seq.type == "candidate" %}
+        <div
+          id="candidate-detail-{{ seq.id|replace('|', '_')|replace('.', '_') }}"
+          class="candidate-detail{% if view.recommendation and seq.id == view.recommendation.candidate_id %} active{% endif %}"
+          data-sequence-id="{{ seq.id }}"
+        >
+          <h3>{{ seq.id }}</h3>
+
+          <p>
+            Candidate sequence, {{ seq.length }} bp
+          </p>
+
+          <p>
+            <button onclick="copySequence('{{ seq.id }}')">
+              Copy sequence
+            </button>
+
+            <button onclick="downloadOne('{{ seq.id }}')">
+              Download FASTA
+            </button>
+          </p>
+
+          <pre>{{ seq.sequence }}</pre>
+        </div>
+        {% endif %}
+      {% endfor %}
+  </section>
   <footer>Generated by SegPick {{ package_version }}</footer>
 </main>
 <script>
 const sequences={{ sequences_json|safe }};
+const proteinSequences={{ protein_sequences_json|safe }};
 function fastaText(items){return items.map(x=>`>${x.id}\n${(x.sequence.match(/.{1,80}/g)||[x.sequence]).join("\n")}`).join("\n")+"\n";}
 function triggerDownload(text,filename){const blob=new Blob([text],{type:"text/plain"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);}
 function downloadSelected(){const ids=[...document.querySelectorAll(".seq-check:checked")].map(x=>x.value);triggerDownload(fastaText(sequences.filter(x=>ids.includes(x.id))),"{{ gene.name }}_selected.fa");}
 function downloadOne(id){const item=sequences.find(x=>x.id===id);triggerDownload(fastaText([item]),`${id}.fa`);}
 function copySequence(id){navigator.clipboard.writeText(sequences.find(x=>x.id===id).sequence);}
+function wrapSequence(sequence,width=80){return (sequence.match(new RegExp(`.{1,${width}}`,"g"))||[sequence]).join("\n");}
+function proteinFasta(header,sequence){return `>${header}\n${wrapSequence(sequence)}\n`;}
+function safeFilename(value){return value.replace(/[^A-Za-z0-9._-]+/g,"_");}
+function proteinEntry(candidateId){return proteinSequences[candidateId]||null;}
+function handleProteinAction(button){
+  const candidateId=button.dataset.candidateId;
+  const action=button.dataset.proteinAction;
+  const item=proteinEntry(candidateId);
+  if(!item)return;
+  const predicted=proteinFasta(item.predicted_header,item.predicted_sequence);
+  const predictedCds=item.predicted_coding_sequence?proteinFasta(item.predicted_coding_header,item.predicted_coding_sequence):"";
+  const reference=item.reference_sequence?proteinFasta(item.reference_header,item.reference_sequence):"";
+  const anchoredProtein=item.anchored_protein_sequence?proteinFasta(item.anchored_protein_header,item.anchored_protein_sequence):"";
+  const anchoredCds=item.anchored_coding_sequence?proteinFasta(item.anchored_coding_header,item.anchored_coding_sequence):"";
+  if(action==="copy-predicted")navigator.clipboard.writeText(predicted);
+  if(action==="copy-predicted-cds"&&predictedCds)navigator.clipboard.writeText(predictedCds);
+  if(action==="copy-anchored-protein"&&anchoredProtein)navigator.clipboard.writeText(anchoredProtein);
+  if(action==="copy-anchored-cds"&&anchoredCds)navigator.clipboard.writeText(anchoredCds);
+  if(action==="copy-alignment")navigator.clipboard.writeText(item.alignment||"");
+  if(action==="download-predicted")triggerDownload(predicted,`${safeFilename(candidateId)}.predicted.faa`);
+  if(action==="download-predicted-cds"&&predictedCds)triggerDownload(predictedCds,`${safeFilename(candidateId)}.predicted.fna`);
+  if(action==="download-anchored-protein"&&anchoredProtein)triggerDownload(anchoredProtein,`${safeFilename(candidateId)}.blastx_anchored.faa`);
+  if(action==="download-anchored-cds"&&anchoredCds)triggerDownload(anchoredCds,`${safeFilename(candidateId)}.blastx_anchored.fna`);
+  if(action==="download-reference"&&reference)triggerDownload(reference,`${safeFilename(candidateId)}.reference.faa`);
+  if(action==="download-both"&&reference)triggerDownload(predicted+reference,`${safeFilename(candidateId)}.predicted_with_reference.faa`);
+}
 function traceSequence(trace){return trace.meta&&trace.meta.sequence_id?trace.meta.sequence_id:null;}
 function highlightPlot(divId,id){const div=document.getElementById(divId);if(!div||!div.data)return;const op=div.data.map(t=>!id||traceSequence(t)===id?1:0.16);const widths=div.data.map(t=>{const w=(t.line&&t.line.width)||4;return !id||traceSequence(t)===id?Math.max(w,6):Math.max(2,w*.55);});Plotly.restyle(div,{opacity:op,"line.width":widths});}
-function selectSequence(id){document.querySelectorAll("#evidence-table tbody tr").forEach(r=>r.classList.toggle("selected",r.dataset.sequenceId===id));document.querySelectorAll("details.seq").forEach(d=>{const yes=d.dataset.sequenceId===id;d.classList.toggle("selected",yes);if(yes){d.open=true;d.scrollIntoView({behavior:"smooth",block:"nearest"});}});highlightPlot("dotplot",id);highlightPlot("containment-plot",id);}
-function clearSelection(){document.querySelectorAll(".selected").forEach(x=>x.classList.remove("selected"));highlightPlot("dotplot",null);highlightPlot("containment-plot",null);}
-function bindPlotClick(id){const div=document.getElementById(id);if(div&&div.on)div.on("plotly_click",e=>{const sid=e.points&&e.points[0]&&e.points[0].customdata;if(sid)selectSequence(sid);});}
-window.addEventListener("load",()=>{bindPlotClick("dotplot");bindPlotClick("containment-plot");});
+function clearSelection(){DashboardState.selectedCandidate=null;document.querySelectorAll(".selected,.candidate-detail.active").forEach(x=>x.classList.remove("selected","active"));}
+function bindPlotClick(id){const div=document.getElementById(id);if(div&&div.on)div.on("plotly_click",e=>{const sid=e.points&&e.points[0]&&e.points[0].customdata;if(sid)selectCandidate(sid);});}
+const DashboardTabs = {
+  summary: new Set(["Recommended candidate"]),
+  comparison: new Set(["Evidence table"]),
+  evidence: new Set(["Structural integrity", "Reference compatibility", "Read evidence", "ORF structural evidence"]),
+  reasoning: new Set(["Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Biological interpretation"]),
+  plots: new Set(["Visualizations", "Candidate-to-candidate structural comparison", "Candidates aligned to shared nucleotide reference", "Candidate versus closest nucleotide reference", "Protein coordinate map", "Protein relatedness", "Read coverage"]),
+  downloads: new Set(["Download selected sequences", "Selected candidate sequence"]),
+  expert: new Set(["Rule explorer"])
+};
+
+function classifyDashboardSections() {
+  const assigned = new Set();
+  const visualNav = document.getElementById("visualization-navigation");
+  if (visualNav) {
+    visualNav.dataset.dashboardTab = "plots";
+    visualNav.classList.add("dashboard-panel");
+  }
+  const evidenceNav = document.getElementById("evidence-navigation");
+  if (evidenceNav) {
+    evidenceNav.dataset.dashboardTab = "evidence";
+    evidenceNav.classList.add("dashboard-panel");
+  }
+  document.querySelectorAll("main > section.card").forEach((section) => {
+    const heading = section.querySelector(":scope > h2");
+    if (!heading) return;
+    const title = heading.textContent.trim();
+    for (const [tab, headings] of Object.entries(DashboardTabs)) {
+      if (headings.has(title)) {
+        section.dataset.dashboardTab = tab;
+        section.classList.add("dashboard-panel");
+        if (tab === "plots") section.classList.add("plot-panel");
+        if (tab === "evidence") section.classList.add("section-panel", "evidence-panel");
+        assigned.add(section);
+        break;
+      }
+    }
+    if (!assigned.has(section)) {
+      section.dataset.dashboardTab = "expert";
+      section.classList.add("dashboard-panel");
+    }
+  });
+}
+
+function activateDashboardTab(tabName, updateHash=true) {
+  document.querySelectorAll(".dashboard-tab").forEach((button) => {
+    const active = button.dataset.tabTarget === tabName;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  let visibleCount = 0;
+  document.querySelectorAll(".dashboard-panel").forEach((section) => {
+    const visible = section.dataset.dashboardTab === tabName;
+    section.hidden = !visible;
+    if (visible) visibleCount += 1;
+  });
+  if (updateHash) history.replaceState(null, "", `#tab-${tabName}`);
+  window.dispatchEvent(new Event("resize"));
+}
+
+function tabForTarget(target) {
+  const panel = target && target.closest ? target.closest(".dashboard-panel") : null;
+  return panel ? panel.dataset.dashboardTab : null;
+}
+
+function initialiseDashboardTabs() {
+  classifyDashboardSections();
+  document.querySelectorAll(".dashboard-tab").forEach((button) => {
+    button.addEventListener("click", () => activateDashboardTab(button.dataset.tabTarget));
+  });
+  document.querySelectorAll("a[href^='#']").forEach((link) => {
+    link.addEventListener("click", () => {
+      const target = document.querySelector(link.getAttribute("href"));
+      const tab = tabForTarget(target);
+      if (tab) activateDashboardTab(tab);
+    });
+  });
+  const requested = location.hash.startsWith("#tab-") ? location.hash.slice(5) : "summary";
+  activateDashboardTab(DashboardTabs[requested] ? requested : "summary", false);
+}
+
+function initialiseSectionNavigation(navId, tabName) {
+  const links = [...document.querySelectorAll(`#${navId} a`)];
+  links.forEach((link) => {
+    link.addEventListener("click", () => {
+      activateDashboardTab(tabName);
+      links.forEach((item) => item.classList.toggle("active", item === link));
+    });
+  });
+  if (links.length) links[0].classList.add("active");
+}
+
+function updateCandidateSwitcher(candidateId) {
+  document.querySelectorAll(".candidate-switch").forEach((button) => {
+    const active = button.dataset.candidateId === candidateId;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+}
+
+window.addEventListener("load",()=>{
+  initialiseDashboardTabs();
+  initialiseSectionNavigation("visualization-navigation", "plots");
+  initialiseSectionNavigation("evidence-navigation", "evidence");
+  document.querySelectorAll(".candidate-switch").forEach((button) => {
+    button.addEventListener("click", () => selectCandidate(button.dataset.candidateId));
+  });
+  bindPlotClick("dotplot");
+  document.querySelectorAll("[data-protein-action]").forEach((button)=>{
+    button.addEventListener("click",()=>handleProteinAction(button));
+  });
+  const contigTarget = document.getElementById("contig-dotplot-target");
+  if (contigTarget) {
+    contigTarget.addEventListener("change", () =>
+      updateContigDotplot(DashboardState.selectedCandidate, contigTarget.value)
+    );
+  }
+});
 function sortTable(col){const table=document.getElementById("evidence-table"),tbody=table.tBodies[0],rows=[...tbody.rows],asc=table.dataset.sortCol!=col||table.dataset.sortDir!="asc";rows.sort((a,b)=>{const av=a.cells[col].innerText.trim().replace("%",""),bv=b.cells[col].innerText.trim().replace("%","");const an=Number(av),bn=Number(bv),cmp=(!Number.isNaN(an)&&!Number.isNaN(bn))?an-bn:av.localeCompare(bv);return asc?cmp:-cmp;});rows.forEach(r=>tbody.appendChild(r));table.dataset.sortCol=col;table.dataset.sortDir=asc?"asc":"desc";}
+
+
+const ContigDotplots = {{ contig_dotplots_json|safe }};
+
+function contigComparisonsFor(candidateId) {
+  return Object.values(ContigDotplots).filter((item) =>
+    item.query_id === candidateId || item.target_id === candidateId
+  );
+}
+
+function updateContigDotplotTargetOptions(candidateId) {
+  const select = document.getElementById("contig-dotplot-target");
+  const comparisons = contigComparisonsFor(candidateId);
+  select.innerHTML = "";
+  if (!candidateId || comparisons.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = comparisons.length === 0 && candidateId
+      ? "No other candidate available"
+      : "Select a candidate first";
+    select.appendChild(option);
+    select.disabled = true;
+    updateContigDotplot(candidateId, null);
+    return;
+  }
+  comparisons.forEach((item) => {
+    const other = item.query_id === candidateId ? item.target_id : item.query_id;
+    const option = document.createElement("option");
+    option.value = other;
+    option.textContent = other;
+    select.appendChild(option);
+  });
+  select.disabled = false;
+  updateContigDotplot(candidateId, select.value);
+}
+
+function updateContigDotplot(candidateId, targetId) {
+  const placeholder = document.getElementById("contig-dotplot-placeholder");
+  const unavailable = document.getElementById("contig-dotplot-unavailable");
+  const content = document.getElementById("contig-dotplot-content");
+  const summary = document.getElementById("contig-dotplot-summary");
+  const plot = document.getElementById("contig-dotplot");
+  placeholder.hidden = Boolean(candidateId && targetId);
+  if (!candidateId || !targetId) {
+    unavailable.hidden = true;
+    content.hidden = true;
+    if (plot && plot.data) Plotly.purge(plot);
+    return;
+  }
+  const item = Object.values(ContigDotplots).find((entry) =>
+    (entry.query_id === candidateId && entry.target_id === targetId) ||
+    (entry.query_id === targetId && entry.target_id === candidateId)
+  );
+  if (!item) {
+    unavailable.hidden = false;
+    unavailable.textContent = `No cached pairwise alignment is available for ${candidateId} and ${targetId}.`;
+    content.hidden = true;
+    if (plot && plot.data) Plotly.purge(plot);
+    return;
+  }
+  if (!item.figure || !item.figure.data || item.figure.data.length === 0) {
+    unavailable.hidden = false;
+    unavailable.textContent = `No MegaBLAST HSPs were detected for ${item.query_id} versus ${item.target_id}.`;
+    content.hidden = true;
+    if (plot && plot.data) Plotly.purge(plot);
+    return;
+  }
+  unavailable.hidden = true;
+  content.hidden = false;
+  const identity = item.identity_min === null
+    ? "—"
+    : `${item.identity_min.toFixed(1)}–${item.identity_max.toFixed(1)}%`;
+  summary.innerHTML = [
+    `<span><strong>Pair:</strong> ${item.query_id} vs ${item.target_id}</span>`,
+    `<span><strong>Blocks:</strong> ${item.block_count}</span>`,
+    `<span><strong>${item.query_id} covered:</strong> ${formatPercent(item.query_coverage)}</span>`,
+    `<span><strong>${item.target_id} covered:</strong> ${formatPercent(item.target_coverage)}</span>`,
+    `<span><strong>Identity:</strong> ${identity}</span>`,
+    `<span><strong>Orientation:</strong> ${item.orientation}</span>`,
+    `<span><strong>Alignment:</strong> ${item.reused_existing ? "cached" : "new"}</span>`
+  ].join("");
+  Plotly.react(plot, item.figure.data, item.figure.layout, {responsive: true, displaylogo: false});
+}
+
+const ReferenceDotplots = {{ reference_dotplots_json|safe }};
+
+function formatPercent(value) {
+  return value === null || value === undefined ? "—" : `${(value * 100).toFixed(1)}%`;
+}
+
+function updateReferenceDotplot(candidateId) {
+  const item = ReferenceDotplots[candidateId];
+  const placeholder = document.getElementById("reference-dotplot-placeholder");
+  const unavailable = document.getElementById("reference-dotplot-unavailable");
+  const content = document.getElementById("reference-dotplot-content");
+  const summary = document.getElementById("reference-dotplot-summary");
+  const plot = document.getElementById("reference-dotplot");
+
+  placeholder.hidden = true;
+  if (!item) {
+    unavailable.hidden = false;
+    content.hidden = true;
+    if (plot && plot.data) Plotly.purge(plot);
+    summary.innerHTML = "";
+    return;
+  }
+
+  unavailable.hidden = false;
+  if (!item.figure || !item.figure.data || item.figure.data.length === 0) {
+    unavailable.textContent = `No MegaBLAST HSPs were detected for ${candidateId} versus ${item.reference_id}.`;
+    content.hidden = true;
+    if (plot && plot.data) Plotly.purge(plot);
+    summary.innerHTML = "";
+    return;
+  }
+
+  unavailable.hidden = true;
+  content.hidden = false;
+  const identity = item.identity_min === null
+    ? "—"
+    : `${item.identity_min.toFixed(1)}–${item.identity_max.toFixed(1)}%`;
+  summary.innerHTML = [
+    `<span><strong>Reference:</strong> ${item.reference_id}</span>`,
+    `<span><strong>Blocks:</strong> ${item.block_count}</span>`,
+    `<span><strong>Candidate covered:</strong> ${formatPercent(item.query_coverage)}</span>`,
+    `<span><strong>Reference covered:</strong> ${formatPercent(item.reference_coverage)}</span>`,
+    `<span><strong>Identity:</strong> ${identity}</span>`,
+    `<span><strong>Orientation:</strong> ${item.orientation}</span>`,
+    `<span><strong>Alignment:</strong> ${item.reused_existing ? "cached" : "new"}</span>`
+  ].join("");
+  Plotly.react(plot, item.figure.data, item.figure.layout, {responsive: true, displaylogo: false});
+}
+
+const DashboardState = {
+  selectedCandidate: {% if view.recommendation %}{{ view.recommendation.candidate_id|tojson }}{% else %}null{% endif %}
+};
+
+function selectCandidate(candidateId) {
+  DashboardState.selectedCandidate = candidateId;
+  updateCandidateSwitcher(candidateId);
+
+  document.querySelectorAll(".candidate-row").forEach((row) => {
+    row.classList.toggle("selected", row.dataset.sequenceId === candidateId);
+  });
+
+  document.querySelectorAll(".candidate-detail").forEach((detail) => {
+    detail.classList.toggle("active", detail.dataset.sequenceId === candidateId);
+  });
+
+  highlightPlot("dotplot", candidateId);
+  updateCoveragePanel(candidateId);
+  updateReferenceDotplot(candidateId);
+  updateContigDotplotTargetOptions(candidateId);
+}
+
+function updateCoveragePanel(candidateId) {
+  const row = [...document.querySelectorAll(".candidate-row")].find(
+    (candidateRow) => candidateRow.dataset.sequenceId === candidateId
+  );
+  const coveragePlot = row ? row.dataset.coveragePlot : "";
+  const placeholder = document.getElementById("coverage-placeholder");
+  const unavailable = document.getElementById("coverage-unavailable");
+  const figure = document.getElementById("coverage-figure");
+  const image = document.getElementById("coverage-image");
+  const caption = document.getElementById("coverage-caption");
+
+  placeholder.hidden = true;
+
+  if (!coveragePlot) {
+    figure.hidden = true;
+    unavailable.hidden = false;
+    image.removeAttribute("src");
+    caption.textContent = "";
+    return;
+  }
+
+  unavailable.hidden = true;
+  figure.hidden = false;
+  image.src = coveragePlot;
+  image.alt = `Read coverage profile for ${candidateId}`;
+  caption.textContent = candidateId;
+}
+
+if (DashboardState.selectedCandidate) {
+  selectCandidate(DashboardState.selectedCandidate);
+}
 </script>
 </body>
 </html>

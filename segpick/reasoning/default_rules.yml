@@ -1,0 +1,58 @@
+version: 1
+rules:
+  - id: possible_assembly_interruption
+    title: Possible assembly interruption
+    description: >
+      Suggests that protein and read-coverage abnormalities may reflect a
+      local interruption in the assembled coding sequence.
+    category: assembly
+    scope: candidate
+    severity: review
+    base_confidence: moderate
+    summary: >
+      Independent protein and read-coverage observations are consistent with
+      a possible local assembly interruption.
+    requires:
+      - observation: internal_deletion
+        source: protein_alignment
+      - observation: coverage_drop
+        source: read_coverage
+    supports:
+      - observation: partial_orf_start_boundary
+        source: orf_structure
+      - observation: partial_orf_end_boundary
+        source: orf_structure
+      - finding: Local evidence convergence
+    conflicts:
+      - finding: Complete protein recovered
+
+  - id: divergent_structurally_supported_protein
+    title: Possible divergent lineage
+    description: >
+      Identifies a broadly recovered and structurally intact protein whose
+      similarity to represented database proteins is comparatively low.
+    category: homology
+    scope: candidate
+    severity: informational
+    base_confidence: moderate
+    summary: >
+      Low protein relatedness is accompanied by a structurally intact
+      predicted protein, consistent with a potentially divergent lineage.
+    requires:
+      - finding: Divergent but structurally supported protein
+      - finding: Complete protein recovered
+
+  - id: possible_split_assembly
+    title: Possible split assembly
+    description: >
+      Indicates that complementary protein regions are distributed across
+      multiple contigs rather than recovered by one candidate.
+    category: assembly
+    scope: gene
+    severity: warning
+    base_confidence: high
+    summary: >
+      Complementary protein regions are distributed across multiple contigs,
+      so selecting one contig may not recover the complete gene.
+    requires:
+      - finding: Possible split assembly

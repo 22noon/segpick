@@ -1,0 +1,54 @@
+version: 1
+observations:
+  reference_structural_discontinuity:
+    display_name: Reference-alignment discontinuity
+    category: Structural evidence
+    description: The candidate-to-reference alignment contains an internal interruption or discontinuity.
+  coverage_drop_at_reference_boundary:
+    display_name: Coverage decrease at a structural boundary
+    category: Combined evidence
+    description: Read depth decreases close to a boundary in the reference-supported alignment.
+  internal_coverage_interruption:
+    display_name: Internal read-coverage interruption
+    category: Read evidence
+    description: An internal region of the biologically relevant sequence has unusually low or absent read coverage.
+  weak_orf_terminal_support:
+    display_name: Weak ORF terminal support
+    category: Read evidence
+    description: One or both ends of the predicted coding sequence have substantially weaker read support than its interior.
+  partial_orf_start_boundary:
+    display_name: Incomplete ORF start boundary
+    category: ORF evidence
+    description: The selected open reading frame does not have a confidently supported complete start boundary.
+  partial_orf_end_boundary:
+    display_name: Incomplete ORF end boundary
+    category: ORF evidence
+    description: The selected open reading frame does not have a confidently supported complete end boundary.
+  continuous_reference_structure:
+    display_name: Continuous reference-supported structure
+    category: Structural evidence
+    description: The candidate aligns across the expected reference structure without a major internal discontinuity.
+  reference_organisation_compatible:
+    display_name: Reference organisation is compatible
+    category: Reference compatibility
+    description: Candidate block order, orientation and represented span agree with the closest reference expectation.
+  unsupported_internal_candidate_region:
+    display_name: Internal candidate region lacks reference support
+    category: Reference compatibility
+    description: An internal sequence interval is present in the candidate but is not supported by the closest reference alignment.
+  missing_expected_reference_region:
+    display_name: Expected reference region is missing
+    category: Reference compatibility
+    description: An internal region expected from the closest reference is not represented continuously in the candidate.
+  reference_block_order_disrupted:
+    display_name: Reference block order is disrupted
+    category: Reference compatibility
+    description: Candidate alignment blocks occur in a different order from the closest reference.
+  unexpected_reference_orientation_switch:
+    display_name: Unexpected orientation change relative to reference
+    category: Reference compatibility
+    description: Candidate alignment blocks switch orientation relative to the closest reference expectation.
+  duplicated_reference_mapping:
+    display_name: Candidate repeatedly maps to the same reference region
+    category: Reference compatibility
+    description: Separate candidate regions align to overlapping parts of the closest reference, compatible with duplication or repeat-related misassembly.

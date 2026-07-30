@@ -1,7 +1,10 @@
 from dataclasses import dataclass, field
+
 from Bio.SeqRecord import SeqRecord
+
 from .alignment import Alignment
 from .containment import ContainmentMetrics
+
 
 @dataclass(slots=True)
 class ReferenceSequence:
@@ -11,8 +14,13 @@ class ReferenceSequence:
     containment: ContainmentMetrics = field(default_factory=ContainmentMetrics)
 
     @property
-    def description(self): return self.record.description
+    def description(self):
+        return self.record.description
+
     @property
-    def sequence(self): return str(self.record.seq)
+    def sequence(self):
+        return str(self.record.seq)
+
     @property
-    def length(self): return len(self.record.seq)
+    def length(self):
+        return len(self.record.seq)

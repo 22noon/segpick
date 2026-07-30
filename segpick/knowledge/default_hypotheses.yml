@@ -1,0 +1,111 @@
+version: 1
+hypotheses:
+  - id: assembly_breakpoint
+    title: Possible assembly breakpoint
+    category: assembly
+    scope: candidate
+    severity: warning
+    base_confidence: moderate
+    explanation: The candidate may contain an assembly breakpoint rather than a biologically continuous segment.
+    supported_by:
+      - coverage_supported_assembly_breakpoint
+    recommended_actions:
+      - Inspect reads spanning the suspected breakpoint.
+      - Compare the affected region with alternative candidate contigs.
+
+  - id: incomplete_segment
+    title: Incomplete genome segment
+    category: completeness
+    scope: candidate
+    severity: review
+    base_confidence: moderate
+    explanation: The assembled contig may represent only part of the biological genome segment.
+    supported_by:
+      - incomplete_terminal_assembly
+    contradicted_by:
+      - divergent_but_coherent_segment
+    recommended_actions:
+      - Search unplaced contigs and reads for terminal extension.
+      - Inspect support at the affected terminus.
+
+  - id: divergent_segment
+    title: Divergent but coherent genome segment
+    category: divergence
+    scope: candidate
+    severity: informational
+    base_confidence: moderate
+    explanation: The segment may be genuinely divergent while retaining coherent biological and structural support.
+    supported_by:
+      - divergent_but_coherent_segment
+    contradicted_by:
+      - coverage_supported_assembly_breakpoint
+    recommended_actions:
+      - Confirm the translated protein with profile-HMM or broader homology searches.
+
+  - id: fragmented_gene_assembly
+    title: Gene recovered across complementary fragments
+    category: assembly
+    scope: gene
+    severity: warning
+    base_confidence: high
+    explanation: No single candidate appears to recover the complete gene, but complementary candidates collectively support it.
+    supported_by:
+      - complementary_fragmented_gene
+    recommended_actions:
+      - Inspect the assembly graph or perform targeted reassembly.
+      - Review whether the fragments can be joined without unsupported sequence.
+
+  - id: reference_relative_structural_variation
+    title: Possible reference-relative structural variation
+    category: structural_variation
+    scope: candidate
+    severity: review
+    base_confidence: moderate
+    explanation: The candidate may contain a genuine insertion, deletion, inversion, rearrangement, or duplication relative to the closest available reference.
+    supported_by:
+      - coverage_supported_reference_insertion
+      - reference_relative_rearrangement
+      - reference_relative_inversion
+      - repeated_reference_region
+      - missing_internal_reference_sequence
+    contradicted_by:
+      - possible_misassembled_internal_insertion
+    minimum_support: 1
+    recommended_actions:
+      - Validate the affected junctions using reads that span them.
+      - Compare the candidate with multiple phylogenetically close references.
+
+  - id: possible_reference_relative_misassembly
+    title: Possible reference-relative misassembly
+    category: assembly
+    scope: candidate
+    severity: warning
+    base_confidence: moderate
+    explanation: A departure from expected reference structure is accompanied by evidence that the affected sequence or junction is not fully supported by reads.
+    supported_by:
+      - possible_misassembled_internal_insertion
+      - coverage_supported_assembly_breakpoint
+    contradicted_by:
+      - coverage_supported_reference_insertion
+    minimum_support: 1
+    recommended_actions:
+      - Inspect split reads, paired-read consistency, and local assembly graph paths.
+      - Compare alternative candidate contigs before accepting the affected structure.
+
+  - id: closest_reference_may_be_unrepresentative
+    title: Closest reference may not represent the isolate structure
+    category: reference_context
+    scope: candidate
+    severity: informational
+    base_confidence: moderate
+    explanation: The candidate differs from the closest reference but retains read support, so the reference may not represent the isolate's true structure.
+    supported_by:
+      - coverage_supported_reference_insertion
+      - divergent_but_coherent_segment
+    contradicted_by:
+      - possible_misassembled_internal_insertion
+    minimum_support: 1
+    recommended_actions:
+      - Compare against a broader panel of related segment references.
+      - Treat reference-relative differences as provisional biological variation until junctions are validated.
+

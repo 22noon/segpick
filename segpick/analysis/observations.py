@@ -1,0 +1,705 @@
+from __future__ import annotations
+
+from statistics import median
+
+from segpick.models import (
+    CandidateContig,
+    EvidenceObservation,
+    ObservationInterval,
+    ObservationSource,
+    ORFAlignmentMetrics,
+    Sample,
+)
+
+
+def _coordinate_system(metrics: ORFAlignmentMetrics) -> str:
+    return f"reference_protein:{metrics.reference_id}"
+
+
+def _terminal_observations(
+    metrics: ORFAlignmentMetrics,
+) -> list[ObservationInterval]:
+    observations: list[ObservationInterval] = []
+    coordinate_system = _coordinate_system(metrics)
+
+    if metrics.n_terminal_missing:
+        observations.append(
+            ObservationInterval(
+                coordinate_system=coordinate_system,
+                start=1,
+                end=metrics.n_terminal_missing,
+                observation_type="n_terminal_truncation",
+                source="protein_alignment",
+                description=(
+                    "Predicted protein lacks "
+                    f"{metrics.n_terminal_missing} N-terminal reference residues."
+                ),
+                attributes={"missing_residues": metrics.n_terminal_missing},
+            )
+        )
+
+    if metrics.c_terminal_missing:
+        start = metrics.reference_protein_length - metrics.c_terminal_missing + 1
+        observations.append(
+            ObservationInterval(
+                coordinate_system=coordinate_system,
+                start=start,
+                end=metrics.reference_protein_length,
+                observation_type="c_terminal_truncation",
+                source="protein_alignment",
+                description=(
+                    "Predicted protein lacks "
+                    f"{metrics.c_terminal_missing} C-terminal reference residues."
+                ),
+                attributes={"missing_residues": metrics.c_terminal_missing},
+            )
+        )
+
+    return observations
+
+
+def _internal_indel_observations(
+    metrics: ORFAlignmentMetrics,
+) -> list[ObservationInterval]:
+    observations: list[ObservationInterval] = []
+    coordinate_system = _coordinate_system(metrics)
+    aligned_candidate = metrics.aligned_candidate
+    aligned_reference = metrics.aligned_reference
+
+    if not aligned_candidate or not aligned_reference:
+        return observations
+
+    reference_position = 0
+    index = 0
+    alignment_length = min(len(aligned_candidate), len(aligned_reference))
+
+    while index < alignment_length:
+        candidate_residue = aligned_candidate[index]
+        reference_residue = aligned_reference[index]
+
+        if reference_residue != "-":
+            reference_position += 1
+
+        if candidate_residue == "-" and reference_residue != "-":
+            start = reference_position
+            deleted = 1
+            index += 1
+            while index < alignment_length:
+                candidate_residue = aligned_candidate[index]
+                reference_residue = aligned_reference[index]
+                if candidate_residue != "-" or reference_residue == "-":
+                    break
+                reference_position += 1
+                deleted += 1
+                index += 1
+            end = start + deleted - 1
+            observations.append(
+                ObservationInterval(
+                    coordinate_system=coordinate_system,
+                    start=start,
+                    end=end,
+                    observation_type="internal_deletion",
+                    source="protein_alignment",
+                    description=(
+                        f"Predicted protein lacks {deleted} reference residues "
+                        f"at positions {start}-{end}."
+                    ),
+                    attributes={"deleted_residues": deleted},
+                )
+            )
+            continue
+
+        if reference_residue == "-" and candidate_residue != "-":
+            inserted = 1
+            index += 1
+            while index < alignment_length:
+                candidate_residue = aligned_candidate[index]
+                reference_residue = aligned_reference[index]
+                if reference_residue != "-" or candidate_residue == "-":
+                    break
+                inserted += 1
+                index += 1
+
+            anchor = max(reference_position, 1)
+            observations.append(
+                ObservationInterval(
+                    coordinate_system=coordinate_system,
+                    start=anchor,
+                    end=anchor,
+                    observation_type="internal_insertion",
+                    source="protein_alignment",
+                    description=(
+                        f"Predicted protein contains {inserted} inserted residues "
+                        f"after reference position {anchor}."
+                    ),
+                    attributes={"inserted_residues": inserted},
+                )
+            )
+            continue
+
+        index += 1
+
+    return observations
+
+
+def protein_alignment_observations(
+    metrics: ORFAlignmentMetrics,
+) -> tuple[ObservationInterval, ...]:
+    """Convert protein-alignment differences into reference-protein intervals."""
+
+    observations = _terminal_observations(metrics)
+    observations.extend(_internal_indel_observations(metrics))
+    return tuple(observations)
+
+
+
+
+def _candidate_to_reference_map(
+    metrics: ORFAlignmentMetrics,
+) -> dict[int, int]:
+    """Map 1-based candidate amino-acid positions to reference positions."""
+
+    mapping: dict[int, int] = {}
+    candidate_position = 0
+    reference_position = 0
+
+    for candidate_residue, reference_residue in zip(
+        metrics.aligned_candidate,
+        metrics.aligned_reference,
+        strict=False,
+    ):
+        if candidate_residue != "-":
+            candidate_position += 1
+        if reference_residue != "-":
+            reference_position += 1
+        if candidate_residue != "-" and reference_residue != "-":
+            mapping[candidate_position] = reference_position
+
+    return mapping
+
+
+def _candidate_aa_position(candidate: CandidateContig, nt_position: int) -> int:
+    """Return the 1-based amino-acid position containing a nucleotide."""
+
+    orf_metrics = candidate.analysis.orf
+    if orf_metrics is None or orf_metrics.best_orf is None:
+        raise ValueError("Candidate has no selected ORF")
+
+    orf = orf_metrics.best_orf
+    zero_based_position = nt_position - 1
+
+    if orf.strand == "+":
+        return ((zero_based_position - orf.start) // 3) + 1
+
+    return ((orf.end - 1 - zero_based_position) // 3) + 1
+
+
+def _low_coverage_runs(
+    candidate: CandidateContig,
+    *,
+    minimum_depth: int,
+    relative_fraction: float,
+    minimum_run_bases: int,
+) -> list[tuple[int, int, list[int]]]:
+    orf_metrics = candidate.analysis.orf
+    if orf_metrics is None or orf_metrics.best_orf is None:
+        return []
+
+    depths = candidate.analysis.depth_profile
+    if not depths:
+        return []
+
+    orf = orf_metrics.best_orf
+    positions = list(range(orf.start + 1, orf.end + 1))
+    orf_depths = [depths.get(position, 0) for position in positions]
+    if not orf_depths:
+        return []
+
+    median_depth = float(median(orf_depths))
+    threshold = min(float(minimum_depth), median_depth * relative_fraction)
+    if threshold <= 0:
+        return []
+
+    runs: list[tuple[int, int, list[int]]] = []
+    run_start: int | None = None
+    run_depths: list[int] = []
+
+    for position, depth in zip(positions, orf_depths, strict=True):
+        if depth < threshold:
+            if run_start is None:
+                run_start = position
+            run_depths.append(depth)
+            continue
+
+        if run_start is not None:
+            run_end = position - 1
+            if run_end - run_start + 1 >= minimum_run_bases:
+                runs.append((run_start, run_end, run_depths))
+            run_start = None
+            run_depths = []
+
+    if run_start is not None:
+        run_end = positions[-1]
+        if run_end - run_start + 1 >= minimum_run_bases:
+            runs.append((run_start, run_end, run_depths))
+
+    return runs
+
+
+def coverage_observations(
+    candidate: CandidateContig,
+    *,
+    minimum_depth: int = 3,
+    relative_fraction: float = 0.25,
+    minimum_run_bases: int = 9,
+) -> tuple[ObservationInterval, ...]:
+    """Project sustained ORF coverage drops onto reference-protein coordinates."""
+
+    if minimum_depth < 1:
+        raise ValueError("minimum_depth must be at least 1")
+    if not 0 < relative_fraction <= 1:
+        raise ValueError("relative_fraction must be between 0 and 1")
+    if minimum_run_bases < 1:
+        raise ValueError("minimum_run_bases must be at least 1")
+
+    alignment = candidate.analysis.orf_alignment
+    if alignment is None or not alignment.aligned_candidate:
+        return ()
+
+    reference_map = _candidate_to_reference_map(alignment)
+    if not reference_map:
+        return ()
+
+    orf = candidate.analysis.orf.best_orf if candidate.analysis.orf else None
+    if orf is None:
+        return ()
+
+    positions = list(range(orf.start + 1, orf.end + 1))
+    orf_depths = [candidate.analysis.depth_profile.get(position, 0) for position in positions]
+    orf_median = float(median(orf_depths)) if orf_depths else 0.0
+    threshold = min(float(minimum_depth), orf_median * relative_fraction)
+    coordinate_system = _coordinate_system(alignment)
+    observations: list[ObservationInterval] = []
+
+    for nt_start, nt_end, run_depths in _low_coverage_runs(
+        candidate,
+        minimum_depth=minimum_depth,
+        relative_fraction=relative_fraction,
+        minimum_run_bases=minimum_run_bases,
+    ):
+        candidate_positions = {
+            _candidate_aa_position(candidate, position)
+            for position in range(nt_start, nt_end + 1)
+        }
+        reference_positions = [
+            reference_map[position]
+            for position in candidate_positions
+            if position in reference_map
+        ]
+        if not reference_positions:
+            continue
+
+        start = min(reference_positions)
+        end = max(reference_positions)
+        observations.append(
+            ObservationInterval(
+                coordinate_system=coordinate_system,
+                start=start,
+                end=end,
+                observation_type="coverage_drop",
+                source="read_coverage",
+                description=(
+                    "Sustained low read coverage overlaps reference-protein "
+                    f"positions {start}-{end}."
+                ),
+                attributes={
+                    "minimum_depth": min(run_depths),
+                    "orf_median_depth": orf_median,
+                    "coverage_threshold": threshold,
+                    "mean_depth_in_region": sum(run_depths) / len(run_depths),
+                    "nucleotide_length": nt_end - nt_start + 1,
+                    "contig_start": nt_start,
+                    "contig_end": nt_end,
+                },
+            )
+        )
+
+    return tuple(observations)
+
+
+
+def orf_structure_observations(
+    candidate: CandidateContig,
+) -> tuple[ObservationInterval, ...]:
+    """Project partial selected-ORF boundaries onto reference coordinates.
+
+    These observations describe where an incomplete selected ORF begins or
+    ends relative to the aligned reference protein. They do not diagnose the
+    cause of the incomplete boundary.
+    """
+
+    orf_metrics = candidate.analysis.orf
+    alignment = candidate.analysis.orf_alignment
+    selected = orf_metrics.best_orf if orf_metrics is not None else None
+    if selected is None or alignment is None or not alignment.aligned_candidate:
+        return ()
+
+    reference_map = _candidate_to_reference_map(alignment)
+    if not reference_map:
+        return ()
+
+    coordinate_system = _coordinate_system(alignment)
+    observations: list[ObservationInterval] = []
+
+    if not selected.has_start_codon:
+        first_reference_position = min(reference_map.values())
+        observations.append(
+            ObservationInterval(
+                coordinate_system=coordinate_system,
+                start=first_reference_position,
+                end=first_reference_position,
+                observation_type="partial_orf_start_boundary",
+                source="orf_structure",
+                description=(
+                    "Selected ORF lacks a confirmed start codon near "
+                    f"reference-protein position {first_reference_position}."
+                ),
+                attributes={
+                    "strand": selected.strand,
+                    "frame": selected.frame,
+                    "has_start_codon": False,
+                },
+            )
+        )
+
+    if not selected.has_stop_codon:
+        last_reference_position = max(reference_map.values())
+        boundary = min(
+            last_reference_position + 1,
+            alignment.reference_protein_length,
+        )
+        observations.append(
+            ObservationInterval(
+                coordinate_system=coordinate_system,
+                start=boundary,
+                end=boundary,
+                observation_type="partial_orf_end_boundary",
+                source="orf_structure",
+                description=(
+                    "Selected ORF lacks a confirmed stop codon near "
+                    f"reference-protein position {boundary}."
+                ),
+                attributes={
+                    "strand": selected.strand,
+                    "frame": selected.frame,
+                    "has_stop_codon": False,
+                },
+            )
+        )
+
+    return tuple(observations)
+
+
+def global_candidate_observations(
+    candidate: CandidateContig,
+) -> tuple[EvidenceObservation, ...]:
+    """Return non-spatial structural observations for one candidate."""
+
+    observations: list[EvidenceObservation] = []
+    orf = candidate.analysis.orf
+    if orf is not None:
+        if orf.major_competing_orf_count:
+            observations.append(
+                EvidenceObservation(
+                    observation_type="major_competing_orf",
+                    source=ObservationSource.ORF_STRUCTURE,
+                    description=(
+                        f"{orf.major_competing_orf_count} major competing complete "
+                        "ORF(s) were identified."
+                    ),
+                    severity="review",
+                    attributes={
+                        "count": orf.major_competing_orf_count,
+                        "largest_competing_orf_length": (
+                            orf.largest_competing_orf_length
+                        ),
+                    },
+                )
+            )
+        if not orf.selected_matches_longest:
+            observations.append(
+                EvidenceObservation(
+                    observation_type="selected_orf_differs_from_longest",
+                    source=ObservationSource.ORF_STRUCTURE,
+                    description=(
+                        "The protein-supported selected ORF differs from the "
+                        "longest discovered ORF."
+                    ),
+                    severity="informational",
+                    attributes={"selection_method": orf.selection_method},
+                )
+            )
+
+    structural = candidate.analysis.structural_integrity
+    if structural is not None:
+        if structural.status == "CONTINUOUS":
+            observations.append(EvidenceObservation(
+                observation_type="continuous_reference_structure",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description="Candidate aligns continuously and collinearly to its closest nucleotide reference.",
+                attributes=structural.to_dict(),
+            ))
+        elif structural.status in {"REVIEW", "DISRUPTED"}:
+            observations.append(EvidenceObservation(
+                observation_type="reference_structural_discontinuity",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description="Candidate-to-reference HSPs contain substantial structural discontinuity.",
+                severity="review",
+                attributes=structural.to_dict(),
+            ))
+        if structural.orientation_consistency < 0.8:
+            observations.append(EvidenceObservation(
+                observation_type="mixed_reference_orientation",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description="Candidate-to-reference HSPs have mixed orientation support.",
+                severity="review",
+                attributes={"orientation_consistency": structural.orientation_consistency},
+            ))
+        if structural.order_consistency < 0.8:
+            observations.append(EvidenceObservation(
+                observation_type="reference_order_disruption",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description="Candidate HSP order is inconsistent with reference collinearity.",
+                severity="review",
+                attributes={"order_consistency": structural.order_consistency},
+            ))
+
+    compatibility = candidate.analysis.reference_compatibility
+    if compatibility is not None:
+        attrs = compatibility.to_dict()
+        if compatibility.status == "REFERENCE_COMPATIBLE":
+            observations.append(EvidenceObservation(
+                observation_type="reference_organisation_compatible",
+                source=ObservationSource.REFERENCE_COMPATIBILITY,
+                description="Candidate organisation is compatible with the closest reference expectation.",
+                attributes=attrs,
+            ))
+        if compatibility.unsupported_internal_candidate_bases > 0:
+            observations.append(EvidenceObservation(
+                observation_type="unsupported_internal_candidate_region",
+                source=ObservationSource.REFERENCE_COMPATIBILITY,
+                description=f"An internal candidate interval of {compatibility.unsupported_internal_candidate_bases} nt lacks closest-reference support.",
+                severity="review",
+                attributes=attrs,
+            ))
+        if compatibility.missing_internal_reference_bases > 0:
+            observations.append(EvidenceObservation(
+                observation_type="missing_expected_reference_region",
+                source=ObservationSource.REFERENCE_COMPATIBILITY,
+                description=f"An expected internal reference interval of {compatibility.missing_internal_reference_bases} nt is not represented continuously.",
+                severity="review",
+                attributes=attrs,
+            ))
+        if compatibility.block_order_compatibility < 0.8:
+            observations.append(EvidenceObservation(
+                observation_type="reference_block_order_disrupted",
+                source=ObservationSource.REFERENCE_COMPATIBILITY,
+                description="Candidate alignment blocks occur in an order that differs from the closest reference.",
+                severity="review",
+                attributes=attrs,
+            ))
+        if compatibility.orientation_compatibility < 0.8:
+            observations.append(EvidenceObservation(
+                observation_type="unexpected_reference_orientation_switch",
+                source=ObservationSource.REFERENCE_COMPATIBILITY,
+                description="Candidate alignment blocks contain an unexpected orientation change relative to the closest reference.",
+                severity="review",
+                attributes=attrs,
+            ))
+        if compatibility.duplicated_reference_bases > 0:
+            observations.append(EvidenceObservation(
+                observation_type="duplicated_reference_mapping",
+                source=ObservationSource.REFERENCE_COMPATIBILITY,
+                description=f"Separate candidate regions map to {compatibility.duplicated_reference_bases} overlapping reference bases.",
+                severity="review",
+                attributes=attrs,
+            ))
+
+    read_metrics = candidate.analysis.read_support
+    if read_metrics is not None:
+        if read_metrics.coverage_sufficiency >= 0.95:
+            observations.append(EvidenceObservation(
+                observation_type="complete_orf_read_coverage",
+                source=ObservationSource.READ_COVERAGE,
+                description="At least 95% of the coding region meets the minimum read-depth threshold.",
+                attributes={"score": read_metrics.coverage_sufficiency, "region_source": read_metrics.region_source},
+            ))
+        elif read_metrics.coverage_sufficiency < 0.75:
+            observations.append(EvidenceObservation(
+                observation_type="insufficient_orf_read_coverage",
+                source=ObservationSource.READ_COVERAGE,
+                description="Less than 75% of the coding region meets the minimum read-depth threshold.",
+                severity="review",
+                attributes={"score": read_metrics.coverage_sufficiency, "region_source": read_metrics.region_source},
+            ))
+        if read_metrics.internal_low_depth_interruption_count:
+            observations.append(EvidenceObservation(
+                observation_type="internal_coverage_interruption",
+                source=ObservationSource.READ_COVERAGE,
+                description="One or more internal low-depth intervals interrupt the coding region.",
+                severity="review",
+                attributes={
+                    "count": read_metrics.internal_low_depth_interruption_count,
+                    "longest_low_depth_interval": read_metrics.longest_low_depth_interval,
+                },
+            ))
+        if min(read_metrics.left_terminal_support, read_metrics.right_terminal_support) < 0.5:
+            observations.append(EvidenceObservation(
+                observation_type="weak_orf_terminal_support",
+                source=ObservationSource.READ_COVERAGE,
+                description="At least one coding-region terminus has weak read-depth support.",
+                severity="review",
+                attributes={
+                    "left_terminal_support": read_metrics.left_terminal_support,
+                    "right_terminal_support": read_metrics.right_terminal_support,
+                },
+            ))
+        if read_metrics.uniformity < 0.5:
+            observations.append(EvidenceObservation(
+                observation_type="variable_orf_coverage",
+                source=ObservationSource.READ_COVERAGE,
+                description="Read depth is highly variable across the coding region.",
+                severity="review",
+                attributes={"uniformity": read_metrics.uniformity},
+            ))
+
+    for assessment in candidate.analysis.boundary_coverage:
+        if assessment.classification == "continuous_coverage":
+            observation_type = "coverage_continuous_across_reference_gap"
+        elif assessment.classification == "coverage_gap":
+            observation_type = "coverage_gap_at_reference_boundary"
+        elif assessment.classification in {"local_coverage_decrease", "asymmetric_flank_drop"}:
+            observation_type = "coverage_drop_at_reference_boundary"
+        elif assessment.classification == "low_coverage_both_sides":
+            observation_type = "low_coverage_around_reference_boundary"
+        else:
+            observation_type = "reference_boundary_coverage_unresolved"
+        observations.append(
+            EvidenceObservation(
+                observation_type=observation_type,
+                source=ObservationSource.CROSS_EVIDENCE,
+                description=assessment.summary,
+                coordinate_system=f"contig:{candidate.id}",
+                start=assessment.gap_start,
+                end=assessment.gap_end,
+                severity=assessment.severity,
+                attributes=assessment.to_dict(),
+            )
+        )
+
+    consistency = candidate.analysis.blastx_consistency
+    if consistency is not None:
+        if not consistency.strand_agrees:
+            observations.append(
+                EvidenceObservation(
+                    observation_type="blastx_strand_disagreement",
+                    source=ObservationSource.DIAMOND,
+                    description=(
+                        "The selected ORF strand disagrees with the DIAMOND "
+                        "translated alignment."
+                    ),
+                    severity="review",
+                )
+            )
+        if not consistency.frame_agrees:
+            observations.append(
+                EvidenceObservation(
+                    observation_type="blastx_frame_disagreement",
+                    source=ObservationSource.DIAMOND,
+                    description=(
+                        "The selected ORF frame disagrees with the DIAMOND "
+                        "translated alignment."
+                    ),
+                    severity="review",
+                )
+            )
+
+    return tuple(observations)
+
+
+def contig_comparison_observations(gene) -> dict[str, tuple[EvidenceObservation, ...]]:
+    """Describe candidate containment/overlap from pairwise MegaBLAST HSPs."""
+    by_candidate: dict[str, list[EvidenceObservation]] = {c.id: [] for c in gene.candidates}
+    for result in gene.contig_dotplots:
+        if result.query_coverage >= 0.95 and result.target_coverage < 0.90:
+            by_candidate[result.query_id].append(EvidenceObservation(
+                observation_type="candidate_contained_within_alternative",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description=f"{result.query_id} is largely contained within {result.target_id}.",
+                attributes={"other_candidate": result.target_id, "coverage": result.query_coverage},
+            ))
+            by_candidate[result.target_id].append(EvidenceObservation(
+                observation_type="candidate_extends_alternative",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description=f"{result.target_id} extends the aligned sequence of {result.query_id}.",
+                attributes={"other_candidate": result.query_id, "other_coverage": result.query_coverage},
+            ))
+        elif result.target_coverage >= 0.95 and result.query_coverage < 0.90:
+            by_candidate[result.target_id].append(EvidenceObservation(
+                observation_type="candidate_contained_within_alternative",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description=f"{result.target_id} is largely contained within {result.query_id}.",
+                attributes={"other_candidate": result.query_id, "coverage": result.target_coverage},
+            ))
+            by_candidate[result.query_id].append(EvidenceObservation(
+                observation_type="candidate_extends_alternative",
+                source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                description=f"{result.query_id} extends the aligned sequence of {result.target_id}.",
+                attributes={"other_candidate": result.target_id, "other_coverage": result.target_coverage},
+            ))
+        elif result.query_coverage >= 0.80 and result.target_coverage >= 0.80:
+            for current, other in ((result.query_id, result.target_id), (result.target_id, result.query_id)):
+                by_candidate[current].append(EvidenceObservation(
+                    observation_type="substantial_candidate_overlap",
+                    source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                    description=f"{current} overlaps substantially with {other}.",
+                    attributes={"other_candidate": other},
+                ))
+        elif result.available:
+            for current, other in ((result.query_id, result.target_id), (result.target_id, result.query_id)):
+                by_candidate[current].append(EvidenceObservation(
+                    observation_type="limited_candidate_overlap",
+                    source=ObservationSource.STRUCTURAL_ALIGNMENT,
+                    description=f"{current} has limited structural overlap with {other}.",
+                    severity="review",
+                    attributes={"other_candidate": other},
+                ))
+    return {key: tuple(value) for key, value in by_candidate.items()}
+
+
+def attach_observation_intervals(
+    sample: Sample,
+    *,
+    minimum_depth: int = 3,
+) -> None:
+    """Attach spatial and global evidence observations to candidates."""
+
+    for gene in sample.genes.values():
+        comparative = contig_comparison_observations(gene)
+        for candidate in gene.candidates:
+            alignment = candidate.analysis.orf_alignment
+            protein_observations = (
+                protein_alignment_observations(alignment)
+                if alignment is not None
+                else ()
+            )
+            candidate.analysis.observations = (
+                protein_observations
+                + coverage_observations(
+                    candidate,
+                    minimum_depth=minimum_depth,
+                )
+                + orf_structure_observations(candidate)
+                + global_candidate_observations(candidate)
+                + comparative.get(candidate.id, ())
+            )
