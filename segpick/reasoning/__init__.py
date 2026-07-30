@@ -22,3 +22,6 @@ __all__ = [
     "merge_rules",
     "split_rules_by_scope",
 ]
+
+from .graph import build_reasoning_graph
+__all__.append("build_reasoning_graph")

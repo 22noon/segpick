@@ -39,8 +39,10 @@ class EvidenceObservation:
     def __post_init__(self) -> None:
         try:
             source = ObservationSource(self.source)
-        except ValueError as exc:
-            raise ValueError(f"Unknown observation source: {self.source}") from exc
+        except ValueError:
+            source = str(self.source).strip()
+            if not source.startswith("plugin:"):
+                raise ValueError(f"Unknown observation source: {self.source}")
         object.__setattr__(self, "source", source)
 
         coordinate_fields = (self.coordinate_system, self.start, self.end)
@@ -64,13 +66,17 @@ class EvidenceObservation:
             return None
         return self.end - self.start + 1
 
+    @property
+    def source_name(self) -> str:
+        return self.source.value if isinstance(self.source, ObservationSource) else str(self.source)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "coordinate_system": self.coordinate_system,
             "start": self.start,
             "end": self.end,
             "observation_type": self.observation_type,
-            "source": self.source.value,
+            "source": self.source_name,
             "description": self.description,
             "severity": self.severity,
             "attributes": dict(self.attributes),

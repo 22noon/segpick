@@ -35,7 +35,7 @@ def _condition_provenance(condition, observations, findings):
         matches = tuple(
             item for item in observations
             if item.observation_type == condition.value
-            and (condition.source is None or item.source.value == condition.source)
+            and (condition.source is None or item.source_name == condition.source)
         )
         measurements = []
         regions = []
@@ -48,7 +48,7 @@ def _condition_provenance(condition, observations, findings):
                     "end": item.end,
                     "length": item.length,
                 })
-        source = condition.source or (matches[0].source.value if matches else None)
+        source = condition.source or (matches[0].source_name if matches else None)
         return ScenarioEvidenceProvenance(
             condition=condition.label,
             kind="observation",
