@@ -881,6 +881,15 @@
       .reasoning-step:not(:last-child)::after { content:"↓"; right:auto; left:50%; top:auto; bottom:-.75rem; transform:translateX(-50%); }
     }
 
+    .graph-status { display:inline-flex; align-items:center; gap:.35rem; font-weight:750; }
+    .graph-status.valid { color:#166534; }
+    .graph-status.invalid { color:#b91c1c; }
+    .graph-source-list { display:flex; flex-wrap:wrap; gap:.45rem; margin:.5rem 0; }
+    .graph-source { border:1px solid var(--line); border-radius:999px; padding:.25rem .55rem; background:#f8fafc; font-size:.82rem; }
+    .graph-source.plugin { background:#fff7ed; border-color:#fdba74; }
+    .graph-paths { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.82rem; }
+    .graph-json-preview { max-height:24rem; overflow:auto; white-space:pre; padding:.8rem; border:1px solid var(--line); border-radius:8px; background:#f8fafc; font-size:.78rem; }
+
 </style>
 </head>
 <body>
@@ -1125,6 +1134,43 @@
       <p><strong>No rule-based biological hypotheses were generated.</strong></p>
       <p class="muted">No current hypothesis rule matched the available observations and findings.</p>
     {% endif %}
+  </section>
+
+
+  <section id="reasoning-graph-inspector" class="card reasoning-graph-inspector">
+    <h2>Reasoning graph inspector</h2>
+    <p class="muted">Expert diagnostic view of the immutable V3 graph. It confirms which evidence sources contributed nodes and whether every provenance reference resolves.</p>
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail{% if candidate.recommended %} active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+        <h3>{{ candidate.candidate_id }}</h3>
+        {% if candidate.reasoning_graph.available %}
+          <p class="graph-status {% if candidate.reasoning_graph.valid %}valid{% else %}invalid{% endif %}">{% if candidate.reasoning_graph.valid %}✓ Valid graph{% else %}⚠ Invalid graph{% endif %}</p>
+          <p class="muted">{{ candidate.reasoning_graph.validation_message }}</p>
+          <div class="mini-grid">
+            <div class="mini"><strong>{{ candidate.reasoning_graph.measurement_count }}</strong><span>Measurements</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.observation_count }}</strong><span>Observations</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.interpretation_count }}</strong><span>Interpretations</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.hypothesis_count }}</strong><span>Hypotheses</span></div>
+          </div>
+          <h4>Built-in evidence sources</h4>
+          <div class="graph-source-list">{% for source in candidate.reasoning_graph.builtin_sources %}<span class="graph-source">{{ source }}</span>{% else %}<span class="muted">None recorded.</span>{% endfor %}</div>
+          <h4>Plugin evidence sources</h4>
+          <div class="graph-source-list">{% for source in candidate.reasoning_graph.plugin_sources %}<span class="graph-source plugin">{{ source }}</span>{% else %}<span class="muted">No plugin evidence contributed to this candidate.</span>{% endfor %}</div>
+          <details>
+            <summary><strong>Provenance paths</strong></summary>
+            {% if candidate.reasoning_graph.provenance_paths %}<ul class="graph-paths">{% for path in candidate.reasoning_graph.provenance_paths %}<li>{{ path }}</li>{% endfor %}</ul>{% else %}<p class="muted">No hypothesis provenance paths are currently present.</p>{% endif %}
+          </details>
+          <details>
+            <summary><strong>Graph JSON preview</strong></summary>
+            <pre class="graph-json-preview">{{ candidate.reasoning_graph.graph_json }}</pre>
+          </details>
+          <p><button type="button" data-graph-download data-candidate-id="{{ candidate.candidate_id }}">Download reasoning graph JSON</button></p>
+          <script type="application/json" id="reasoning-graph-json-{{ loop.index0 }}" data-graph-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.graph_json|safe }}</script>
+        {% else %}
+          <p class="muted">No V3 reasoning graph was generated for this candidate.</p>
+        {% endif %}
+      </div>
+    {% endfor %}
   </section>
 
   <section class="card rule-explorer">
@@ -2031,6 +2077,15 @@ function handleProteinAction(button){
   if(action==="download-reference"&&reference)triggerDownload(reference,`${safeFilename(candidateId)}.reference.faa`);
   if(action==="download-both"&&reference)triggerDownload(predicted+reference,`${safeFilename(candidateId)}.predicted_with_reference.faa`);
 }
+
+function downloadReasoningGraph(button){
+  const candidateId=button.dataset.candidateId;
+  const node=[...document.querySelectorAll("script[data-graph-candidate]")].find(x=>x.dataset.graphCandidate===candidateId);
+  if(!node)return;
+  triggerDownload(node.textContent,`${safeFilename(candidateId)}.reasoning_graph.json`,"application/json");
+}
+document.addEventListener("click",event=>{const button=event.target.closest("[data-graph-download]");if(button)downloadReasoningGraph(button);});
+
 function traceSequence(trace){return trace.meta&&trace.meta.sequence_id?trace.meta.sequence_id:null;}
 function highlightPlot(divId,id){const div=document.getElementById(divId);if(!div||!div.data)return;const op=div.data.map(t=>!id||traceSequence(t)===id?1:0.16);const widths=div.data.map(t=>{const w=(t.line&&t.line.width)||4;return !id||traceSequence(t)===id?Math.max(w,6):Math.max(2,w*.55);});Plotly.restyle(div,{opacity:op,"line.width":widths});}
 function clearSelection(){DashboardState.selectedCandidate=null;document.querySelectorAll(".selected,.candidate-detail.active").forEach(x=>x.classList.remove("selected","active"));}
@@ -2042,7 +2097,7 @@ const DashboardTabs = {
   reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Biological interpretation"]),
   plots: new Set(["Visualizations", "Candidate-to-candidate structural comparison", "Candidates aligned to shared nucleotide reference", "Candidate versus closest nucleotide reference", "Protein coordinate map", "Protein relatedness", "Read coverage"]),
   downloads: new Set(["Download selected sequences", "Selected candidate sequence"]),
-  expert: new Set(["Rule explorer"])
+  expert: new Set(["Reasoning graph inspector", "Rule explorer"])
 };
 
 function classifyDashboardSections() {

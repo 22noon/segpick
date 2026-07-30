@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 
 from segpick.analysis import analyse_protein_continuity, build_evidence_assessments
 from segpick.models import BiologicalHypothesis, BiologicalScenario, CandidateContig, Gene, RuleEvaluation, ScenarioHypothesis
@@ -432,6 +433,62 @@ class CrossEvidenceFindingView:
     confidence_method_version: str
     limitations: tuple[str, ...]
 
+
+
+@dataclass(frozen=True, slots=True)
+class ReasoningGraphInspectorView:
+    available: bool
+    valid: bool
+    validation_message: str
+    measurement_count: int
+    observation_count: int
+    interpretation_count: int
+    hypothesis_count: int
+    builtin_sources: tuple[str, ...]
+    plugin_sources: tuple[str, ...]
+    provenance_paths: tuple[str, ...]
+    graph_json: str
+
+
+def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> ReasoningGraphInspectorView:
+    graph = candidate.analysis.reasoning_graph
+    if graph is None:
+        return ReasoningGraphInspectorView(
+            available=False, valid=False, validation_message="Reasoning graph unavailable.",
+            measurement_count=0, observation_count=0, interpretation_count=0, hypothesis_count=0,
+            builtin_sources=(), plugin_sources=(), provenance_paths=(), graph_json="{}",
+        )
+    try:
+        graph.validate()
+        valid = True
+        message = "Graph validated: all referenced provenance nodes are present."
+    except ValueError as exc:
+        valid = False
+        message = str(exc)
+    sources = {item.channel for item in graph.measurements} | {item.source for item in graph.observations}
+    plugin_sources = tuple(sorted(value for value in sources if value.startswith("plugin:")))
+    builtin_sources = tuple(sorted(value for value in sources if not value.startswith("plugin:")))
+    observation_by_id = {item.id: item for item in graph.observations}
+    interpretation_by_id = {item.id: item for item in graph.interpretations}
+    paths = []
+    for hypothesis in graph.hypotheses:
+        for evidence_id in hypothesis.supporting_ids + hypothesis.conflicting_ids:
+            if evidence_id in interpretation_by_id:
+                interpretation = interpretation_by_id[evidence_id]
+                for observation_id in interpretation.observation_ids or ("(no observation link)",):
+                    paths.append(f"{observation_id} → {interpretation.id} → {hypothesis.id}")
+            elif evidence_id in observation_by_id:
+                paths.append(f"{evidence_id} → {hypothesis.id}")
+    return ReasoningGraphInspectorView(
+        available=True, valid=valid, validation_message=message,
+        measurement_count=len(graph.measurements), observation_count=len(graph.observations),
+        interpretation_count=len(graph.interpretations), hypothesis_count=len(graph.hypotheses),
+        builtin_sources=builtin_sources, plugin_sources=plugin_sources,
+        provenance_paths=tuple(paths),
+        graph_json=json.dumps(graph.to_dict(), indent=2, sort_keys=True) if valid else "{}",
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class CandidateView:
     candidate_id: str
@@ -471,6 +528,7 @@ class CandidateView:
     scenarios: tuple[ScenarioView, ...]
     scenario_hypotheses: tuple[ScenarioHypothesisView, ...]
     cross_evidence_findings: tuple[CrossEvidenceFindingView, ...]
+    reasoning_graph: ReasoningGraphInspectorView
 
 
 @dataclass(frozen=True, slots=True)
@@ -792,6 +850,7 @@ def build_gene_page_view(
                 )
                 for item in candidate.analysis.cross_evidence_findings
             ),
+            reasoning_graph=build_reasoning_graph_inspector_view(candidate),
         )
         for candidate in gene.candidates
     )

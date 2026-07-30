@@ -228,7 +228,8 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert 'comparison: new Set(["Evidence table"])' in html
     assert 'evidence: new Set(["Structural integrity", "Reference compatibility", "Read evidence", "ORF structural evidence"])' in html
     assert 'downloads: new Set(["Download selected sequences", "Selected candidate sequence"])' in html
-    assert 'expert: new Set(["Rule explorer"])' in html
+    assert 'expert: new Set(["Reasoning graph inspector", "Rule explorer"])' in html
+    assert 'id="reasoning-graph-inspector"' in html
     assert 'id="visualization-navigation"' in html
     assert 'id="evidence-navigation"' in html
     assert 'id="reasoning-navigation"' in html
