@@ -251,6 +251,8 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert 'href="#reference-dotplot-panel">Reference dot plot</a>' not in template_content
     assert '"%.2f"|format(view.recommendation.score)' in template_content
     assert 'display_measurement(measurement.value)' in template_content
+    assert '#tab-reasoning > .reasoning-panel { margin-left:236px;' in template_content
+    assert '\n    .reasoning-panel { margin-left:236px;' not in template_content
     assert '<h2>Protein relatedness</h2>' in html
     assert '.view-visualization-link' in html
     assert 'if (tab === "plots") section.classList.add("plot-panel")' in html

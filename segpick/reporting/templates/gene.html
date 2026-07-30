@@ -865,7 +865,7 @@
     .reasoning-nav h2 { margin: 0 0 .65rem; font-size: 1rem; }
     .reasoning-nav a { display:block; padding:.48rem .55rem; border-radius:8px; color:#334155; text-decoration:none; font-weight:650; font-size:.88rem; }
     .reasoning-nav a:hover, .reasoning-nav a.active { background:#dbeafe; color:#1d4ed8; }
-    .reasoning-panel { margin-left:236px; scroll-margin-top:6.5rem; }
+    #tab-reasoning > .reasoning-panel { margin-left:236px; scroll-margin-top:6.5rem; }
     .reasoning-path { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.6rem; align-items:stretch; }
     .reasoning-step { position:relative; border:1px solid var(--line); border-radius:10px; padding:.75rem; background:#f8fafc; }
     .reasoning-step:not(:last-child)::after { content:"→"; position:absolute; right:-.52rem; top:50%; transform:translateY(-50%); color:#64748b; font-weight:800; z-index:2; }
@@ -876,7 +876,7 @@
       .section-nav, .visualization-nav, .reasoning-nav { position: static; float: none; width: auto; margin-right: 0; display: flex; gap: .4rem; overflow-x: auto; }
       .section-nav h2, .visualization-nav h2, .reasoning-nav h2 { display: none; }
       .section-nav a, .visualization-nav a, .reasoning-nav a { flex: 0 0 auto; white-space: nowrap; }
-      .section-panel, .plot-panel, .reasoning-panel { margin-left: 0; }
+      .section-panel, .plot-panel, #tab-reasoning > .reasoning-panel { margin-left: 0; }
       .reasoning-path { grid-template-columns:1fr; }
       .reasoning-step:not(:last-child)::after { content:"↓"; right:auto; left:50%; top:auto; bottom:-.75rem; transform:translateX(-50%); }
     }
