@@ -229,6 +229,13 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert 'downloads: new Set(["Download selected sequences", "Selected candidate sequence"])' in html
     assert 'expert: new Set(["Rule explorer"])' in html
     assert 'id="visualization-navigation"' in html
+    assert 'id="evidence-navigation"' in html
+    assert 'href="#structural-integrity-panel"' in html
+    assert 'href="#reference-compatibility-panel"' in html
+    assert 'href="#read-evidence-panel"' in html
+    assert 'href="#orf-structural-evidence-panel"' in html
+    assert '.explanatory-details summary' in html
+    assert 'initialiseSectionNavigation("evidence-navigation", "evidence")' in html
     assert 'href="#protein-relatedness-panel"' in html
     assert '<h2>Protein relatedness</h2>' in html
     assert '.view-visualization-link' in html

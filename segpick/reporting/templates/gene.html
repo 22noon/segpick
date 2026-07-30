@@ -792,6 +792,38 @@
       .candidate-switcher { align-items: flex-start; flex-direction: column; }
     }
 
+    .section-nav {
+      position: sticky;
+      top: 5.4rem;
+      float: left;
+      width: 220px;
+      margin: 0 1rem 1rem 0;
+      padding: .85rem;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      z-index: 4;
+    }
+    .section-nav h2 { margin: 0 0 .65rem; font-size: 1rem; }
+    .section-nav a {
+      display: block;
+      padding: .48rem .55rem;
+      border-radius: 8px;
+      color: #334155;
+      text-decoration: none;
+      font-weight: 650;
+      font-size: .88rem;
+    }
+    .section-nav a:hover, .section-nav a.active { background: #dbeafe; color: #1d4ed8; }
+    .section-panel { margin-left: 236px; scroll-margin-top: 6.5rem; }
+    .section-panel::after { content: ""; display: table; clear: both; }
+    .explanatory-details { width: 100%; box-sizing: border-box; }
+    .explanatory-details summary {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
     .visualization-nav {
       position: sticky;
       top: 5.4rem;
@@ -819,10 +851,10 @@
     .plot-panel::after { content: ""; display: table; clear: both; }
     .view-visualization-link { display: inline-block; margin-top: .7rem; color: #2563eb; font-weight: 700; text-decoration: none; }
     @media (max-width: 900px) {
-      .visualization-nav { position: static; float: none; width: auto; margin-right: 0; display: flex; gap: .4rem; overflow-x: auto; }
-      .visualization-nav h2 { display: none; }
-      .visualization-nav a { flex: 0 0 auto; white-space: nowrap; }
-      .plot-panel { margin-left: 0; }
+      .section-nav, .visualization-nav { position: static; float: none; width: auto; margin-right: 0; display: flex; gap: .4rem; overflow-x: auto; }
+      .section-nav h2, .visualization-nav h2 { display: none; }
+      .section-nav a, .visualization-nav a { flex: 0 0 auto; white-space: nowrap; }
+      .section-panel, .plot-panel { margin-left: 0; }
     }
 
 </style>
@@ -1539,7 +1571,15 @@
 
 
 
-  <section class="card">
+  <aside id="evidence-navigation" class="section-nav evidence-nav">
+    <h2>Evidence</h2>
+    <a href="#structural-integrity-panel">Structural integrity</a>
+    <a href="#reference-compatibility-panel">Reference compatibility</a>
+    <a href="#read-evidence-panel">Read evidence</a>
+    <a href="#orf-structural-evidence-panel">ORF structural evidence</a>
+  </aside>
+
+  <section id="structural-integrity-panel" class="card">
     <h2>Structural integrity</h2>
     <p class="muted">Reference-relative structural evidence from MegaBLAST. The score excludes nucleotide identity and combines coverage agreement, continuity, orientation consistency and HSP ordering.</p>
     {% for candidate in view.candidates %}
@@ -1562,7 +1602,7 @@
             <div class="mini"><strong>{{ "%.3f"|format(candidate.orientation_consistency) }}</strong><span>Orientation consistency</span></div>
             <div class="mini"><strong>{{ "%.3f"|format(candidate.order_consistency) }}</strong><span>HSP order consistency</span></div>
           </div>
-          <details class="evidence-summary-row">
+          <details class="evidence-summary-row explanatory-details">
             <summary>How the score is calculated</summary>
             <div class="evidence-detail">
               <p><code>sqrt(candidate coverage × reference coverage) × continuity × orientation consistency × order consistency</code></p>
@@ -1576,7 +1616,7 @@
     {% endfor %}
   </section>
 
-  <section class="card">
+  <section id="reference-compatibility-panel" class="card">
     <h2>Reference compatibility</h2>
     <p class="muted">Expectation-based evidence from the closest reference. This channel measures whether candidate block order, orientation, spacing and representation are compatible with the expected genome structure. Nucleotide identity is excluded, and disagreement is a review signal rather than proof of misassembly.</p>
     {% for candidate in view.candidates %}
@@ -1594,7 +1634,7 @@
             <div class="mini"><strong>{{ "%.3f"|format(candidate.reference_orientation_compatibility) }}</strong><span>Orientation compatibility</span></div>
             <div class="mini"><strong>{{ "%.3f"|format(candidate.duplication_compatibility) }}</strong><span>Duplication compatibility</span></div>
           </div>
-          <details class="evidence-summary-row">
+          <details class="evidence-summary-row explanatory-details">
             <summary>How this differs from structural integrity</summary>
             <div class="evidence-detail">
               <p><strong>Structural integrity</strong> summarises the current candidate-to-reference alignment coherence. <strong>Reference compatibility</strong> asks whether the organisation matches the closest-reference expectation.</p>
@@ -1608,7 +1648,7 @@
     {% endfor %}
   </section>
 
-  <section class="card">
+  <section id="read-evidence-panel" class="card">
     <h2>Read evidence</h2>
     {% for candidate in view.candidates %}
       <div
@@ -1670,7 +1710,7 @@
     {% endfor %}
   </section>
 
-  <section class="card">
+  <section id="orf-structural-evidence-panel" class="card">
     <h2>ORF structural evidence</h2>
 
     {% for candidate in view.candidates %}
@@ -1959,6 +1999,11 @@ function classifyDashboardSections() {
     visualNav.dataset.dashboardTab = "plots";
     visualNav.classList.add("dashboard-panel");
   }
+  const evidenceNav = document.getElementById("evidence-navigation");
+  if (evidenceNav) {
+    evidenceNav.dataset.dashboardTab = "evidence";
+    evidenceNav.classList.add("dashboard-panel");
+  }
   document.querySelectorAll("main > section.card").forEach((section) => {
     const heading = section.querySelector(":scope > h2");
     if (!heading) return;
@@ -1968,6 +2013,7 @@ function classifyDashboardSections() {
         section.dataset.dashboardTab = tab;
         section.classList.add("dashboard-panel");
         if (tab === "plots") section.classList.add("plot-panel");
+        if (tab === "evidence") section.classList.add("section-panel", "evidence-panel");
         assigned.add(section);
         break;
       }
@@ -2016,11 +2062,11 @@ function initialiseDashboardTabs() {
   activateDashboardTab(DashboardTabs[requested] ? requested : "summary", false);
 }
 
-function initialiseVisualizationNavigation() {
-  const links = [...document.querySelectorAll("#visualization-navigation a")];
+function initialiseSectionNavigation(navId, tabName) {
+  const links = [...document.querySelectorAll(`#${navId} a`)];
   links.forEach((link) => {
     link.addEventListener("click", () => {
-      activateDashboardTab("plots");
+      activateDashboardTab(tabName);
       links.forEach((item) => item.classList.toggle("active", item === link));
     });
   });
@@ -2037,7 +2083,8 @@ function updateCandidateSwitcher(candidateId) {
 
 window.addEventListener("load",()=>{
   initialiseDashboardTabs();
-  initialiseVisualizationNavigation();
+  initialiseSectionNavigation("visualization-navigation", "plots");
+  initialiseSectionNavigation("evidence-navigation", "evidence");
   document.querySelectorAll(".candidate-switch").forEach((button) => {
     button.addEventListener("click", () => selectCandidate(button.dataset.candidateId));
   });
