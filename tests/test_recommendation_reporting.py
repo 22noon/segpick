@@ -228,6 +228,11 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert 'evidence: new Set(["Structural integrity", "Reference compatibility", "Read evidence", "ORF structural evidence"])' in html
     assert 'downloads: new Set(["Download selected sequences", "Selected candidate sequence"])' in html
     assert 'expert: new Set(["Rule explorer"])' in html
+    assert 'id="visualization-navigation"' in html
+    assert 'href="#protein-relatedness-panel"' in html
+    assert '<h2>Protein relatedness</h2>' in html
+    assert '.view-visualization-link' in html
+    assert 'if (tab === "plots") section.classList.add("plot-panel")' in html
     assert "Biological reasoning" in html
     assert 'class="candidate-switch active"' in html
     assert 'data-candidate-id="contig_a"' in html

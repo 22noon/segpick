@@ -792,6 +792,39 @@
       .candidate-switcher { align-items: flex-start; flex-direction: column; }
     }
 
+    .visualization-nav {
+      position: sticky;
+      top: 5.4rem;
+      float: left;
+      width: 220px;
+      margin: 0 1rem 1rem 0;
+      padding: .85rem;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      z-index: 4;
+    }
+    .visualization-nav h2 { margin: 0 0 .65rem; font-size: 1rem; }
+    .visualization-nav a {
+      display: block;
+      padding: .48rem .55rem;
+      border-radius: 8px;
+      color: #334155;
+      text-decoration: none;
+      font-weight: 650;
+      font-size: .88rem;
+    }
+    .visualization-nav a:hover, .visualization-nav a.active { background: #dbeafe; color: #1d4ed8; }
+    .plot-panel { margin-left: 236px; scroll-margin-top: 6.5rem; }
+    .plot-panel::after { content: ""; display: table; clear: both; }
+    .view-visualization-link { display: inline-block; margin-top: .7rem; color: #2563eb; font-weight: 700; text-decoration: none; }
+    @media (max-width: 900px) {
+      .visualization-nav { position: static; float: none; width: auto; margin-right: 0; display: flex; gap: .4rem; overflow-x: auto; }
+      .visualization-nav h2 { display: none; }
+      .visualization-nav a { flex: 0 0 auto; white-space: nowrap; }
+      .plot-panel { margin-left: 0; }
+    }
+
 </style>
 </head>
 <body>
@@ -1302,7 +1335,17 @@
 </section>
 {% endif %}
 
-  <section id="reference-dotplot-panel" class="card reference-dotplot-panel">
+  <aside id="visualization-navigation" class="visualization-nav">
+    <h2>Visualizations</h2>
+    <a href="#candidate-comparison-panel">Candidate comparison</a>
+    <a href="#shared-reference-panel">Shared reference</a>
+    <a href="#closest-reference-panel">Closest reference</a>
+    <a href="#protein-coordinate-panel">Protein coordinates</a>
+    <a href="#protein-relatedness-panel">Protein relatedness</a>
+    <a href="#coverage-panel">Read coverage</a>
+  </aside>
+
+  <section id="candidate-comparison-panel" class="card reference-dotplot-panel">
     <h2>Candidate-to-candidate structural comparison</h2>
     <p class="muted">MegaBLAST HSPs provide a granular view of containment, terminal differences, internal gaps, inversions and alternative assembly structure. The selected candidate is compared with another candidate from the same gene.</p>
     <div class="contig-dotplot-controls">
@@ -1326,7 +1369,7 @@
 
 
   {% if reference_overviews %}
-  <section class="card reference-overview-panel">
+  <section id="shared-reference-panel" class="card reference-overview-panel">
     <h2>Candidates aligned to shared nucleotide reference</h2>
     <p class="muted">Candidates sharing the same closest nucleotide reference are stacked in one compact view. Candidate colours distinguish sequences; line opacity reflects nucleotide identity. The recommended candidate is shown first.</p>
     {% for overview in reference_overviews %}
@@ -1339,7 +1382,7 @@
   </section>
   {% endif %}
 
-  <section class="card reference-dotplot-panel">
+  <section id="closest-reference-panel" class="card reference-dotplot-panel">
     <h2>Candidate versus closest nucleotide reference</h2>
     <p class="muted">MegaBLAST alignment blocks are drawn as diagonal segments. Upward slopes indicate forward orientation; downward slopes indicate reverse-complement alignment.</p>
     <div id="reference-dotplot-placeholder" class="reference-dotplot-placeholder">
@@ -1356,7 +1399,7 @@
 
 
   {% if view.protein_coordinates %}
-  <section class="card">
+  <section id="protein-coordinate-panel" class="card">
     <h2>Protein coordinate map</h2>
     <p class="muted">Each bar shows where a candidate's best DIAMOND alignment falls along its matched protein, normalised from 0% to 100% so homologous proteins of different lengths can be compared.</p>
     <div class="protein-coordinate-map">
@@ -1711,83 +1754,42 @@
           {% if candidate.orf.relatedness.available %}
             <h4>Protein relatedness</h4>
             <p><strong>{{ candidate.orf.relatedness.summary }}</strong></p>
-            <div class="mini-grid">
-              <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.percent_identity) }}</strong><span>DIAMOND identity</span></div>
-              <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.subject_coverage * 100) }}</strong><span>Subject coverage</span></div>
-              <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.query_coverage * 100) }}</strong><span>Query coverage</span></div>
-              <div class="mini"><strong>{{ "%.1f%%"|format(candidate.orf.relatedness.top_hit_gene_agreement * 100) if candidate.orf.relatedness.top_hit_gene_agreement is not none else "—" }}</strong><span>Top-hit gene agreement</span></div>
-            </div>
             <p class="muted">Closest protein: {{ candidate.orf.relatedness.subject_id }} — {{ candidate.orf.relatedness.subject_title }}</p>
+            <a class="view-visualization-link" href="#protein-relatedness-panel" onclick="selectCandidate('{{ candidate.candidate_id }}')">View protein relatedness →</a>
+          {% elif candidate.orf.alignment_text %}
+            <a class="view-visualization-link" href="#protein-relatedness-panel" onclick="selectCandidate('{{ candidate.candidate_id }}')">View protein alignment →</a>
           {% endif %}
 
-          {% if candidate.orf.difference_summary %}
-            <h4>Protein structural interpretation</h4>
-            {% if candidate.orf.interpretation_summary %}
-              <p><strong>{{ candidate.orf.interpretation_summary }}</strong></p>
-            {% endif %}
-            <ul class="protein-difference-summary">
-              {% for description in candidate.orf.difference_summary %}
-                <li>{{ description }}</li>
-              {% endfor %}
-            </ul>
-            {% if candidate.orf.possible_frameshift_pattern %}
-              <p class="warning-text">Possible frameshift pattern detected; inspect the alignment and read coverage.</p>
-            {% endif %}
-          {% endif %}
-
-          {% if candidate.orf.alignment_text or candidate.orf.anchored_available %}
-            <details id="protein-alignment-{{ candidate.candidate_id|replace('|', '_')|replace('.', '_') }}" class="alignment-viewer">
-              <summary>Show protein alignment</summary>
-              {% if candidate.orf.alignment_text %}
-                <p class="muted">| identical residue · . substitution · blank gap</p>
-                <pre class="protein-alignment">{{ candidate.orf.alignment_text }}</pre>
-              {% else %}
-                <p class="muted">No pairwise protein alignment is available; sequence export remains available.</p>
+          {% if candidate.orf.anchored_available %}
+            <div class="subcard blastx-anchored-orf">
+              <h4>BLASTX-anchored coding sequence</h4>
+              <p class="muted">Extended in the DIAMOND strand and frame to plausible start and stop boundaries.</p>
+              <div class="metric-grid">
+                <div><span>Protein length</span><strong>{{ candidate.orf.anchored_protein_length }} aa</strong></div>
+                <div><span>Coordinates</span><strong>{{ candidate.orf.anchored_start }}–{{ candidate.orf.anchored_end }} nt</strong></div>
+                <div><span>Strand / frame</span><strong>{{ candidate.orf.anchored_strand }} / {{ candidate.orf.anchored_frame }}</strong></div>
+                <div><span>Start codon</span><strong>{{ "Present" if candidate.orf.anchored_has_start else "Not found" }}</strong></div>
+                <div><span>Stop codon</span><strong>{{ "Present" if candidate.orf.anchored_has_stop else "Not found" }}</strong></div>
+                <div><span>Matches selected ORF</span><strong>{{ "Yes" if candidate.orf.anchored_matches_selected else "No" }}</strong></div>
+              </div>
+              {% if not candidate.orf.anchored_matches_selected %}
+                <p class="warning-text">
+                  BLASTX-anchored and selected ORF boundaries differ.
+                  {% if candidate.orf.anchored_n_terminal_difference_aa is not none %}
+                    N-terminal difference: {{ "%+d"|format(candidate.orf.anchored_n_terminal_difference_aa) }} aa.
+                  {% endif %}
+                  {% if candidate.orf.anchored_c_terminal_difference_aa is not none %}
+                    C-terminal difference: {{ "%+d"|format(candidate.orf.anchored_c_terminal_difference_aa) }} aa.
+                  {% endif %}
+                </p>
               {% endif %}
               <div class="protein-actions">
-                <button type="button" data-protein-action="copy-predicted" data-candidate-id="{{ candidate.candidate_id }}">Copy predicted protein</button>
-                <button type="button" data-protein-action="download-predicted" data-candidate-id="{{ candidate.candidate_id }}">Download predicted protein</button>
-                <button type="button" data-protein-action="copy-predicted-cds" data-candidate-id="{{ candidate.candidate_id }}">Copy predicted CDS</button>
-                <button type="button" data-protein-action="download-predicted-cds" data-candidate-id="{{ candidate.candidate_id }}">Download predicted CDS</button>
-                {% if candidate.orf.reference_protein %}
-                  <button type="button" data-protein-action="download-reference" data-candidate-id="{{ candidate.candidate_id }}">Download reference FASTA</button>
-                  <button type="button" data-protein-action="download-both" data-candidate-id="{{ candidate.candidate_id }}">Download predicted + reference</button>
-                {% endif %}
-                <button type="button" data-protein-action="copy-alignment" data-candidate-id="{{ candidate.candidate_id }}">Copy alignment</button>
+                <button type="button" data-protein-action="copy-anchored-protein" data-candidate-id="{{ candidate.candidate_id }}">Copy anchored protein</button>
+                <button type="button" data-protein-action="download-anchored-protein" data-candidate-id="{{ candidate.candidate_id }}">Download anchored protein</button>
+                <button type="button" data-protein-action="copy-anchored-cds" data-candidate-id="{{ candidate.candidate_id }}">Copy anchored CDS</button>
+                <button type="button" data-protein-action="download-anchored-cds" data-candidate-id="{{ candidate.candidate_id }}">Download anchored CDS</button>
               </div>
-
-              {% if candidate.orf.anchored_available %}
-                <div class="subcard blastx-anchored-orf">
-                  <h4>BLASTX-anchored coding sequence</h4>
-                  <p class="muted">Extended in the DIAMOND strand and frame to plausible start and stop boundaries.</p>
-                  <div class="metric-grid">
-                    <div><span>Protein length</span><strong>{{ candidate.orf.anchored_protein_length }} aa</strong></div>
-                    <div><span>Coordinates</span><strong>{{ candidate.orf.anchored_start }}–{{ candidate.orf.anchored_end }} nt</strong></div>
-                    <div><span>Strand / frame</span><strong>{{ candidate.orf.anchored_strand }} / {{ candidate.orf.anchored_frame }}</strong></div>
-                    <div><span>Start codon</span><strong>{{ "Present" if candidate.orf.anchored_has_start else "Not found" }}</strong></div>
-                    <div><span>Stop codon</span><strong>{{ "Present" if candidate.orf.anchored_has_stop else "Not found" }}</strong></div>
-                    <div><span>Matches selected ORF</span><strong>{{ "Yes" if candidate.orf.anchored_matches_selected else "No" }}</strong></div>
-                  </div>
-                  {% if not candidate.orf.anchored_matches_selected %}
-                    <p class="warning-text">
-                      BLASTX-anchored and selected ORF boundaries differ.
-                      {% if candidate.orf.anchored_n_terminal_difference_aa is not none %}
-                        N-terminal difference: {{ "%+d"|format(candidate.orf.anchored_n_terminal_difference_aa) }} aa.
-                      {% endif %}
-                      {% if candidate.orf.anchored_c_terminal_difference_aa is not none %}
-                        C-terminal difference: {{ "%+d"|format(candidate.orf.anchored_c_terminal_difference_aa) }} aa.
-                      {% endif %}
-                    </p>
-                  {% endif %}
-                  <div class="protein-actions">
-                    <button type="button" data-protein-action="copy-anchored-protein" data-candidate-id="{{ candidate.candidate_id }}">Copy anchored protein</button>
-                    <button type="button" data-protein-action="download-anchored-protein" data-candidate-id="{{ candidate.candidate_id }}">Download anchored protein</button>
-                    <button type="button" data-protein-action="copy-anchored-cds" data-candidate-id="{{ candidate.candidate_id }}">Copy anchored CDS</button>
-                    <button type="button" data-protein-action="download-anchored-cds" data-candidate-id="{{ candidate.candidate_id }}">Download anchored CDS</button>
-                  </div>
-                </div>
-              {% endif %}
-            </details>
+            </div>
           {% endif %}
 
           {% if candidate.orf.warnings %}
@@ -1800,6 +1802,49 @@
           {% else %}
             <p><span class="badge status-COMPLETE">No ORF structural warnings</span></p>
           {% endif %}
+        {% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section id="protein-relatedness-panel" class="card">
+    <h2>Protein relatedness</h2>
+    <p class="muted">Compare the selected candidate's predicted protein with its closest protein reference and inspect residue-level differences.</p>
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail{% if candidate.recommended %} active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+        <h3>{{ candidate.candidate_id }}</h3>
+        {% if candidate.orf.relatedness.available %}
+          <p><strong>{{ candidate.orf.relatedness.summary }}</strong></p>
+          <div class="mini-grid">
+            <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.percent_identity) }}</strong><span>DIAMOND identity</span></div>
+            <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.subject_coverage * 100) }}</strong><span>Subject coverage</span></div>
+            <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.query_coverage * 100) }}</strong><span>Query coverage</span></div>
+            <div class="mini"><strong>{{ "%.1f%%"|format(candidate.orf.relatedness.top_hit_gene_agreement * 100) if candidate.orf.relatedness.top_hit_gene_agreement is not none else "—" }}</strong><span>Top-hit gene agreement</span></div>
+          </div>
+          <p class="muted">Closest protein: {{ candidate.orf.relatedness.subject_id }} — {{ candidate.orf.relatedness.subject_title }}</p>
+        {% endif %}
+        {% if candidate.orf.difference_summary %}
+          <h4>Protein structural interpretation</h4>
+          {% if candidate.orf.interpretation_summary %}<p><strong>{{ candidate.orf.interpretation_summary }}</strong></p>{% endif %}
+          <ul class="protein-difference-summary">{% for description in candidate.orf.difference_summary %}<li>{{ description }}</li>{% endfor %}</ul>
+          {% if candidate.orf.possible_frameshift_pattern %}<p class="warning-text">Possible frameshift pattern detected; inspect the alignment and read coverage.</p>{% endif %}
+        {% endif %}
+        {% if candidate.orf.alignment_text %}
+          <details id="protein-alignment-{{ candidate.candidate_id|replace('|', '_')|replace('.', '_') }}" class="alignment-viewer" open>
+            <summary>Protein alignment</summary>
+            <p class="muted">| identical residue · . substitution · blank gap</p>
+            <pre class="protein-alignment">{{ candidate.orf.alignment_text }}</pre>
+            <div class="protein-actions">
+              <button type="button" data-protein-action="copy-predicted" data-candidate-id="{{ candidate.candidate_id }}">Copy predicted protein</button>
+              <button type="button" data-protein-action="download-predicted" data-candidate-id="{{ candidate.candidate_id }}">Download predicted protein</button>
+              {% if candidate.orf.reference_protein %}<button type="button" data-protein-action="download-reference" data-candidate-id="{{ candidate.candidate_id }}">Download reference FASTA</button><button type="button" data-protein-action="download-both" data-candidate-id="{{ candidate.candidate_id }}">Download predicted + reference</button>{% endif %}
+              <button type="button" data-protein-action="copy-alignment" data-candidate-id="{{ candidate.candidate_id }}">Copy alignment</button>
+            </div>
+          </details>
+        {% elif candidate.orf.relatedness.available %}
+          <p class="muted">No residue-level pairwise alignment is available for this candidate.</p>
+        {% else %}
+          <p class="muted">No protein-relatedness visualization is available for this candidate.</p>
         {% endif %}
       </div>
     {% endfor %}
@@ -1902,13 +1947,18 @@ const DashboardTabs = {
   comparison: new Set(["Evidence table"]),
   evidence: new Set(["Structural integrity", "Reference compatibility", "Read evidence", "ORF structural evidence"]),
   reasoning: new Set(["Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Biological interpretation"]),
-  plots: new Set(["Candidate-to-candidate structural comparison", "Candidates aligned to shared nucleotide reference", "Candidate versus closest nucleotide reference", "Protein coordinate map", "Read coverage"]),
+  plots: new Set(["Visualizations", "Candidate-to-candidate structural comparison", "Candidates aligned to shared nucleotide reference", "Candidate versus closest nucleotide reference", "Protein coordinate map", "Protein relatedness", "Read coverage"]),
   downloads: new Set(["Download selected sequences", "Selected candidate sequence"]),
   expert: new Set(["Rule explorer"])
 };
 
 function classifyDashboardSections() {
   const assigned = new Set();
+  const visualNav = document.getElementById("visualization-navigation");
+  if (visualNav) {
+    visualNav.dataset.dashboardTab = "plots";
+    visualNav.classList.add("dashboard-panel");
+  }
   document.querySelectorAll("main > section.card").forEach((section) => {
     const heading = section.querySelector(":scope > h2");
     if (!heading) return;
@@ -1917,6 +1967,7 @@ function classifyDashboardSections() {
       if (headings.has(title)) {
         section.dataset.dashboardTab = tab;
         section.classList.add("dashboard-panel");
+        if (tab === "plots") section.classList.add("plot-panel");
         assigned.add(section);
         break;
       }
@@ -1965,6 +2016,17 @@ function initialiseDashboardTabs() {
   activateDashboardTab(DashboardTabs[requested] ? requested : "summary", false);
 }
 
+function initialiseVisualizationNavigation() {
+  const links = [...document.querySelectorAll("#visualization-navigation a")];
+  links.forEach((link) => {
+    link.addEventListener("click", () => {
+      activateDashboardTab("plots");
+      links.forEach((item) => item.classList.toggle("active", item === link));
+    });
+  });
+  if (links.length) links[0].classList.add("active");
+}
+
 function updateCandidateSwitcher(candidateId) {
   document.querySelectorAll(".candidate-switch").forEach((button) => {
     const active = button.dataset.candidateId === candidateId;
@@ -1975,6 +2037,7 @@ function updateCandidateSwitcher(candidateId) {
 
 window.addEventListener("load",()=>{
   initialiseDashboardTabs();
+  initialiseVisualizationNavigation();
   document.querySelectorAll(".candidate-switch").forEach((button) => {
     button.addEventListener("click", () => selectCandidate(button.dataset.candidateId));
   });
