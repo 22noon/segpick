@@ -802,6 +802,7 @@
 
   <nav class="dashboard-tabs" aria-label="Gene analysis sections">
     <button type="button" class="dashboard-tab active" data-tab-target="summary" aria-selected="true">Summary</button>
+    <button type="button" class="dashboard-tab" data-tab-target="comparison" aria-selected="false">Comparison</button>
     <button type="button" class="dashboard-tab" data-tab-target="evidence" aria-selected="false">Evidence</button>
     <button type="button" class="dashboard-tab" data-tab-target="reasoning" aria-selected="false">Biological reasoning</button>
     <button type="button" class="dashboard-tab" data-tab-target="plots" aria-selected="false">Plots</button>
@@ -1898,7 +1899,8 @@ function clearSelection(){DashboardState.selectedCandidate=null;document.querySe
 function bindPlotClick(id){const div=document.getElementById(id);if(div&&div.on)div.on("plotly_click",e=>{const sid=e.points&&e.points[0]&&e.points[0].customdata;if(sid)selectCandidate(sid);});}
 const DashboardTabs = {
   summary: new Set(["Recommended candidate"]),
-  evidence: new Set(["Evidence table", "Structural integrity", "Reference compatibility", "Read evidence", "ORF structural evidence"]),
+  comparison: new Set(["Evidence table"]),
+  evidence: new Set(["Structural integrity", "Reference compatibility", "Read evidence", "ORF structural evidence"]),
   reasoning: new Set(["Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Biological interpretation"]),
   plots: new Set(["Candidate-to-candidate structural comparison", "Candidates aligned to shared nucleotide reference", "Candidate versus closest nucleotide reference", "Protein coordinate map", "Read coverage"]),
   downloads: new Set(["Download selected sequences", "Selected candidate sequence"]),
