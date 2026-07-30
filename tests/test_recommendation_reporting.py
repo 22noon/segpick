@@ -1,3 +1,4 @@
+from pathlib import Path
 import json
 
 from Bio.Seq import Seq
@@ -230,6 +231,14 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert 'expert: new Set(["Rule explorer"])' in html
     assert 'id="visualization-navigation"' in html
     assert 'id="evidence-navigation"' in html
+    assert 'id="reasoning-navigation"' in html
+    assert 'id="reasoning-path-panel"' in html
+    assert 'href="#cross-evidence-panel"' in html
+    assert 'href="#biological-scenarios-panel"' in html
+    assert 'href="#biological-hypotheses-panel"' in html
+    assert 'href="#biological-interpretation-panel"' in html
+    assert 'reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Biological interpretation"])' in html
+    assert 'initialiseSectionNavigation("reasoning-navigation", "reasoning")' in html
     assert 'href="#structural-integrity-panel"' in html
     assert 'href="#reference-compatibility-panel"' in html
     assert 'href="#read-evidence-panel"' in html
@@ -237,6 +246,11 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert '.explanatory-details summary' in html
     assert 'initialiseSectionNavigation("evidence-navigation", "evidence")' in html
     assert 'href="#protein-relatedness-panel"' in html
+    template_content = (Path(__file__).resolve().parents[1] / "segpick" / "reporting" / "templates" / "gene.html").read_text()
+    assert 'href="#closest-reference-panel">Reference dot plot</a>' in template_content
+    assert 'href="#reference-dotplot-panel">Reference dot plot</a>' not in template_content
+    assert '"%.2f"|format(view.recommendation.score)' in template_content
+    assert 'display_measurement(measurement.value)' in template_content
     assert '<h2>Protein relatedness</h2>' in html
     assert '.view-visualization-link' in html
     assert 'if (tab === "plots") section.classList.add("plot-panel")' in html
