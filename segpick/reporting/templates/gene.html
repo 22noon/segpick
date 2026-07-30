@@ -1469,7 +1469,7 @@
 
   <section id="closest-reference-panel" class="card reference-dotplot-panel">
     <h2>Candidate versus closest nucleotide reference</h2>
-    <p class="muted">MegaBLAST alignment blocks are drawn as diagonal segments. Upward slopes indicate forward orientation; downward slopes indicate reverse-complement alignment. Distinct candidate blocks that map to overlapping reference coordinates are drawn last as orange dashed lines, with the shared reference interval shaded. A separate HSP track prevents shorter blocks from being hidden by drawing order.</p>
+    <p class="muted">MegaBLAST alignment blocks are drawn as diagonal segments. Upward slopes indicate forward orientation; downward slopes indicate reverse-complement alignment. Distinct candidate blocks that map to overlapping reference coordinates are drawn last as orange dashed lines, with the shared reference interval shaded. A contig-centric architecture track orders every block along the candidate and reports the corresponding reference interval. When repeated mappings occur, a separate HSP lane track prevents shorter blocks from being hidden by drawing order.</p>
     <div id="reference-dotplot-placeholder" class="reference-dotplot-placeholder">
       Select a candidate to view its structural alignment to the closest nucleotide reference.
     </div>
@@ -2234,7 +2234,9 @@ function updateContigDotplot(candidateId, targetId) {
     : `${item.identity_min.toFixed(1)}–${item.identity_max.toFixed(1)}%`;
   summary.innerHTML = [
     `<span><strong>Pair:</strong> ${item.query_id} vs ${item.target_id}</span>`,
+    `<span><strong>Architecture:</strong> ${item.architecture_summary ? item.architecture_summary.primary_classification : "—"}</span>`,
     `<span><strong>Blocks:</strong> ${item.block_count}</span>`,
+    `<span><strong>Internal gaps:</strong> ${item.architecture_summary ? item.architecture_summary.substantial_internal_gap_count : 0}</span>`,
     `<span><strong>${item.query_id} covered:</strong> ${formatPercent(item.query_coverage)}</span>`,
     `<span><strong>${item.target_id} covered:</strong> ${formatPercent(item.target_coverage)}</span>`,
     `<span><strong>Identity:</strong> ${identity}</span>`,
@@ -2283,7 +2285,9 @@ function updateReferenceDotplot(candidateId) {
     : `${item.identity_min.toFixed(1)}–${item.identity_max.toFixed(1)}%`;
   summary.innerHTML = [
     `<span><strong>Reference:</strong> ${item.reference_id}</span>`,
+    `<span><strong>Architecture:</strong> ${item.architecture_summary ? item.architecture_summary.primary_classification : "—"}</span>`,
     `<span><strong>Blocks:</strong> ${item.block_count}</span>`,
+    `<span><strong>Internal gaps:</strong> ${item.architecture_summary ? item.architecture_summary.substantial_internal_gap_count : 0}</span>`,
     `<span><strong>Repeated-reference pairs:</strong> ${item.repeated_reference_pair_count || 0}</span>`,
     `<span><strong>Repeated reference span:</strong> ${(item.duplicated_reference_bases || 0).toLocaleString()} bp</span>`,
     `<span><strong>Candidate covered:</strong> ${formatPercent(item.query_coverage)}</span>`,

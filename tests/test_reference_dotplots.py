@@ -120,8 +120,67 @@ def test_reference_dotplot_highlights_repeated_mapping_blocks(tmp_path: Path):
         trace for trace in figure.data
         if trace.line.color == "#c2410c"
     ]
-    assert len(diagnostic_traces) == 4  # two dot-plot traces and two mapping-track traces
+    assert len(diagnostic_traces) == 6  # dot plot, architecture track, and HSP lanes
     assert all(trace.line.dash == "dash" for trace in diagnostic_traces)
     assert len(figure.layout.shapes) == 1
     assert figure.layout.shapes[0].y0 == 501
     assert figure.layout.shapes[0].y1 == 1000
+
+
+def test_candidate_architecture_orders_blocks_and_classifies_repeated_mapping(tmp_path: Path):
+    path = tmp_path / "architecture.tsv"
+    path.write_text(
+        "q\ts\t3000\t3000\t95.0\t1000\t0\t0\t1501\t2500\t501\t1500\t1e-18\t90\n"
+        "q\ts\t3000\t3000\t94.0\t1000\t0\t0\t1\t1000\t1\t1000\t1e-20\t100\n"
+    )
+    result = parse_megablast_tsv(
+        path, candidate_id="q", reference_id="s", query_length=3000,
+        reference_length=3000, reused_existing=True,
+    )
+
+    blocks = result.architecture_blocks()
+    assert [block["query_interval"] for block in blocks] == [(1, 1000), (1501, 2500)]
+    assert blocks[1]["gap_before"] == 500
+    assert all(block["repeated_reference_mapping"] for block in blocks)
+
+    summary = result.architecture_summary()
+    assert summary["primary_classification"] == "Repeated-reference architecture"
+    assert "repeated_reference_mapping" in summary["classifications"]
+    assert "fragmented_alignment" in summary["classifications"]
+    assert summary["substantial_internal_gap_count"] == 1
+    assert summary["terminal_right_unaligned_bases"] == 500
+
+
+def test_candidate_architecture_detects_mixed_orientation(tmp_path: Path):
+    path = tmp_path / "mixed.tsv"
+    path.write_text(
+        "q\ts\t2000\t2000\t95.0\t800\t0\t0\t1\t800\t1\t800\t1e-20\t100\n"
+        "q\ts\t2000\t2000\t94.0\t800\t0\t0\t901\t1700\t1700\t901\t1e-18\t90\n"
+    )
+    result = parse_megablast_tsv(
+        path, candidate_id="q", reference_id="s", query_length=2000,
+        reference_length=2000, reused_existing=True,
+    )
+
+    summary = result.architecture_summary()
+    assert summary["primary_classification"] == "Mixed-orientation architecture"
+    assert summary["mixed_orientation"] is True
+    assert summary["reference_order_consistent"] is None
+
+
+def test_reference_dotplot_always_contains_candidate_architecture_track(tmp_path: Path):
+    from segpick.visualization.reference_dotplot import make_reference_dotplot
+
+    path = tmp_path / "single.tsv"
+    path.write_text(
+        "q\ts\t1000\t1200\t98.0\t900\t0\t0\t51\t950\t101\t1000\t1e-40\t200\n"
+    )
+    result = parse_megablast_tsv(
+        path, candidate_id="q", reference_id="s", query_length=1000,
+        reference_length=1200, reused_existing=True,
+    )
+    figure = make_reference_dotplot(result)
+
+    assert len(figure.data) == 2  # dot-plot HSP plus architecture block
+    assert "Candidate architecture" in [annotation.text for annotation in figure.layout.annotations]
+    assert "Single alignment block" in figure.layout.title.text

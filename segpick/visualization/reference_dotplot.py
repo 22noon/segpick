@@ -14,27 +14,29 @@ def _display_coordinate(position: int, length: int, reverse: bool) -> int:
 
 
 def make_reference_dotplot(result: ReferenceDotplot) -> go.Figure:
-    """Draw every HSP and make repeated-reference mappings explicit."""
+    """Draw every HSP, candidate architecture, and repeated-reference diagnostics."""
 
     repeated_pairs = result.repeated_reference_pairs()
     repeated_indices = set(result.repeated_reference_hsp_indices)
+    architecture_blocks = result.architecture_blocks()
     has_repeated = bool(repeated_pairs)
+    rows = 3 if has_repeated else 2
+    row_heights = [0.68, 0.20, 0.12] if has_repeated else [0.76, 0.24]
+    subplot_titles = (
+        ("Candidate-to-reference HSPs", "Candidate architecture", "Individual HSP lanes")
+        if has_repeated
+        else ("Candidate-to-reference HSPs", "Candidate architecture")
+    )
     fig = make_subplots(
-        rows=2 if has_repeated else 1,
+        rows=rows,
         cols=1,
-        shared_xaxes=has_repeated,
-        row_heights=[0.82, 0.18] if has_repeated else None,
-        vertical_spacing=0.08 if has_repeated else 0.0,
-        subplot_titles=(
-            ("Candidate-to-reference HSPs", "Individual candidate mapping blocks")
-            if has_repeated
-            else None
-        ),
+        shared_xaxes=True,
+        row_heights=row_heights,
+        vertical_spacing=0.07,
+        subplot_titles=subplot_titles,
     )
     reverse_query = result.display_reverse_complemented
 
-    # Draw ordinary blocks first and diagnostic blocks last so repeated mappings
-    # cannot be hidden beneath larger or nearly coincident HSPs.
     ordered_indices = [
         *[index for index in range(len(result.hsps)) if index not in repeated_indices],
         *[index for index in range(len(result.hsps)) if index in repeated_indices],
@@ -80,14 +82,72 @@ def make_reference_dotplot(result: ReferenceDotplot) -> go.Figure:
             col=1,
         )
 
-        if has_repeated:
-            lane = index + 1
+    # Contig-centric architecture track. Every block is shown in query order and
+    # labelled through hover with its corresponding reference interval.
+    for block in architecture_blocks:
+        hsp_index = int(block["hsp_index"])
+        query_start, query_end = block["query_interval"]
+        display_start = _display_coordinate(query_start, result.query_length, reverse_query)
+        display_end = _display_coordinate(query_end, result.query_length, reverse_query)
+        repeated = bool(block["repeated_reference_mapping"])
+        reverse_strand = block["strand"] == "-"
+        colour = "#c2410c" if repeated else ("#7c3aed" if reverse_strand else "#2563eb")
+        reference_start, reference_end = block["reference_interval"]
+        custom = [[
+            int(block["order"]),
+            hsp_index + 1,
+            reference_start,
+            reference_end,
+            block["strand"],
+            repeated,
+            float(block["percent_identity"]),
+            int(block["gap_before"]),
+        ]] * 2
+        fig.add_trace(
+            go.Scattergl(
+                x=[display_start, display_end],
+                y=[1, 1],
+                mode="lines+markers",
+                name=(
+                    "Repeated block" if repeated
+                    else ("Reverse-orientation block" if reverse_strand else "Forward block")
+                ),
+                legendgroup=("architecture-repeated" if repeated else f"architecture-{block['strand']}"),
+                showlegend=(
+                    repeated and int(block["order"]) == min(
+                        int(item["order"]) for item in architecture_blocks if item["repeated_reference_mapping"]
+                    )
+                ),
+                line={"width": 16, "color": colour, "dash": "dash" if repeated else "solid"},
+                marker={"size": 6, "symbol": "diamond" if repeated else "circle"},
+                customdata=custom,
+                hovertemplate=(
+                    "Architecture block %{customdata[0]} (HSP %{customdata[1]})<br>"
+                    "Candidate: %{x:,} bp<br>"
+                    "Reference interval: %{customdata[2]:,}–%{customdata[3]:,} bp<br>"
+                    "Strand: %{customdata[4]}<br>"
+                    "Identity: %{customdata[6]:.2f}%<br>"
+                    "Unaligned bases before block: %{customdata[7]:,}<br>"
+                    "Repeated-reference mapping: %{customdata[5]}<extra></extra>"
+                ),
+            ),
+            row=2,
+            col=1,
+        )
+
+    if has_repeated:
+        for index, hsp in enumerate(result.hsps):
+            repeated = index in repeated_indices
+            x_values = [
+                _display_coordinate(hsp.query_start, result.query_length, reverse_query),
+                _display_coordinate(hsp.query_end, result.query_length, reverse_query),
+            ]
             fig.add_trace(
                 go.Scattergl(
                     x=x_values,
-                    y=[lane, lane],
+                    y=[index + 1, index + 1],
                     mode="lines+markers",
-                    name=f"HSP {index + 1} mapping track",
+                    name=f"HSP {index + 1} lane",
                     showlegend=False,
                     line={
                         "width": 9 if repeated else 5,
@@ -95,14 +155,14 @@ def make_reference_dotplot(result: ReferenceDotplot) -> go.Figure:
                         "dash": "dash" if repeated else "solid",
                     },
                     marker={"size": 6},
-                    customdata=customdata,
+                    customdata=[[index + 1, repeated], [index + 1, repeated]],
                     hovertemplate=(
-                        "HSP %{customdata[5]} candidate interval<br>"
+                        "HSP %{customdata[0]} candidate interval<br>"
                         "Candidate: %{x:,} bp<br>"
-                        "Repeated-reference mapping: %{customdata[6]}<extra></extra>"
+                        "Repeated-reference mapping: %{customdata[1]}<extra></extra>"
                     ),
                 ),
-                row=2,
+                row=3,
                 col=1,
             )
 
@@ -121,44 +181,34 @@ def make_reference_dotplot(result: ReferenceDotplot) -> go.Figure:
             col=1,
         )
 
-    fig.update_xaxes(
-        title_text="Candidate position (bp)" if not has_repeated else None,
-        range=[0, max(1, result.query_length)],
-        constrain="domain",
-        row=1,
-        col=1,
-    )
-    fig.update_yaxes(
-        title_text="Reference position (bp)",
-        range=[0, max(1, result.reference_length)],
-        row=1,
-        col=1,
-    )
+    fig.update_xaxes(range=[0, max(1, result.query_length)], constrain="domain", row=1, col=1)
+    fig.update_yaxes(title_text="Reference position (bp)", range=[0, max(1, result.reference_length)], row=1, col=1)
+    fig.update_xaxes(range=[0, max(1, result.query_length)], row=2, col=1)
+    fig.update_yaxes(title_text="Contig", tickmode="array", tickvals=[1], ticktext=[result.candidate_id], range=[0.55, 1.45], row=2, col=1)
     if has_repeated:
-        fig.update_xaxes(
-            title_text="Candidate position (bp)",
-            range=[0, max(1, result.query_length)],
-            row=2,
-            col=1,
-        )
+        fig.update_xaxes(title_text="Candidate position (bp)", range=[0, max(1, result.query_length)], row=3, col=1)
         fig.update_yaxes(
             title_text="HSP",
             tickmode="array",
             tickvals=list(range(1, len(result.hsps) + 1)),
             ticktext=[str(index) for index in range(1, len(result.hsps) + 1)],
             range=[0.25, len(result.hsps) + 0.75],
-            row=2,
+            row=3,
             col=1,
         )
+    else:
+        fig.update_xaxes(title_text="Candidate position (bp)", row=2, col=1)
 
+    architecture = result.architecture_summary()
     fig.update_layout(
         title=(
             f"{result.candidate_id} vs {result.reference_id}"
             + (" — reverse-complemented for display" if reverse_query else "")
+            + f"<br><sup>{architecture['primary_classification']}</sup>"
         ),
         template="plotly_white",
-        height=700 if has_repeated else 560,
-        margin={"l": 75, "r": 35, "t": 80, "b": 65},
+        height=820 if has_repeated else 680,
+        margin={"l": 90, "r": 35, "t": 100, "b": 65},
         hovermode="closest",
         legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "x": 0},
     )
