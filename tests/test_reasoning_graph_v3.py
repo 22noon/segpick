@@ -380,3 +380,68 @@ def test_rule_results_are_findings_and_only_scenario_results_are_final_hypothese
     assert len(graph.biological_hypotheses) == 1
     assert graph.biological_hypotheses is graph.hypotheses
     assert graph.biological_hypotheses[0].title == "Genuine biological structure"
+
+
+def test_reasoning_graph_uses_canonical_collection_fields_with_legacy_aliases():
+    from segpick.models import ReasoningGraph
+
+    graph = ReasoningGraph()
+
+    assert graph.interpretive_findings == ()
+    assert graph.evidence_syntheses == ()
+    assert graph.biological_hypotheses == ()
+    assert graph.interpretations is graph.interpretive_findings
+    assert graph.scenarios is graph.evidence_syntheses
+    assert graph.hypotheses is graph.biological_hypotheses
+
+
+def test_reasoning_graph_schema_v2_is_canonical_and_versioned():
+    from segpick.models import ReasoningGraph
+
+    graph = ReasoningGraph()
+    payload = graph.to_dict(include_legacy_aliases=False)
+
+    assert payload["schema_version"] == "2.0"
+    assert set(payload) == {
+        "schema_version",
+        "measurements",
+        "observations",
+        "interpretive_findings",
+        "evidence_syntheses",
+        "biological_hypotheses",
+    }
+
+
+def test_reasoning_graph_default_export_preserves_legacy_collection_aliases():
+    from segpick.models import ReasoningGraph
+
+    payload = ReasoningGraph().to_dict()
+
+    assert payload["interpretations"] is payload["interpretive_findings"]
+    assert payload["scenarios"] is payload["evidence_syntheses"]
+    assert payload["hypotheses"] is payload["biological_hypotheses"]
+
+
+def test_reasoning_graph_can_emit_explicit_schema_v1_payload():
+    from segpick.models import ReasoningGraph
+
+    payload = ReasoningGraph().to_legacy_dict()
+
+    assert payload["schema_version"] == "1.0"
+    assert set(payload) == {
+        "schema_version",
+        "measurements",
+        "observations",
+        "interpretations",
+        "scenarios",
+        "hypotheses",
+    }
+
+
+def test_reasoning_graph_rejects_unknown_schema_version():
+    import pytest
+
+    from segpick.models import ReasoningGraph
+
+    with pytest.raises(ValueError, match="Unsupported reasoning graph schema version"):
+        ReasoningGraph().to_dict(schema_version="99")

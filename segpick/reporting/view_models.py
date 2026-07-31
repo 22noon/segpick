@@ -470,8 +470,8 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
     plugin_sources = tuple(sorted(value for value in sources if value.startswith("plugin:")))
     builtin_sources = tuple(sorted(value for value in sources if not value.startswith("plugin:")))
     observation_by_id = {item.id: item for item in graph.observations}
-    interpretation_by_id = {item.id: item for item in graph.interpretations}
-    scenario_by_id = {item.id: item for item in graph.scenarios}
+    interpretation_by_id = {item.id: item for item in graph.interpretive_findings}
+    scenario_by_id = {item.id: item for item in graph.evidence_syntheses}
 
     def evidence_paths(evidence_id: str, visited: frozenset[str] = frozenset()) -> tuple[str, ...]:
         if evidence_id in visited:
@@ -494,7 +494,7 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
         return (f"{evidence_id} (missing)",)
 
     paths = []
-    for hypothesis in graph.hypotheses:
+    for hypothesis in graph.biological_hypotheses:
         for evidence_id in hypothesis.supporting_ids + hypothesis.conflicting_ids:
             relation = "supports" if evidence_id in hypothesis.supporting_ids else "contradicts"
             if evidence_id in scenario_by_id:
@@ -520,11 +520,11 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
     return ReasoningGraphInspectorView(
         available=True, valid=valid, validation_message=message,
         measurement_count=len(graph.measurements), observation_count=len(graph.observations),
-        interpretation_count=len(graph.interpretations), scenario_count=len(graph.scenarios),
-        hypothesis_count=len(graph.hypotheses),
+        interpretation_count=len(graph.interpretive_findings), scenario_count=len(graph.evidence_syntheses),
+        hypothesis_count=len(graph.biological_hypotheses),
         builtin_sources=builtin_sources, plugin_sources=plugin_sources,
         provenance_paths=tuple(paths),
-        graph_json=json.dumps(graph.to_dict(), indent=2, sort_keys=True) if valid else "{}",
+        graph_json=json.dumps(graph.to_dict(include_legacy_aliases=False), indent=2, sort_keys=True) if valid else "{}",
     )
 
 

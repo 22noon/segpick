@@ -207,9 +207,9 @@ def build_reasoning_graph(candidate) -> ReasoningGraph:
     graph = ReasoningGraph(
         measurements=measurements,
         observations=observation_nodes,
-        interpretations=interpretation_nodes,
-        scenarios=scenario_nodes,
-        hypotheses=scenario_hypothesis_nodes,
+        interpretive_findings=interpretation_nodes,
+        evidence_syntheses=scenario_nodes,
+        biological_hypotheses=scenario_hypothesis_nodes,
     )
     graph.validate()
     return graph
