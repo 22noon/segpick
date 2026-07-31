@@ -34,21 +34,24 @@ def _observation_nodes(
     for observation in observations:
         base = f"observation:{_slug(observation.source_name)}:{_slug(observation.observation_type)}"
         counts[base] = counts.get(base, 0) + 1
-        nodes.append(ObservationNode(
+        measurement_ids = (
+            measurements_by_channel.get(observation.source_name.removeprefix("plugin:"), ())
+            if observation.source_name.startswith("plugin:")
+            else ()
+        )
+        node = ObservationNode(
             id=f"{base}:{counts[base]}",
             observation_type=observation.observation_type,
             source=observation.source_name,
             description=observation.description,
-            measurement_ids=measurements_by_channel.get(
-                observation.source_name.removeprefix("plugin:"), ()
-            ) if observation.source_name.startswith("plugin:") else (),
             severity=observation.severity,
-        ))
-    node_tuple = tuple(nodes)
+        )
+        nodes.append((node, measurement_ids))
+    node_tuple = tuple(node for node, _ in nodes)
     edges = tuple(
         ReasoningEdge(node.id, measurement_id, "supported_by")
-        for node in node_tuple
-        for measurement_id in node.measurement_ids
+        for node, measurement_ids in nodes
+        for measurement_id in measurement_ids
     )
     return node_tuple, edges
 
@@ -63,17 +66,17 @@ def _interpretation_nodes(
     nodes = []
     for index, finding in enumerate(findings, 1):
         linked = tuple(dict.fromkeys(node_id for source in finding.sources for node_id in by_source.get(source, ())))
-        nodes.append(InterpretiveFindingNode(
+        node = InterpretiveFindingNode(
             id=f"interpretation:{_slug(finding.title)}:{index}",
             title=finding.title,
             summary=finding.summary,
-            observation_ids=linked,
-        ))
-    node_tuple = tuple(nodes)
+        )
+        nodes.append((node, linked))
+    node_tuple = tuple(node for node, _ in nodes)
     edges = tuple(
         ReasoningEdge(node.id, observation_id, "derived_from")
-        for node in node_tuple
-        for observation_id in node.observation_ids
+        for node, linked in nodes
+        for observation_id in linked
     )
     return node_tuple, edges
 
@@ -113,13 +116,10 @@ def _rule_finding_nodes(
         direct_observations = tuple(
             node_id for node_id in supporting if node_id.startswith("observation:")
         )
-        nodes.append(InterpretiveFindingNode(
+        node = InterpretiveFindingNode(
             id=f"finding:rule:{_slug(hypothesis.rule_id)}:{index}",
             title=hypothesis.title,
             summary=hypothesis.summary,
-            observation_ids=direct_observations,
-            supporting_ids=supporting,
-            conflicting_ids=conflicting,
             source="rule",
             confidence=hypothesis.confidence,
             state=hypothesis.state,
@@ -130,16 +130,17 @@ def _rule_finding_nodes(
             rule_source=hypothesis.rule_source,
             rule_description=hypothesis.rule_description,
             rule_references=hypothesis.rule_references,
-        ))
-    node_tuple = tuple(nodes)
+        )
+        nodes.append((node, supporting, conflicting, direct_observations))
+    node_tuple = tuple(node for node, *_ in nodes)
     edges: list[ReasoningEdge] = []
-    for node in node_tuple:
-        edges.extend(ReasoningEdge(node.id, target_id, "supported_by") for target_id in node.supporting_ids)
-        edges.extend(ReasoningEdge(node.id, target_id, "contradicted_by") for target_id in node.conflicting_ids)
-        linked = set(node.supporting_ids) | set(node.conflicting_ids)
+    for node, supporting, conflicting, direct_observations in nodes:
+        edges.extend(ReasoningEdge(node.id, target_id, "supported_by") for target_id in supporting)
+        edges.extend(ReasoningEdge(node.id, target_id, "contradicted_by") for target_id in conflicting)
+        linked = set(supporting) | set(conflicting)
         edges.extend(
             ReasoningEdge(node.id, observation_id, "derived_from")
-            for observation_id in node.observation_ids
+            for observation_id in direct_observations
             if observation_id not in linked
         )
     return node_tuple, tuple(edges)
@@ -163,25 +164,24 @@ def _scenario_nodes(
             for label in scenario.matched_conflicting
             for node_id in _condition_targets(label, observations, interpretations)
         ))
-        nodes.append(EvidenceSynthesisNode(
+        node = EvidenceSynthesisNode(
             id=f"scenario:{_slug(scenario.scenario_id)}:{index}",
             scenario_id=scenario.scenario_id,
             title=scenario.title,
             interpretation=scenario.interpretation,
             confidence=scenario.confidence,
-            supporting_ids=supporting,
-            conflicting_ids=conflicting,
             category=scenario.category,
             scope=scenario.scope,
             severity=scenario.severity,
             source=scenario.source,
             references=scenario.references,
-        ))
-    node_tuple = tuple(nodes)
+        )
+        nodes.append((node, supporting, conflicting))
+    node_tuple = tuple(node for node, *_ in nodes)
     edges: list[ReasoningEdge] = []
-    for node in node_tuple:
-        edges.extend(ReasoningEdge(node.id, target_id, "composed_from") for target_id in node.supporting_ids)
-        edges.extend(ReasoningEdge(node.id, target_id, "conflicted_by") for target_id in node.conflicting_ids)
+    for node, supporting, conflicting in nodes:
+        edges.extend(ReasoningEdge(node.id, target_id, "composed_from") for target_id in supporting)
+        edges.extend(ReasoningEdge(node.id, target_id, "conflicted_by") for target_id in conflicting)
     return node_tuple, tuple(edges)
 
 
@@ -202,14 +202,12 @@ def _scenario_hypothesis_nodes(
             for item in hypothesis.conflicting_scenarios
             if item in scenario_by_rule_id
         )
-        nodes.append(BiologicalHypothesisNode(
+        node = BiologicalHypothesisNode(
             id=f"hypothesis:scenario:{_slug(hypothesis.hypothesis_id)}:{index}",
             rule_id=hypothesis.hypothesis_id,
             title=hypothesis.title,
             summary=hypothesis.explanation,
             confidence=hypothesis.confidence,
-            supporting_ids=supporting,
-            conflicting_ids=conflicting,
             state="challenged" if conflicting else "supported",
             category=hypothesis.category,
             scope=hypothesis.scope,
@@ -225,12 +223,13 @@ def _scenario_hypothesis_nodes(
             evaluation_candidate_ids=hypothesis.candidate_ids,
             evaluation_supporting_synthesis_ids=hypothesis.supporting_scenarios,
             evaluation_conflicting_synthesis_ids=hypothesis.conflicting_scenarios,
-        ))
-    node_tuple = tuple(nodes)
+        )
+        nodes.append((node, supporting, conflicting))
+    node_tuple = tuple(node for node, *_ in nodes)
     edges: list[ReasoningEdge] = []
-    for node in node_tuple:
-        edges.extend(ReasoningEdge(node.id, target_id, "supported_by") for target_id in node.supporting_ids)
-        edges.extend(ReasoningEdge(node.id, target_id, "contradicted_by") for target_id in node.conflicting_ids)
+    for node, supporting, conflicting in nodes:
+        edges.extend(ReasoningEdge(node.id, target_id, "supported_by") for target_id in supporting)
+        edges.extend(ReasoningEdge(node.id, target_id, "contradicted_by") for target_id in conflicting)
     return node_tuple, tuple(edges)
 
 

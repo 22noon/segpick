@@ -26,7 +26,6 @@ class ObservationNode:
     observation_type: str
     source: str
     description: str
-    measurement_ids: tuple[str, ...] = ()
     severity: str = "informational"
 
     def to_dict(self) -> dict[str, Any]:
@@ -38,9 +37,6 @@ class InterpretiveFindingNode:
     id: str
     title: str
     summary: str
-    observation_ids: tuple[str, ...] = ()
-    supporting_ids: tuple[str, ...] = ()
-    conflicting_ids: tuple[str, ...] = ()
     source: str = "finding"
     confidence: str = ""
     state: str = "provisional"
@@ -67,8 +63,6 @@ class EvidenceSynthesisNode:
     title: str
     interpretation: str
     confidence: str
-    supporting_ids: tuple[str, ...] = ()
-    conflicting_ids: tuple[str, ...] = ()
     category: str = ""
     scope: str = "candidate"
     severity: str = "informational"
@@ -89,8 +83,6 @@ class BiologicalHypothesisNode:
     title: str
     summary: str
     confidence: str
-    supporting_ids: tuple[str, ...] = ()
-    conflicting_ids: tuple[str, ...] = ()
     rule_id: str = ""
     state: str = "provisional"
     category: str = ""
@@ -127,8 +119,6 @@ class BiologicalHypothesisNode:
             "state": self.state,
             "supporting_synthesis_ids": list(self.evaluation_supporting_synthesis_ids),
             "conflicting_synthesis_ids": list(self.evaluation_conflicting_synthesis_ids),
-            "supporting_node_ids": list(self.supporting_ids),
-            "conflicting_node_ids": list(self.conflicting_ids),
         }
         return data
 
@@ -156,7 +146,7 @@ class ReasoningGraph:
     biological_hypotheses: tuple[BiologicalHypothesisNode, ...] = ()
     edges: tuple[ReasoningEdge, ...] = ()
 
-    SCHEMA_VERSION = "3.0"
+    SCHEMA_VERSION = "4.0"
 
     @property
     def interpretations(self) -> tuple[InterpretiveFindingNode, ...]:
@@ -178,56 +168,47 @@ class ReasoningGraph:
         return self.edges
 
     def validate(self) -> None:
-        measurement_ids = {item.id for item in self.measurements}
-        observation_ids = {item.id for item in self.observations}
-        finding_ids = {item.id for item in self.interpretive_findings}
-        synthesis_ids = {item.id for item in self.evidence_syntheses}
-        hypothesis_ids = {item.id for item in self.biological_hypotheses}
-        all_ids = measurement_ids | observation_ids | finding_ids | synthesis_ids | hypothesis_ids
-        expected = sum(map(len, (measurement_ids, observation_ids, finding_ids, synthesis_ids, hypothesis_ids)))
-        if len(all_ids) != expected:
-            raise ValueError("Reasoning graph node IDs must be globally unique")
-        for item in self.observations:
-            missing = set(item.measurement_ids) - measurement_ids
-            if missing:
-                raise ValueError(f"Observation {item.id} references missing measurements: {sorted(missing)}")
-        for item in self.interpretive_findings:
-            missing_observations = set(item.observation_ids) - observation_ids
-            if missing_observations:
-                raise ValueError(
-                    f"Interpretive finding {item.id} references missing observations: "
-                    f"{sorted(missing_observations)}"
-                )
-            allowed_evidence_ids = observation_ids | (finding_ids - {item.id})
-            missing_evidence = (set(item.supporting_ids) | set(item.conflicting_ids)) - allowed_evidence_ids
-            if missing_evidence:
-                raise ValueError(
-                    f"Interpretive finding {item.id} references missing evidence nodes: "
-                    f"{sorted(missing_evidence)}"
-                )
-        lower_ids = observation_ids | finding_ids
-        for item in self.evidence_syntheses:
-            missing = (set(item.supporting_ids) | set(item.conflicting_ids)) - lower_ids
-            if missing:
-                raise ValueError(f"Evidence synthesis {item.id} references missing evidence nodes: {sorted(missing)}")
-        hypothesis_evidence_ids = lower_ids | synthesis_ids
-        for item in self.biological_hypotheses:
-            missing = (set(item.supporting_ids) | set(item.conflicting_ids)) - hypothesis_evidence_ids
-            if missing:
-                raise ValueError(f"Hypothesis {item.id} references missing evidence nodes: {sorted(missing)}")
-        edge_keys: set[tuple[str, str, str]] = set()
-        allowed_relationships = {
-            "supported_by", "contradicted_by", "composed_from",
-            "conflicted_by", "derived_from",
+        node_groups = {
+            "measurement": self.measurements,
+            "observation": self.observations,
+            "interpretive_finding": self.interpretive_findings,
+            "evidence_synthesis": self.evidence_syntheses,
+            "biological_hypothesis": self.biological_hypotheses,
         }
-        for edge in self.provenance_edges():
-            if edge.source_id not in all_ids or edge.target_id not in all_ids:
+        node_types = {item.id: node_type for node_type, items in node_groups.items() for item in items}
+        expected = sum(len(items) for items in node_groups.values())
+        if len(node_types) != expected:
+            raise ValueError("Reasoning graph node IDs must be globally unique")
+
+        allowed_transitions = {
+            ("observation", "measurement", "supported_by"),
+            ("interpretive_finding", "observation", "derived_from"),
+            ("interpretive_finding", "observation", "supported_by"),
+            ("interpretive_finding", "observation", "contradicted_by"),
+            ("interpretive_finding", "interpretive_finding", "supported_by"),
+            ("interpretive_finding", "interpretive_finding", "contradicted_by"),
+            ("evidence_synthesis", "observation", "composed_from"),
+            ("evidence_synthesis", "interpretive_finding", "composed_from"),
+            ("evidence_synthesis", "observation", "conflicted_by"),
+            ("evidence_synthesis", "interpretive_finding", "conflicted_by"),
+            ("biological_hypothesis", "evidence_synthesis", "supported_by"),
+            ("biological_hypothesis", "evidence_synthesis", "contradicted_by"),
+        }
+        edge_keys: set[tuple[str, str, str]] = set()
+        for edge in self.edges:
+            source_type = node_types.get(edge.source_id)
+            target_type = node_types.get(edge.target_id)
+            if source_type is None or target_type is None:
                 raise ValueError(
-                    f"Reasoning edge references missing node: "
+                    "Reasoning edge references missing node: "
                     f"{edge.source_id} -[{edge.relationship}]-> {edge.target_id}"
                 )
-            if edge.relationship not in allowed_relationships:
-                raise ValueError(f"Unsupported reasoning edge relationship: {edge.relationship}")
+            transition = (source_type, target_type, edge.relationship)
+            if transition not in allowed_transitions:
+                raise ValueError(
+                    "Unsupported reasoning edge transition: "
+                    f"{source_type} -[{edge.relationship}]-> {target_type}"
+                )
             key = (edge.source_id, edge.target_id, edge.relationship)
             if key in edge_keys:
                 raise ValueError(f"Duplicate reasoning edge: {key}")

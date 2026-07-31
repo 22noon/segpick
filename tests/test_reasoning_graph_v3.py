@@ -7,7 +7,7 @@ from segpick.evidence_plugins import (
     EvidencePluginResult,
     PluginMeasurement,
 )
-from segpick.models import CandidateContig, ContigMetadata, EvidenceObservation, Gene, Sample
+from segpick.models import CandidateContig, ContigMetadata, EvidenceObservation, Gene, ReasoningEdge, Sample
 from segpick.reasoning.rules import HypothesisRule, RuleCondition
 
 
@@ -67,9 +67,13 @@ def test_plugin_observation_can_trigger_hypothesis_and_enter_graph():
     assert graph is not None
     assert graph.measurements[0].channel == "junction_support"
     assert graph.observations[0].source == "plugin:junction_support"
-    assert graph.observations[0].measurement_ids == (graph.measurements[0].id,)
+    assert ReasoningEdge(
+        graph.observations[0].id, graph.measurements[0].id, "supported_by"
+    ) in graph.edges
     rule_finding = next(item for item in graph.interpretations if item.rule_id == "junction_supported_structure")
-    assert rule_finding.supporting_ids == (graph.observations[0].id,)
+    assert ReasoningEdge(
+        rule_finding.id, graph.observations[0].id, "supported_by"
+    ) in graph.edges
     assert graph.hypotheses == ()
     graph.validate()
 
@@ -202,8 +206,13 @@ def test_scenario_hypotheses_enter_graph_through_scenario_nodes():
     assert len(graph.hypotheses) == 3
     assert {item.hypothesis_type for item in graph.hypotheses} == {"biological"}
     scenario_node = graph.scenarios[0]
-    assert scenario_node.supporting_ids == (graph.observations[0].id,)
-    assert all(item.supporting_ids == (scenario_node.id,) for item in graph.hypotheses)
+    assert ReasoningEdge(
+        scenario_node.id, graph.observations[0].id, "composed_from"
+    ) in graph.edges
+    assert all(
+        ReasoningEdge(item.id, scenario_node.id, "supported_by") in graph.edges
+        for item in graph.hypotheses
+    )
     assert len(graph.to_dict()["biological_hypotheses"]) == 3
     graph.validate()
 
@@ -215,7 +224,6 @@ def test_interpretive_finding_node_is_the_canonical_graph_class():
         id="finding:fragmented-architecture:1",
         title="Fragmented architecture",
         summary="The alignment pattern is consistent with fragmentation.",
-        observation_ids=("observation:structural-alignment:fragmented-alignment:1",),
     )
 
     assert isinstance(node, InterpretiveFindingNode)
@@ -251,7 +259,9 @@ def test_reasoning_graph_builds_interpretive_finding_instances():
 
     assert len(graph.interpretations) == 1
     assert isinstance(graph.interpretations[0], InterpretiveFindingNode)
-    assert graph.interpretations[0].observation_ids == (graph.observations[0].id,)
+    assert ReasoningEdge(
+        graph.interpretations[0].id, graph.observations[0].id, "derived_from"
+    ) in graph.edges
 
 
 def test_evidence_synthesis_node_is_the_canonical_graph_class():
@@ -263,7 +273,6 @@ def test_evidence_synthesis_node_is_the_canonical_graph_class():
         title="Fragmented candidate structure",
         interpretation="Several findings form a fragmented-structure evidence pattern.",
         confidence="moderate",
-        supporting_ids=("finding:fragmented-architecture:1",),
     )
 
     assert isinstance(node, EvidenceSynthesisNode)
@@ -313,7 +322,6 @@ def test_biological_hypothesis_node_is_the_canonical_final_graph_class():
         title="Genuine tandem duplication",
         summary="The integrated evidence supports a duplicated biological structure.",
         confidence="moderate",
-        supporting_ids=("scenario:duplication-pattern:1",),
     )
 
     assert isinstance(node, BiologicalHypothesisNode)
@@ -400,7 +408,7 @@ def test_reasoning_graph_export_uses_single_canonical_schema():
     graph = ReasoningGraph()
     payload = graph.to_dict()
 
-    assert payload["schema_version"] == "3.0"
+    assert payload["schema_version"] == "4.0"
     assert set(payload) == {
         "schema_version",
         "measurements",
@@ -433,7 +441,6 @@ def test_biological_hypothesis_graph_node_separates_definition_and_evaluation():
         title="Genuine duplication",
         summary="Repeated structure retains coding continuity.",
         confidence="high",
-        supporting_ids=("synthesis:repeat:1",),
         rule_id="duplication",
         rule_source="builtin:hypotheses.yml",
         definition_id="duplication",
@@ -473,7 +480,6 @@ def test_graph_inspector_separates_hypothesis_definition_and_current_evaluation(
         summary="Repeated structure retains coding continuity.",
         confidence="high",
         state="supported",
-        supporting_ids=(synthesis.id,),
         rule_id="duplication",
         rule_source="builtin:hypotheses.yml",
         rule_description="A repeated structure with continuity supports duplication.",
@@ -489,6 +495,7 @@ def test_graph_inspector_separates_hypothesis_definition_and_current_evaluation(
     candidate.analysis.reasoning_graph = ReasoningGraph(
         evidence_syntheses=(synthesis,),
         biological_hypotheses=(hypothesis,),
+        edges=(ReasoningEdge(hypothesis.id, synthesis.id, "supported_by"),),
     )
 
     view = build_reasoning_graph_inspector_view(candidate)
@@ -540,13 +547,11 @@ def test_graph_inspector_builds_typed_path_from_hypothesis_to_measurement():
         observation_type="fragmented_architecture",
         source="structural_alignment",
         description="Several separated alignment blocks are present.",
-        measurement_ids=(measurement.id,),
     )
     finding = InterpretiveFindingNode(
         id="finding:fragmentation:1",
         title="Fragmentation is plausible",
         summary="The alignment pattern is consistent with fragmentation.",
-        observation_ids=(observation.id,),
         state="supported",
     )
     synthesis = EvidenceSynthesisNode(
@@ -555,7 +560,6 @@ def test_graph_inspector_builds_typed_path_from_hypothesis_to_measurement():
         title="Partial assembly evidence pattern",
         interpretation="The evidence is consistent with incomplete assembly.",
         confidence="moderate",
-        supporting_ids=(finding.id,),
     )
     hypothesis = BiologicalHypothesisNode(
         id="hypothesis:partial:1",
@@ -563,7 +567,6 @@ def test_graph_inspector_builds_typed_path_from_hypothesis_to_measurement():
         summary="The candidate may be incomplete.",
         confidence="moderate",
         state="supported",
-        supporting_ids=(synthesis.id,),
     )
     from segpick.models import ReasoningEdge
 
@@ -653,10 +656,29 @@ def test_reasoning_graph_does_not_infer_missing_edges():
 
     measurement = MeasurementNode("measurement:m:1", "test", "metric", 1)
     observation = ObservationNode(
-        "observation:o:1", "observed", "test", "Observed evidence",
-        measurement_ids=(measurement.id,),
+        "observation:o:1", "observed", "test", "Observed evidence"
     )
     graph = ReasoningGraph(measurements=(measurement,), observations=(observation,))
 
     assert graph.provenance_edges() == ()
     assert graph.to_dict()["edges"] == []
+
+
+def test_graph_export_keeps_relationships_only_in_edges():
+    from segpick.models import MeasurementNode, ObservationNode, ReasoningEdge, ReasoningGraph
+
+    measurement = MeasurementNode("measurement:m:1", "test", "metric", 1)
+    observation = ObservationNode("observation:o:1", "observed", "test", "Observed evidence")
+    graph = ReasoningGraph(
+        measurements=(measurement,),
+        observations=(observation,),
+        edges=(ReasoningEdge(observation.id, measurement.id, "supported_by"),),
+    )
+
+    payload = graph.to_dict()
+    assert "measurement_ids" not in payload["observations"][0]
+    assert payload["edges"] == [{
+        "source_id": observation.id,
+        "target_id": measurement.id,
+        "relationship": "supported_by",
+    }]
