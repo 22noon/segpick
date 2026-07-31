@@ -100,9 +100,37 @@ class BiologicalHypothesisNode:
     rule_description: str = ""
     rule_references: tuple[str, ...] = ()
     hypothesis_type: str = "biological"
+    definition_id: str = ""
+    definition_base_confidence: str = ""
+    definition_supported_by: tuple[str, ...] = ()
+    definition_contradicted_by: tuple[str, ...] = ()
+    definition_minimum_support: int = 1
+    evaluation_candidate_ids: tuple[str, ...] = ()
+    evaluation_supporting_synthesis_ids: tuple[str, ...] = ()
+    evaluation_conflicting_synthesis_ids: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        data = asdict(self)
+        data["definition"] = {
+            "hypothesis_id": self.definition_id or self.rule_id,
+            "base_confidence": self.definition_base_confidence,
+            "supported_by": list(self.definition_supported_by),
+            "contradicted_by": list(self.definition_contradicted_by),
+            "minimum_support": self.definition_minimum_support,
+            "source": self.rule_source,
+            "description": self.rule_description,
+            "references": list(self.rule_references),
+        }
+        data["evaluation"] = {
+            "candidate_ids": list(self.evaluation_candidate_ids),
+            "confidence": self.confidence,
+            "state": self.state,
+            "supporting_synthesis_ids": list(self.evaluation_supporting_synthesis_ids),
+            "conflicting_synthesis_ids": list(self.evaluation_conflicting_synthesis_ids),
+            "supporting_node_ids": list(self.supporting_ids),
+            "conflicting_node_ids": list(self.conflicting_ids),
+        }
+        return data
 
 
 # Backward-compatible alias during the final hypothesis-layer migration.

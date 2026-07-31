@@ -186,6 +186,14 @@ def _scenario_hypothesis_nodes(
             rule_source=hypothesis.source,
             rule_references=hypothesis.references,
             hypothesis_type="biological",
+            definition_id=hypothesis.hypothesis_id,
+            definition_base_confidence=hypothesis.base_confidence,
+            definition_supported_by=hypothesis.definition_supported_by,
+            definition_contradicted_by=hypothesis.definition_contradicted_by,
+            definition_minimum_support=hypothesis.minimum_support,
+            evaluation_candidate_ids=hypothesis.candidate_ids,
+            evaluation_supporting_synthesis_ids=hypothesis.supporting_scenarios,
+            evaluation_conflicting_synthesis_ids=hypothesis.conflicting_scenarios,
         ))
     return tuple(nodes)
 

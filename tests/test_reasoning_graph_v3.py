@@ -445,3 +445,33 @@ def test_reasoning_graph_rejects_unknown_schema_version():
 
     with pytest.raises(ValueError, match="Unsupported reasoning graph schema version"):
         ReasoningGraph().to_dict(schema_version="99")
+
+
+def test_biological_hypothesis_graph_node_separates_definition_and_evaluation():
+    from segpick.models import BiologicalHypothesisNode
+
+    node = BiologicalHypothesisNode(
+        id="hypothesis:duplication:1",
+        title="Genuine duplication",
+        summary="Repeated structure retains coding continuity.",
+        confidence="high",
+        supporting_ids=("synthesis:repeat:1",),
+        rule_id="duplication",
+        rule_source="builtin:hypotheses.yml",
+        definition_id="duplication",
+        definition_base_confidence="moderate",
+        definition_supported_by=("repeat_with_continuity",),
+        definition_contradicted_by=("breakpoint_loss",),
+        definition_minimum_support=1,
+        evaluation_candidate_ids=("contig_a",),
+        evaluation_supporting_synthesis_ids=("repeat_with_continuity",),
+    )
+
+    payload = node.to_dict()
+
+    assert payload["definition"]["hypothesis_id"] == "duplication"
+    assert payload["definition"]["base_confidence"] == "moderate"
+    assert payload["definition"]["supported_by"] == ["repeat_with_continuity"]
+    assert payload["evaluation"]["candidate_ids"] == ["contig_a"]
+    assert payload["evaluation"]["confidence"] == "high"
+    assert payload["evaluation"]["supporting_synthesis_ids"] == ["repeat_with_continuity"]
