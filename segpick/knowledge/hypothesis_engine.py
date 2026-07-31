@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-from segpick.models import BiologicalScenario, ScenarioHypothesis
+from segpick.models import BiologicalScenario, HypothesisEvaluation
 
-from .hypothesis_schema import HypothesisModule
+from .hypothesis_definition import HypothesisDefinition
 
 _ORDER = ("low", "moderate", "high")
 
 
 def evaluate_hypotheses(
-    modules: tuple[HypothesisModule, ...],
+    definitions: tuple[HypothesisDefinition, ...],
     scenarios: tuple[BiologicalScenario, ...],
     candidate_ids: tuple[str, ...] = (),
-) -> tuple[ScenarioHypothesis, ...]:
+) -> tuple[HypothesisEvaluation, ...]:
     scenario_by_id = {item.scenario_id: item for item in scenarios}
-    results: list[ScenarioHypothesis] = []
-    for module in modules:
+    results: list[HypothesisEvaluation] = []
+    for module in definitions:
         supporting = tuple(
             scenario_by_id[sid] for sid in module.supported_by if sid in scenario_by_id
         )
@@ -31,7 +31,7 @@ def evaluate_hypotheses(
         inferred_candidates = tuple(dict.fromkeys(
             candidate_id for scenario in supporting for candidate_id in scenario.candidate_ids
         ))
-        results.append(ScenarioHypothesis(
+        results.append(HypothesisEvaluation(
             hypothesis_id=module.hypothesis_id,
             title=module.title,
             category=module.category,

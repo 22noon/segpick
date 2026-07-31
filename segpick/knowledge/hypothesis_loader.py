@@ -5,7 +5,7 @@ from typing import Any, Iterable
 
 import yaml
 
-from .hypothesis_schema import HypothesisModule
+from .hypothesis_definition import HypothesisDefinition
 
 SCHEMA_VERSION = 1
 
@@ -16,19 +16,19 @@ def _text(value: Any, field: str, source: str) -> str:
     return value.strip()
 
 
-def load_hypothesis_file(path: str | Path, *, source_label: str | None = None) -> tuple[HypothesisModule, ...]:
+def load_hypothesis_file(path: str | Path, *, source_label: str | None = None) -> tuple[HypothesisDefinition, ...]:
     p = Path(path)
     source = source_label or str(p)
     raw = yaml.safe_load(p.read_text()) or {}
     if not isinstance(raw, dict) or raw.get("version", 1) != SCHEMA_VERSION:
         raise ValueError(f"{source}: unsupported knowledge schema")
-    modules: list[HypothesisModule] = []
+    modules: list[HypothesisDefinition] = []
     for item in raw.get("hypotheses", []) or []:
         hid = _text(item.get("id"), "id", source)
         supported_by = tuple(str(x).strip() for x in item.get("supported_by", []) if str(x).strip())
         if not supported_by:
             raise ValueError(f"{source}: hypothesis '{hid}' requires at least one supported_by scenario")
-        modules.append(HypothesisModule(
+        modules.append(HypothesisDefinition(
             hypothesis_id=hid,
             title=_text(item.get("title"), "title", source),
             category=_text(item.get("category"), "category", source),
@@ -46,7 +46,7 @@ def load_hypothesis_file(path: str | Path, *, source_label: str | None = None) -
     return tuple(modules)
 
 
-def load_active_hypotheses(user_files: Iterable[str | Path] = ()) -> tuple[tuple[HypothesisModule, ...], tuple[HypothesisModule, ...]]:
+def load_active_hypotheses(user_files: Iterable[str | Path] = ()) -> tuple[tuple[HypothesisDefinition, ...], tuple[HypothesisDefinition, ...]]:
     builtin = load_hypothesis_file(
         Path(__file__).with_name("default_hypotheses.yml"),
         source_label="builtin:default_hypotheses.yml",

@@ -12,7 +12,7 @@ from .gene import Gene
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
 from .scenario import BiologicalScenario, ScenarioEvidenceProvenance
-from .scenario_hypothesis import ScenarioHypothesis
+from .hypothesis_evaluation import HypothesisEvaluation, ScenarioHypothesis
 from .metadata import ContigMetadata
 from .manifest import AnalysisManifest
 from .orf import ORFHit, ORFMetrics
@@ -48,6 +48,7 @@ __all__ = [
     "BiologicalHypothesis",
     "BiologicalScenario",
     "ScenarioEvidenceProvenance",
+    "HypothesisEvaluation",
     "ScenarioHypothesis",
     "CandidateContig",
     "ContigDotplot",
