@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from typing import Iterable
 
 from segpick.models import (
     BiologicalFinding, BiologicalHypothesis, BiologicalScenario,
@@ -25,7 +24,7 @@ def _slug(value: str) -> str:
 def _observation_nodes(
     observations: tuple[EvidenceObservation, ...],
     measurements: tuple[MeasurementNode, ...] = (),
-) -> tuple[ObservationNode, ...]:
+) -> tuple[tuple[ObservationNode, ...], tuple[ReasoningEdge, ...]]:
     counts: dict[str, int] = {}
     nodes = []
     measurements_by_channel: dict[str, tuple[str, ...]] = {}
@@ -45,10 +44,19 @@ def _observation_nodes(
             ) if observation.source_name.startswith("plugin:") else (),
             severity=observation.severity,
         ))
-    return tuple(nodes)
+    node_tuple = tuple(nodes)
+    edges = tuple(
+        ReasoningEdge(node.id, measurement_id, "supported_by")
+        for node in node_tuple
+        for measurement_id in node.measurement_ids
+    )
+    return node_tuple, edges
 
 
-def _interpretation_nodes(findings: tuple[BiologicalFinding, ...], observations: tuple[ObservationNode, ...]) -> tuple[InterpretiveFindingNode, ...]:
+def _interpretation_nodes(
+    findings: tuple[BiologicalFinding, ...],
+    observations: tuple[ObservationNode, ...],
+) -> tuple[tuple[InterpretiveFindingNode, ...], tuple[ReasoningEdge, ...]]:
     by_source: dict[str, list[str]] = {}
     for node in observations:
         by_source.setdefault(node.source, []).append(node.id)
@@ -61,7 +69,13 @@ def _interpretation_nodes(findings: tuple[BiologicalFinding, ...], observations:
             summary=finding.summary,
             observation_ids=linked,
         ))
-    return tuple(nodes)
+    node_tuple = tuple(nodes)
+    edges = tuple(
+        ReasoningEdge(node.id, observation_id, "derived_from")
+        for node in node_tuple
+        for observation_id in node.observation_ids
+    )
+    return node_tuple, edges
 
 
 def _condition_targets(label: str, observations: tuple[ObservationNode, ...], interpretations: tuple[InterpretiveFindingNode, ...]) -> tuple[str, ...]:
@@ -76,7 +90,7 @@ def _rule_finding_nodes(
     hypotheses: tuple[BiologicalHypothesis, ...],
     observations: tuple[ObservationNode, ...],
     interpretations: tuple[InterpretiveFindingNode, ...],
-) -> tuple[InterpretiveFindingNode, ...]:
+) -> tuple[tuple[InterpretiveFindingNode, ...], tuple[ReasoningEdge, ...]]:
     """Represent legacy rule-generated hypotheses as interpretive findings.
 
     These rules interpret local observations/findings; final biological
@@ -117,14 +131,25 @@ def _rule_finding_nodes(
             rule_description=hypothesis.rule_description,
             rule_references=hypothesis.rule_references,
         ))
-    return tuple(nodes)
+    node_tuple = tuple(nodes)
+    edges: list[ReasoningEdge] = []
+    for node in node_tuple:
+        edges.extend(ReasoningEdge(node.id, target_id, "supported_by") for target_id in node.supporting_ids)
+        edges.extend(ReasoningEdge(node.id, target_id, "contradicted_by") for target_id in node.conflicting_ids)
+        linked = set(node.supporting_ids) | set(node.conflicting_ids)
+        edges.extend(
+            ReasoningEdge(node.id, observation_id, "derived_from")
+            for observation_id in node.observation_ids
+            if observation_id not in linked
+        )
+    return node_tuple, tuple(edges)
 
 
 def _scenario_nodes(
     scenarios: tuple[BiologicalScenario, ...],
     observations: tuple[ObservationNode, ...],
     interpretations: tuple[InterpretiveFindingNode, ...],
-) -> tuple[EvidenceSynthesisNode, ...]:
+) -> tuple[tuple[EvidenceSynthesisNode, ...], tuple[ReasoningEdge, ...]]:
     nodes = []
     for index, scenario in enumerate(scenarios, 1):
         support_labels = scenario.matched_required + scenario.matched_supporting
@@ -152,13 +177,18 @@ def _scenario_nodes(
             source=scenario.source,
             references=scenario.references,
         ))
-    return tuple(nodes)
+    node_tuple = tuple(nodes)
+    edges: list[ReasoningEdge] = []
+    for node in node_tuple:
+        edges.extend(ReasoningEdge(node.id, target_id, "composed_from") for target_id in node.supporting_ids)
+        edges.extend(ReasoningEdge(node.id, target_id, "conflicted_by") for target_id in node.conflicting_ids)
+    return node_tuple, tuple(edges)
 
 
 def _scenario_hypothesis_nodes(
     hypotheses: tuple[ScenarioHypothesis, ...],
     scenarios: tuple[EvidenceSynthesisNode, ...],
-) -> tuple[BiologicalHypothesisNode, ...]:
+) -> tuple[tuple[BiologicalHypothesisNode, ...], tuple[ReasoningEdge, ...]]:
     scenario_by_rule_id = {node.scenario_id: node.id for node in scenarios}
     nodes = []
     for index, hypothesis in enumerate(hypotheses, 1):
@@ -196,51 +226,30 @@ def _scenario_hypothesis_nodes(
             evaluation_supporting_synthesis_ids=hypothesis.supporting_scenarios,
             evaluation_conflicting_synthesis_ids=hypothesis.conflicting_scenarios,
         ))
-    return tuple(nodes)
-
-
-def _reasoning_edges(
-    observations: tuple[ObservationNode, ...],
-    findings: tuple[InterpretiveFindingNode, ...],
-    syntheses: tuple[EvidenceSynthesisNode, ...],
-    hypotheses: tuple[BiologicalHypothesisNode, ...],
-) -> tuple[ReasoningEdge, ...]:
+    node_tuple = tuple(nodes)
     edges: list[ReasoningEdge] = []
-    for observation in observations:
-        edges.extend(
-            ReasoningEdge(observation.id, measurement_id, "supported_by")
-            for measurement_id in observation.measurement_ids
-        )
-    for finding in findings:
-        edges.extend(ReasoningEdge(finding.id, node_id, "supported_by") for node_id in finding.supporting_ids)
-        edges.extend(ReasoningEdge(finding.id, node_id, "contradicted_by") for node_id in finding.conflicting_ids)
-        linked = set(finding.supporting_ids) | set(finding.conflicting_ids)
-        edges.extend(
-            ReasoningEdge(finding.id, node_id, "derived_from")
-            for node_id in finding.observation_ids
-            if node_id not in linked
-        )
-    for synthesis in syntheses:
-        edges.extend(ReasoningEdge(synthesis.id, node_id, "composed_from") for node_id in synthesis.supporting_ids)
-        edges.extend(ReasoningEdge(synthesis.id, node_id, "conflicted_by") for node_id in synthesis.conflicting_ids)
-    for hypothesis in hypotheses:
-        edges.extend(ReasoningEdge(hypothesis.id, node_id, "supported_by") for node_id in hypothesis.supporting_ids)
-        edges.extend(ReasoningEdge(hypothesis.id, node_id, "contradicted_by") for node_id in hypothesis.conflicting_ids)
-    return tuple(edges)
+    for node in node_tuple:
+        edges.extend(ReasoningEdge(node.id, target_id, "supported_by") for target_id in node.supporting_ids)
+        edges.extend(ReasoningEdge(node.id, target_id, "contradicted_by") for target_id in node.conflicting_ids)
+    return node_tuple, tuple(edges)
 
 
 def build_reasoning_graph(candidate) -> ReasoningGraph:
     measurements = tuple(candidate.analysis.plugin_measurements)
-    observation_nodes = _observation_nodes(candidate.analysis.observations, measurements)
-    base_finding_nodes = _interpretation_nodes(candidate.analysis.findings, observation_nodes)
-    rule_finding_nodes = _rule_finding_nodes(
+    observation_nodes, observation_edges = _observation_nodes(
+        candidate.analysis.observations, measurements
+    )
+    base_finding_nodes, base_finding_edges = _interpretation_nodes(
+        candidate.analysis.findings, observation_nodes
+    )
+    rule_finding_nodes, rule_finding_edges = _rule_finding_nodes(
         candidate.analysis.hypotheses, observation_nodes, base_finding_nodes
     )
     interpretation_nodes = base_finding_nodes + rule_finding_nodes
-    scenario_nodes = _scenario_nodes(
+    scenario_nodes, scenario_edges = _scenario_nodes(
         candidate.analysis.scenarios, observation_nodes, interpretation_nodes
     )
-    scenario_hypothesis_nodes = _scenario_hypothesis_nodes(
+    scenario_hypothesis_nodes, hypothesis_edges = _scenario_hypothesis_nodes(
         candidate.analysis.scenario_hypotheses, scenario_nodes
     )
     graph = ReasoningGraph(
@@ -249,9 +258,12 @@ def build_reasoning_graph(candidate) -> ReasoningGraph:
         interpretive_findings=interpretation_nodes,
         evidence_syntheses=scenario_nodes,
         biological_hypotheses=scenario_hypothesis_nodes,
-        edges=_reasoning_edges(
-            observation_nodes, interpretation_nodes, scenario_nodes,
-            scenario_hypothesis_nodes,
+        edges=(
+            observation_edges
+            + base_finding_edges
+            + rule_finding_edges
+            + scenario_edges
+            + hypothesis_edges
         ),
     )
     graph.validate()

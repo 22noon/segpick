@@ -565,12 +565,20 @@ def test_graph_inspector_builds_typed_path_from_hypothesis_to_measurement():
         state="supported",
         supporting_ids=(synthesis.id,),
     )
+    from segpick.models import ReasoningEdge
+
     candidate.analysis.reasoning_graph = ReasoningGraph(
         measurements=(measurement,),
         observations=(observation,),
         interpretive_findings=(finding,),
         evidence_syntheses=(synthesis,),
         biological_hypotheses=(hypothesis,),
+        edges=(
+            ReasoningEdge(hypothesis.id, synthesis.id, "supported_by"),
+            ReasoningEdge(synthesis.id, finding.id, "composed_from"),
+            ReasoningEdge(finding.id, observation.id, "derived_from"),
+            ReasoningEdge(observation.id, measurement.id, "supported_by"),
+        ),
     )
 
     view = build_reasoning_graph_inspector_view(candidate)
@@ -638,3 +646,17 @@ def test_graph_inspector_template_renders_typed_provenance_relationships():
     assert "step.relationship" in template
     assert "step.node_type" in template
     assert "step.node_id" in template
+
+
+def test_reasoning_graph_does_not_infer_missing_edges():
+    from segpick.models import ObservationNode, MeasurementNode, ReasoningGraph
+
+    measurement = MeasurementNode("measurement:m:1", "test", "metric", 1)
+    observation = ObservationNode(
+        "observation:o:1", "observed", "test", "Observed evidence",
+        measurement_ids=(measurement.id,),
+    )
+    graph = ReasoningGraph(measurements=(measurement,), observations=(observation,))
+
+    assert graph.provenance_edges() == ()
+    assert graph.to_dict()["edges"] == []

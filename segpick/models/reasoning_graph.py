@@ -174,24 +174,8 @@ class ReasoningGraph:
         return self.biological_hypotheses
 
     def provenance_edges(self) -> tuple[ReasoningEdge, ...]:
-        """Return explicit edges, deriving them for schema-2.0 graphs if needed."""
-        if self.edges:
-            return self.edges
-        edges: list[ReasoningEdge] = []
-        for observation in self.observations:
-            edges.extend(ReasoningEdge(observation.id, node_id, "supported_by") for node_id in observation.measurement_ids)
-        for finding in self.interpretive_findings:
-            edges.extend(ReasoningEdge(finding.id, node_id, "supported_by") for node_id in finding.supporting_ids)
-            edges.extend(ReasoningEdge(finding.id, node_id, "contradicted_by") for node_id in finding.conflicting_ids)
-            linked = set(finding.supporting_ids) | set(finding.conflicting_ids)
-            edges.extend(ReasoningEdge(finding.id, node_id, "derived_from") for node_id in finding.observation_ids if node_id not in linked)
-        for synthesis in self.evidence_syntheses:
-            edges.extend(ReasoningEdge(synthesis.id, node_id, "composed_from") for node_id in synthesis.supporting_ids)
-            edges.extend(ReasoningEdge(synthesis.id, node_id, "conflicted_by") for node_id in synthesis.conflicting_ids)
-        for hypothesis in self.biological_hypotheses:
-            edges.extend(ReasoningEdge(hypothesis.id, node_id, "supported_by") for node_id in hypothesis.supporting_ids)
-            edges.extend(ReasoningEdge(hypothesis.id, node_id, "contradicted_by") for node_id in hypothesis.conflicting_ids)
-        return tuple(edges)
+        """Return the graph's explicit immutable provenance edges."""
+        return self.edges
 
     def validate(self) -> None:
         measurement_ids = {item.id for item in self.measurements}
