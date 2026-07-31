@@ -3,13 +3,17 @@ from __future__ import annotations
 import re
 from typing import Iterable
 
-from segpick.models import BiologicalFinding, BiologicalHypothesis, EvidenceObservation
+from segpick.models import (
+    BiologicalFinding, BiologicalHypothesis, BiologicalScenario,
+    EvidenceObservation, ScenarioHypothesis,
+)
 from segpick.models.reasoning_graph import (
     HypothesisNode,
     InterpretationNode,
     MeasurementNode,
     ObservationNode,
     ReasoningGraph,
+    ScenarioNode,
 )
 
 
@@ -92,16 +96,96 @@ def _hypothesis_nodes(hypotheses: tuple[BiologicalHypothesis, ...], observations
     return tuple(nodes)
 
 
+def _scenario_nodes(
+    scenarios: tuple[BiologicalScenario, ...],
+    observations: tuple[ObservationNode, ...],
+    interpretations: tuple[InterpretationNode, ...],
+) -> tuple[ScenarioNode, ...]:
+    nodes = []
+    for index, scenario in enumerate(scenarios, 1):
+        support_labels = scenario.matched_required + scenario.matched_supporting
+        supporting = tuple(dict.fromkeys(
+            node_id
+            for label in support_labels
+            for node_id in _condition_targets(label, observations, interpretations)
+        ))
+        conflicting = tuple(dict.fromkeys(
+            node_id
+            for label in scenario.matched_conflicting
+            for node_id in _condition_targets(label, observations, interpretations)
+        ))
+        nodes.append(ScenarioNode(
+            id=f"scenario:{_slug(scenario.scenario_id)}:{index}",
+            scenario_id=scenario.scenario_id,
+            title=scenario.title,
+            interpretation=scenario.interpretation,
+            confidence=scenario.confidence,
+            supporting_ids=supporting,
+            conflicting_ids=conflicting,
+            category=scenario.category,
+            scope=scenario.scope,
+            severity=scenario.severity,
+            source=scenario.source,
+            references=scenario.references,
+        ))
+    return tuple(nodes)
+
+
+def _scenario_hypothesis_nodes(
+    hypotheses: tuple[ScenarioHypothesis, ...],
+    scenarios: tuple[ScenarioNode, ...],
+) -> tuple[HypothesisNode, ...]:
+    scenario_by_rule_id = {node.scenario_id: node.id for node in scenarios}
+    nodes = []
+    for index, hypothesis in enumerate(hypotheses, 1):
+        supporting = tuple(
+            scenario_by_rule_id[item]
+            for item in hypothesis.supporting_scenarios
+            if item in scenario_by_rule_id
+        )
+        conflicting = tuple(
+            scenario_by_rule_id[item]
+            for item in hypothesis.conflicting_scenarios
+            if item in scenario_by_rule_id
+        )
+        nodes.append(HypothesisNode(
+            id=f"hypothesis:scenario:{_slug(hypothesis.hypothesis_id)}:{index}",
+            rule_id=hypothesis.hypothesis_id,
+            title=hypothesis.title,
+            summary=hypothesis.explanation,
+            confidence=hypothesis.confidence,
+            supporting_ids=supporting,
+            conflicting_ids=conflicting,
+            state="challenged" if conflicting else "supported",
+            category=hypothesis.category,
+            scope=hypothesis.scope,
+            severity=hypothesis.severity,
+            rule_source=hypothesis.source,
+            rule_references=hypothesis.references,
+            hypothesis_type="scenario",
+        ))
+    return tuple(nodes)
+
+
 def build_reasoning_graph(candidate) -> ReasoningGraph:
     measurements = tuple(candidate.analysis.plugin_measurements)
     observation_nodes = _observation_nodes(candidate.analysis.observations, measurements)
     interpretation_nodes = _interpretation_nodes(candidate.analysis.findings, observation_nodes)
-    hypothesis_nodes = _hypothesis_nodes(candidate.analysis.hypotheses, observation_nodes, interpretation_nodes)
+    rule_hypothesis_nodes = _hypothesis_nodes(
+        candidate.analysis.hypotheses, observation_nodes, interpretation_nodes
+    )
+    scenario_nodes = _scenario_nodes(
+        candidate.analysis.scenarios, observation_nodes, interpretation_nodes
+    )
+    scenario_hypothesis_nodes = _scenario_hypothesis_nodes(
+        candidate.analysis.scenario_hypotheses, scenario_nodes
+    )
     graph = ReasoningGraph(
         measurements=measurements,
         observations=observation_nodes,
         interpretations=interpretation_nodes,
-        hypotheses=hypothesis_nodes,
+        scenarios=scenario_nodes,
+        hypotheses=rule_hypothesis_nodes + scenario_hypothesis_nodes,
     )
     graph.validate()
     return graph

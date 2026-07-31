@@ -46,6 +46,25 @@ class InterpretationNode:
 
 
 @dataclass(frozen=True, slots=True)
+class ScenarioNode:
+    id: str
+    scenario_id: str
+    title: str
+    interpretation: str
+    confidence: str
+    supporting_ids: tuple[str, ...] = ()
+    conflicting_ids: tuple[str, ...] = ()
+    category: str = ""
+    scope: str = "candidate"
+    severity: str = "informational"
+    source: str = "builtin"
+    references: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
 class HypothesisNode:
     id: str
     title: str
@@ -61,6 +80,7 @@ class HypothesisNode:
     rule_source: str = ""
     rule_description: str = ""
     rule_references: tuple[str, ...] = ()
+    hypothesis_type: str = "rule"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -71,15 +91,17 @@ class ReasoningGraph:
     measurements: tuple[MeasurementNode, ...] = ()
     observations: tuple[ObservationNode, ...] = ()
     interpretations: tuple[InterpretationNode, ...] = ()
+    scenarios: tuple[ScenarioNode, ...] = ()
     hypotheses: tuple[HypothesisNode, ...] = ()
 
     def validate(self) -> None:
         measurement_ids = {item.id for item in self.measurements}
         observation_ids = {item.id for item in self.observations}
         interpretation_ids = {item.id for item in self.interpretations}
+        scenario_ids = {item.id for item in self.scenarios}
         hypothesis_ids = {item.id for item in self.hypotheses}
-        all_ids = measurement_ids | observation_ids | interpretation_ids | hypothesis_ids
-        expected = sum(map(len, (measurement_ids, observation_ids, interpretation_ids, hypothesis_ids)))
+        all_ids = measurement_ids | observation_ids | interpretation_ids | scenario_ids | hypothesis_ids
+        expected = sum(map(len, (measurement_ids, observation_ids, interpretation_ids, scenario_ids, hypothesis_ids)))
         if len(all_ids) != expected:
             raise ValueError("Reasoning graph node IDs must be globally unique")
         for item in self.observations:
@@ -91,8 +113,13 @@ class ReasoningGraph:
             if missing:
                 raise ValueError(f"Interpretation {item.id} references missing observations: {sorted(missing)}")
         lower_ids = observation_ids | interpretation_ids
-        for item in self.hypotheses:
+        for item in self.scenarios:
             missing = (set(item.supporting_ids) | set(item.conflicting_ids)) - lower_ids
+            if missing:
+                raise ValueError(f"Scenario {item.id} references missing evidence nodes: {sorted(missing)}")
+        hypothesis_evidence_ids = lower_ids | scenario_ids
+        for item in self.hypotheses:
+            missing = (set(item.supporting_ids) | set(item.conflicting_ids)) - hypothesis_evidence_ids
             if missing:
                 raise ValueError(f"Hypothesis {item.id} references missing evidence nodes: {sorted(missing)}")
 
@@ -102,5 +129,6 @@ class ReasoningGraph:
             "measurements": [item.to_dict() for item in self.measurements],
             "observations": [item.to_dict() for item in self.observations],
             "interpretations": [item.to_dict() for item in self.interpretations],
+            "scenarios": [item.to_dict() for item in self.scenarios],
             "hypotheses": [item.to_dict() for item in self.hypotheses],
         }

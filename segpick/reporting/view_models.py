@@ -443,6 +443,7 @@ class ReasoningGraphInspectorView:
     measurement_count: int
     observation_count: int
     interpretation_count: int
+    scenario_count: int
     hypothesis_count: int
     builtin_sources: tuple[str, ...]
     plugin_sources: tuple[str, ...]
@@ -455,7 +456,7 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
     if graph is None:
         return ReasoningGraphInspectorView(
             available=False, valid=False, validation_message="Reasoning graph unavailable.",
-            measurement_count=0, observation_count=0, interpretation_count=0, hypothesis_count=0,
+            measurement_count=0, observation_count=0, interpretation_count=0, scenario_count=0, hypothesis_count=0,
             builtin_sources=(), plugin_sources=(), provenance_paths=(), graph_json="{}",
         )
     try:
@@ -470,19 +471,48 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
     builtin_sources = tuple(sorted(value for value in sources if not value.startswith("plugin:")))
     observation_by_id = {item.id: item for item in graph.observations}
     interpretation_by_id = {item.id: item for item in graph.interpretations}
+    scenario_by_id = {item.id: item for item in graph.scenarios}
+
+    def evidence_paths(evidence_id: str) -> tuple[str, ...]:
+        if evidence_id in interpretation_by_id:
+            interpretation = interpretation_by_id[evidence_id]
+            return tuple(
+                f"{interpretation.id} → {observation_id}"
+                for observation_id in interpretation.observation_ids or ("(no observation link)",)
+            )
+        if evidence_id in observation_by_id:
+            return (evidence_id,)
+        return (f"{evidence_id} (missing)",)
+
     paths = []
     for hypothesis in graph.hypotheses:
         for evidence_id in hypothesis.supporting_ids + hypothesis.conflicting_ids:
-            if evidence_id in interpretation_by_id:
-                interpretation = interpretation_by_id[evidence_id]
-                for observation_id in interpretation.observation_ids or ("(no observation link)",):
-                    paths.append(f"{observation_id} → {interpretation.id} → {hypothesis.id} [{hypothesis.state}]")
-            elif evidence_id in observation_by_id:
-                paths.append(f"{evidence_id} → {hypothesis.id} [{hypothesis.state}]")
+            relation = "supports" if evidence_id in hypothesis.supporting_ids else "contradicts"
+            if evidence_id in scenario_by_id:
+                scenario = scenario_by_id[evidence_id]
+                scenario_evidence = scenario.supporting_ids + scenario.conflicting_ids
+                if scenario_evidence:
+                    for nested_id in scenario_evidence:
+                        for tail in evidence_paths(nested_id):
+                            paths.append(
+                                f"{hypothesis.id} [{hypothesis.state}] → {relation}: "
+                                f"{scenario.id} → {tail}"
+                            )
+                else:
+                    paths.append(
+                        f"{hypothesis.id} [{hypothesis.state}] → {relation}: "
+                        f"{scenario.id} → (no evidence link)"
+                    )
+            else:
+                for tail in evidence_paths(evidence_id):
+                    paths.append(
+                        f"{hypothesis.id} [{hypothesis.state}] → {relation}: {tail}"
+                    )
     return ReasoningGraphInspectorView(
         available=True, valid=valid, validation_message=message,
         measurement_count=len(graph.measurements), observation_count=len(graph.observations),
-        interpretation_count=len(graph.interpretations), hypothesis_count=len(graph.hypotheses),
+        interpretation_count=len(graph.interpretations), scenario_count=len(graph.scenarios),
+        hypothesis_count=len(graph.hypotheses),
         builtin_sources=builtin_sources, plugin_sources=plugin_sources,
         provenance_paths=tuple(paths),
         graph_json=json.dumps(graph.to_dict(), indent=2, sort_keys=True) if valid else "{}",

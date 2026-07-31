@@ -139,3 +139,57 @@ def test_hypothesis_metadata_and_rule_provenance_enter_graph():
     assert node.rule_description == "Tests preservation of declarative rule provenance."
     assert node.rule_references == ("doi:10.0000/example",)
     assert candidate.analysis.reasoning_graph.to_dict()["hypotheses"][0]["rule_source"] == "user:test-rules.yml"
+
+
+def test_scenario_hypotheses_enter_graph_through_scenario_nodes():
+    from segpick.models import BiologicalScenario, ScenarioHypothesis
+    from segpick.reasoning.graph import build_reasoning_graph
+
+    _, candidate = _sample()
+    candidate.analysis.observations = (
+        EvidenceObservation(
+            observation_type="fragmented_alignment",
+            source="structural_alignment",
+            description="The alignment is split across multiple blocks.",
+        ),
+    )
+    candidate.analysis.scenarios = (
+        BiologicalScenario(
+            scenario_id="fragmented_candidate_structure",
+            title="Fragmented candidate structure",
+            category="assembly_structure",
+            scope="candidate",
+            confidence="moderate",
+            severity="review",
+            interpretation="The candidate has fragmented structural support.",
+            candidate_ids=(candidate.id,),
+            matched_required=("observation:fragmented_alignment@structural_alignment",),
+            source="builtin:test-scenarios.yml",
+        ),
+    )
+    candidate.analysis.scenario_hypotheses = tuple(
+        ScenarioHypothesis(
+            hypothesis_id=f"scenario_hypothesis_{index}",
+            title=f"Scenario hypothesis {index}",
+            category="assembly_structure",
+            scope="candidate",
+            confidence="moderate",
+            severity="review",
+            explanation="A scenario-derived explanation.",
+            candidate_ids=(candidate.id,),
+            supporting_scenarios=("fragmented_candidate_structure",),
+            source="builtin:test-hypotheses.yml",
+        )
+        for index in range(1, 4)
+    )
+
+    graph = build_reasoning_graph(candidate)
+
+    assert len(graph.scenarios) == 1
+    assert len(graph.hypotheses) == 3
+    assert {item.hypothesis_type for item in graph.hypotheses} == {"scenario"}
+    scenario_node = graph.scenarios[0]
+    assert scenario_node.supporting_ids == (graph.observations[0].id,)
+    assert all(item.supporting_ids == (scenario_node.id,) for item in graph.hypotheses)
+    assert len(graph.to_dict()["hypotheses"]) == 3
+    graph.validate()

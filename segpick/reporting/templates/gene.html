@@ -1150,6 +1150,7 @@
             <div class="mini"><strong>{{ candidate.reasoning_graph.measurement_count }}</strong><span>Measurements</span></div>
             <div class="mini"><strong>{{ candidate.reasoning_graph.observation_count }}</strong><span>Observations</span></div>
             <div class="mini"><strong>{{ candidate.reasoning_graph.interpretation_count }}</strong><span>Interpretations</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.scenario_count }}</strong><span>Scenarios</span></div>
             <div class="mini"><strong>{{ candidate.reasoning_graph.hypothesis_count }}</strong><span>Hypotheses</span></div>
           </div>
           <h4>Built-in evidence sources</h4>
@@ -1157,7 +1158,7 @@
           <h4>Plugin evidence sources</h4>
           <div class="graph-source-list">{% for source in candidate.reasoning_graph.plugin_sources %}<span class="graph-source plugin">{{ source }}</span>{% else %}<span class="muted">No plugin evidence contributed to this candidate.</span>{% endfor %}</div>
           <details>
-            <summary><strong>Provenance paths</strong></summary>
+            <summary><strong>Hypothesis-first provenance paths</strong></summary>
             {% if candidate.reasoning_graph.provenance_paths %}<ul class="graph-paths">{% for path in candidate.reasoning_graph.provenance_paths %}<li>{{ path }}</li>{% endfor %}</ul>{% else %}<p class="muted">No hypothesis provenance paths are currently present.</p>{% endif %}
           </details>
           <details>

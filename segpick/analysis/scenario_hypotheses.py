@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from segpick.knowledge import HypothesisModule, evaluate_hypotheses
 from segpick.models import Sample
+from segpick.reasoning.graph import build_reasoning_graph
 
 
 def attach_scenario_hypotheses(
@@ -16,6 +17,7 @@ def attach_scenario_hypotheses(
                 candidate.analysis.scenarios,
                 candidate_ids=(candidate.id,),
             )
+            candidate.analysis.reasoning_graph = build_reasoning_graph(candidate)
         gene.scenario_hypotheses = evaluate_hypotheses(
             gene_modules,
             gene.scenarios,
