@@ -1200,8 +1200,24 @@
           <h4>Plugin evidence sources</h4>
           <div class="graph-source-list">{% for source in candidate.reasoning_graph.plugin_sources %}<span class="graph-source plugin">{{ source }}</span>{% else %}<span class="muted">No plugin evidence contributed to this candidate.</span>{% endfor %}</div>
           <details>
-            <summary><strong>Hypothesis-first provenance paths</strong></summary>
-            {% if candidate.reasoning_graph.provenance_paths %}<ul class="graph-paths">{% for path in candidate.reasoning_graph.provenance_paths %}<li>{{ path }}</li>{% endfor %}</ul>{% else %}<p class="muted">No hypothesis provenance paths are currently present.</p>{% endif %}
+            <summary><strong>Typed hypothesis provenance</strong></summary>
+            {% if candidate.reasoning_graph.provenance_paths %}
+              <div class="graph-paths">
+                {% for path in candidate.reasoning_graph.provenance_paths %}
+                  <ol class="graph-typed-path">
+                    {% for step in path.steps %}
+                      <li class="graph-path-step{% if step.missing %} missing{% endif %}">
+                        {% if step.relationship %}<span class="graph-relation">{{ step.relationship }}</span>{% endif %}
+                        <span class="graph-node-type">{{ step.node_type }}</span>
+                        <strong>{{ step.title }}</strong>
+                        <code>{{ step.node_id }}</code>
+                        {% if step.state %}<span class="graph-node-state">{{ step.state }}</span>{% endif %}
+                      </li>
+                    {% endfor %}
+                  </ol>
+                {% endfor %}
+              </div>
+            {% else %}<p class="muted">No hypothesis provenance paths are currently present.</p>{% endif %}
           </details>
           <details>
             <summary><strong>Graph JSON preview</strong></summary>

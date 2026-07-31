@@ -536,3 +536,93 @@ def test_graph_inspector_template_labels_definition_and_current_evaluation():
     assert "<h4>Current evaluation</h4>" in template
     assert "Supporting evidence syntheses" in template
     assert "Conflicting evidence syntheses" in template
+
+
+def test_graph_inspector_builds_typed_path_from_hypothesis_to_measurement():
+    from segpick.models import (
+        BiologicalHypothesisNode,
+        EvidenceSynthesisNode,
+        InterpretiveFindingNode,
+        MeasurementNode,
+        ObservationNode,
+        ReasoningGraph,
+    )
+    from segpick.reporting.view_models import build_reasoning_graph_inspector_view
+
+    _, candidate = _sample()
+    measurement = MeasurementNode(
+        id="measurement:block_count:1",
+        channel="structural_alignment",
+        name="alignment block count",
+        value=4,
+        unit="blocks",
+    )
+    observation = ObservationNode(
+        id="observation:fragmented:1",
+        observation_type="fragmented_architecture",
+        source="structural_alignment",
+        description="Several separated alignment blocks are present.",
+        measurement_ids=(measurement.id,),
+    )
+    finding = InterpretiveFindingNode(
+        id="finding:fragmentation:1",
+        title="Fragmentation is plausible",
+        summary="The alignment pattern is consistent with fragmentation.",
+        observation_ids=(observation.id,),
+        state="supported",
+    )
+    synthesis = EvidenceSynthesisNode(
+        id="synthesis:partial:1",
+        scenario_id="partial_assembly_pattern",
+        title="Partial assembly evidence pattern",
+        interpretation="The evidence is consistent with incomplete assembly.",
+        confidence="moderate",
+        supporting_ids=(finding.id,),
+    )
+    hypothesis = BiologicalHypothesisNode(
+        id="hypothesis:partial:1",
+        title="Partial assembly",
+        summary="The candidate may be incomplete.",
+        confidence="moderate",
+        state="supported",
+        supporting_ids=(synthesis.id,),
+    )
+    candidate.analysis.reasoning_graph = ReasoningGraph(
+        measurements=(measurement,),
+        observations=(observation,),
+        interpretive_findings=(finding,),
+        evidence_syntheses=(synthesis,),
+        biological_hypotheses=(hypothesis,),
+    )
+
+    view = build_reasoning_graph_inspector_view(candidate)
+
+    assert len(view.provenance_paths) == 1
+    path = view.provenance_paths[0]
+    assert tuple(step.node_type for step in path.steps) == (
+        "biological hypothesis",
+        "evidence synthesis",
+        "interpretive finding",
+        "observation",
+        "measurement",
+    )
+    assert tuple(step.relationship for step in path.steps) == (
+        "",
+        "supported by",
+        "composed from",
+        "derived from",
+        "supported by",
+    )
+    assert path.steps[-1].title == "alignment block count: 4 blocks"
+
+
+def test_graph_inspector_template_renders_typed_provenance_relationships():
+    from pathlib import Path
+
+    template = Path("segpick/reporting/templates/gene.html").read_text()
+
+    assert "Typed hypothesis provenance" in template
+    assert "graph-typed-path" in template
+    assert "step.relationship" in template
+    assert "step.node_type" in template
+    assert "step.node_id" in template

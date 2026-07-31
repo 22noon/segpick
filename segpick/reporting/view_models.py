@@ -456,6 +456,24 @@ class HypothesisInspectorView:
 
 
 @dataclass(frozen=True, slots=True)
+class ProvenanceStepView:
+    node_id: str
+    node_type: str
+    title: str
+    relationship: str = ""
+    state: str = ""
+    missing: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class ProvenancePathView:
+    hypothesis_id: str
+    hypothesis_title: str
+    hypothesis_state: str
+    steps: tuple[ProvenanceStepView, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class ReasoningGraphInspectorView:
     available: bool
     valid: bool
@@ -467,7 +485,7 @@ class ReasoningGraphInspectorView:
     hypothesis_count: int
     builtin_sources: tuple[str, ...]
     plugin_sources: tuple[str, ...]
-    provenance_paths: tuple[str, ...]
+    provenance_paths: tuple[ProvenancePathView, ...]
     hypotheses: tuple[HypothesisInspectorView, ...]
     graph_json: str
 
@@ -490,54 +508,134 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
     sources = {item.channel for item in graph.measurements} | {item.source for item in graph.observations}
     plugin_sources = tuple(sorted(value for value in sources if value.startswith("plugin:")))
     builtin_sources = tuple(sorted(value for value in sources if not value.startswith("plugin:")))
+    measurement_by_id = {item.id: item for item in graph.measurements}
     observation_by_id = {item.id: item for item in graph.observations}
-    interpretation_by_id = {item.id: item for item in graph.interpretive_findings}
-    scenario_by_id = {item.id: item for item in graph.evidence_syntheses}
+    finding_by_id = {item.id: item for item in graph.interpretive_findings}
+    synthesis_by_id = {item.id: item for item in graph.evidence_syntheses}
 
-    def evidence_paths(evidence_id: str, visited: frozenset[str] = frozenset()) -> tuple[str, ...]:
+    def missing_step(node_id: str, relationship: str) -> ProvenanceStepView:
+        return ProvenanceStepView(
+            node_id=node_id, node_type="missing", title="Missing graph node",
+            relationship=relationship, missing=True,
+        )
+
+    def evidence_paths(
+        evidence_id: str,
+        relationship: str,
+        visited: frozenset[str] = frozenset(),
+    ) -> tuple[tuple[ProvenanceStepView, ...], ...]:
         if evidence_id in visited:
-            return (f"{evidence_id} → (cycle)",)
-        if evidence_id in interpretation_by_id:
-            finding = interpretation_by_id[evidence_id]
-            nested_ids = tuple(dict.fromkeys(
-                finding.supporting_ids + finding.conflicting_ids + finding.observation_ids
-            ))
-            if not nested_ids:
-                return (f"{finding.id} → (no observation link)",)
-            paths = []
-            for nested_id in nested_ids:
-                relation = "contradicts" if nested_id in finding.conflicting_ids else "derived from"
-                for tail in evidence_paths(nested_id, visited | {evidence_id}):
-                    paths.append(f"{finding.id} → {relation}: {tail}")
-            return tuple(paths)
+            return ((ProvenanceStepView(
+                node_id=evidence_id, node_type="cycle", title="Cycle detected",
+                relationship=relationship, missing=True,
+            ),),)
+        visited = visited | {evidence_id}
+        if evidence_id in finding_by_id:
+            finding = finding_by_id[evidence_id]
+            head = ProvenanceStepView(
+                node_id=finding.id, node_type="interpretive finding", title=finding.title,
+                relationship=relationship, state=finding.state,
+            )
+            links = []
+            for nested_id in finding.supporting_ids:
+                links.append((nested_id, "supported by"))
+            for nested_id in finding.conflicting_ids:
+                links.append((nested_id, "contradicted by"))
+            for nested_id in finding.observation_ids:
+                if nested_id not in finding.supporting_ids and nested_id not in finding.conflicting_ids:
+                    links.append((nested_id, "derived from"))
+            if not links:
+                return ((head, missing_step(finding.id, "no evidence link")),)
+            return tuple(
+                (head, *tail)
+                for nested_id, nested_relation in links
+                for tail in evidence_paths(nested_id, nested_relation, visited)
+            )
         if evidence_id in observation_by_id:
-            return (evidence_id,)
-        return (f"{evidence_id} (missing)",)
-
-    paths = []
-    for hypothesis in graph.biological_hypotheses:
-        for evidence_id in hypothesis.supporting_ids + hypothesis.conflicting_ids:
-            relation = "supports" if evidence_id in hypothesis.supporting_ids else "contradicts"
-            if evidence_id in scenario_by_id:
-                scenario = scenario_by_id[evidence_id]
-                scenario_evidence = scenario.supporting_ids + scenario.conflicting_ids
-                if scenario_evidence:
-                    for nested_id in scenario_evidence:
-                        for tail in evidence_paths(nested_id):
-                            paths.append(
-                                f"{hypothesis.id} [{hypothesis.state}] → {relation}: "
-                                f"{scenario.id} → {tail}"
-                            )
+            observation = observation_by_id[evidence_id]
+            head = ProvenanceStepView(
+                node_id=observation.id, node_type="observation",
+                title=observation.description, relationship=relationship,
+                state=observation.severity,
+            )
+            if not observation.measurement_ids:
+                return ((head,),)
+            paths = []
+            for measurement_id in observation.measurement_ids:
+                measurement = measurement_by_id.get(measurement_id)
+                if measurement is None:
+                    paths.append((head, missing_step(measurement_id, "supported by")))
                 else:
-                    paths.append(
-                        f"{hypothesis.id} [{hypothesis.state}] → {relation}: "
-                        f"{scenario.id} → (no evidence link)"
-                    )
+                    value = measurement.value
+                    if measurement.unit:
+                        value = f"{value} {measurement.unit}"
+                    paths.append((head, ProvenanceStepView(
+                        node_id=measurement.id, node_type="measurement",
+                        title=f"{measurement.name}: {value}", relationship="supported by",
+                        state=measurement.channel,
+                    )))
+            return tuple(paths)
+        if evidence_id in measurement_by_id:
+            measurement = measurement_by_id[evidence_id]
+            value = measurement.value
+            if measurement.unit:
+                value = f"{value} {measurement.unit}"
+            return ((ProvenanceStepView(
+                node_id=measurement.id, node_type="measurement",
+                title=f"{measurement.name}: {value}", relationship=relationship,
+                state=measurement.channel,
+            ),),)
+        return ((missing_step(evidence_id, relationship),),)
+
+    paths: list[ProvenancePathView] = []
+    for hypothesis in graph.biological_hypotheses:
+        hypothesis_step = ProvenanceStepView(
+            node_id=hypothesis.id, node_type="biological hypothesis",
+            title=hypothesis.title, state=hypothesis.state,
+        )
+        hypothesis_links = [
+            *((item, "supported by") for item in hypothesis.supporting_ids),
+            *((item, "contradicted by") for item in hypothesis.conflicting_ids),
+        ]
+        if not hypothesis_links:
+            paths.append(ProvenancePathView(
+                hypothesis_id=hypothesis.id, hypothesis_title=hypothesis.title,
+                hypothesis_state=hypothesis.state,
+                steps=(hypothesis_step, missing_step(hypothesis.id, "no evidence link")),
+            ))
+            continue
+        for evidence_id, relation in hypothesis_links:
+            if evidence_id in synthesis_by_id:
+                synthesis = synthesis_by_id[evidence_id]
+                synthesis_step = ProvenanceStepView(
+                    node_id=synthesis.id, node_type="evidence synthesis",
+                    title=synthesis.title, relationship=relation, state=synthesis.confidence,
+                )
+                synthesis_links = [
+                    *((item, "composed from") for item in synthesis.supporting_ids),
+                    *((item, "conflicted by") for item in synthesis.conflicting_ids),
+                ]
+                if not synthesis_links:
+                    paths.append(ProvenancePathView(
+                        hypothesis_id=hypothesis.id, hypothesis_title=hypothesis.title,
+                        hypothesis_state=hypothesis.state,
+                        steps=(hypothesis_step, synthesis_step, missing_step(synthesis.id, "no evidence link")),
+                    ))
+                else:
+                    for nested_id, nested_relation in synthesis_links:
+                        for tail in evidence_paths(nested_id, nested_relation):
+                            paths.append(ProvenancePathView(
+                                hypothesis_id=hypothesis.id, hypothesis_title=hypothesis.title,
+                                hypothesis_state=hypothesis.state,
+                                steps=(hypothesis_step, synthesis_step, *tail),
+                            ))
             else:
-                for tail in evidence_paths(evidence_id):
-                    paths.append(
-                        f"{hypothesis.id} [{hypothesis.state}] → {relation}: {tail}"
-                    )
+                for tail in evidence_paths(evidence_id, relation):
+                    paths.append(ProvenancePathView(
+                        hypothesis_id=hypothesis.id, hypothesis_title=hypothesis.title,
+                        hypothesis_state=hypothesis.state,
+                        steps=(hypothesis_step, *tail),
+                    ))
     hypothesis_views = tuple(
         HypothesisInspectorView(
             hypothesis_id=item.id,
