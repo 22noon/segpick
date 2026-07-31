@@ -19,9 +19,9 @@ def test_build_analysis_manifest_records_active_rules() -> None:
     )
 
     assert manifest.rule_schema_version == 1
-    assert manifest.builtin_rule_count == 3
+    assert manifest.builtin_rule_count == 6
     assert manifest.user_rule_count == 0
-    assert manifest.total_rule_count == 3
+    assert manifest.total_rule_count == 6
     assert manifest.rule_sources == ("builtin:default_rules.yml",)
     assert manifest.gene_count == 0
     assert manifest.hypothesis_count == 0

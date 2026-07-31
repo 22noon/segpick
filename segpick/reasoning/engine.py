@@ -36,6 +36,19 @@ def _adjust_confidence(
     return _CONFIDENCE_ORDER[max(0, min(index, len(_CONFIDENCE_ORDER) - 1))]
 
 
+
+def _hypothesis_state(support_count: int, conflict_count: int) -> str:
+    """Summarise the current evidence state without implying biological truth."""
+
+    if conflict_count and support_count:
+        return "contested"
+    if conflict_count:
+        return "challenged"
+    if support_count:
+        return "supported"
+    return "provisional"
+
+
 def evaluate_rules(
     rules: tuple[HypothesisRule, ...],
     observations: tuple[EvidenceObservation, ...],
@@ -73,6 +86,7 @@ def evaluate_rules(
                 rule_source=rule.source,
                 rule_description=rule.description,
                 rule_references=rule.references,
+                state=_hypothesis_state(len(supporting), len(conflicting)),
             )
         )
     return tuple(hypotheses)

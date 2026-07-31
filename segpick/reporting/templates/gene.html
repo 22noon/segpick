@@ -1097,7 +1097,7 @@
             <summary>
               <span class="hypothesis-title">{{ hypothesis.title }}</span>
               <span class="hypothesis-badge confidence-{{ hypothesis.confidence }}">{{ hypothesis.confidence|upper }}</span>
-              <span class="hypothesis-scope muted">{{ hypothesis.scope|title }}</span>
+              <span class="hypothesis-scope muted">{{ hypothesis.scope|title }} · {{ hypothesis.state|title }}</span>
             </summary>
             <div class="hypothesis-detail">
               <p>{{ hypothesis.summary }}</p>

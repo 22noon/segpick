@@ -476,9 +476,9 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
             if evidence_id in interpretation_by_id:
                 interpretation = interpretation_by_id[evidence_id]
                 for observation_id in interpretation.observation_ids or ("(no observation link)",):
-                    paths.append(f"{observation_id} → {interpretation.id} → {hypothesis.id}")
+                    paths.append(f"{observation_id} → {interpretation.id} → {hypothesis.id} [{hypothesis.state}]")
             elif evidence_id in observation_by_id:
-                paths.append(f"{evidence_id} → {hypothesis.id}")
+                paths.append(f"{evidence_id} → {hypothesis.id} [{hypothesis.state}]")
     return ReasoningGraphInspectorView(
         available=True, valid=valid, validation_message=message,
         measurement_count=len(graph.measurements), observation_count=len(graph.observations),
