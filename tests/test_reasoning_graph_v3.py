@@ -193,3 +193,49 @@ def test_scenario_hypotheses_enter_graph_through_scenario_nodes():
     assert all(item.supporting_ids == (scenario_node.id,) for item in graph.hypotheses)
     assert len(graph.to_dict()["hypotheses"]) == 3
     graph.validate()
+
+
+def test_interpretive_finding_node_is_the_canonical_graph_class():
+    from segpick.models import InterpretationNode, InterpretiveFindingNode
+
+    node = InterpretiveFindingNode(
+        id="finding:fragmented-architecture:1",
+        title="Fragmented architecture",
+        summary="The alignment pattern is consistent with fragmentation.",
+        observation_ids=("observation:structural-alignment:fragmented-alignment:1",),
+    )
+
+    assert isinstance(node, InterpretiveFindingNode)
+    assert InterpretationNode is InterpretiveFindingNode
+    assert node.to_dict()["title"] == "Fragmented architecture"
+
+
+def test_reasoning_graph_builds_interpretive_finding_instances():
+    from segpick.models import BiologicalFinding, InterpretiveFindingNode
+    from segpick.reasoning.graph import build_reasoning_graph
+
+    _, candidate = _sample()
+    candidate.analysis.observations = (
+        EvidenceObservation(
+            observation_type="fragmented_alignment",
+            source="structural_alignment",
+            description="The alignment is split across multiple blocks.",
+        ),
+    )
+    candidate.analysis.findings = (
+        BiologicalFinding(
+            category="assembly_structure",
+            title="Fragmented architecture",
+            severity="review",
+            confidence="moderate",
+            scope="candidate",
+            summary="The alignment pattern is consistent with fragmentation.",
+            sources=("structural_alignment",),
+        ),
+    )
+
+    graph = build_reasoning_graph(candidate)
+
+    assert len(graph.interpretations) == 1
+    assert isinstance(graph.interpretations[0], InterpretiveFindingNode)
+    assert graph.interpretations[0].observation_ids == (graph.observations[0].id,)

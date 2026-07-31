@@ -27,7 +27,15 @@ from .reference_dotplot import BlastNHSP, ReferenceDotplot
 from .reference_compatibility import ReferenceCompatibility
 from .structural_integrity import StructuralIntegrity
 from .rule_evaluation import RuleEvaluation
-from .reasoning_graph import MeasurementNode, ObservationNode, InterpretationNode, ScenarioNode, HypothesisNode, ReasoningGraph
+from .reasoning_graph import (
+    MeasurementNode,
+    ObservationNode,
+    InterpretiveFindingNode,
+    InterpretationNode,
+    ScenarioNode,
+    HypothesisNode,
+    ReasoningGraph,
+)
 from .sample import Sample
 from .read_support import ReadSupportMetrics
 

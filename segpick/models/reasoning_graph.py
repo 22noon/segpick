@@ -34,7 +34,7 @@ class ObservationNode:
 
 
 @dataclass(frozen=True, slots=True)
-class InterpretationNode:
+class InterpretiveFindingNode:
     id: str
     title: str
     summary: str
@@ -43,6 +43,10 @@ class InterpretationNode:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+# Backward-compatible alias during the terminology migration.
+InterpretationNode = InterpretiveFindingNode
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,7 +94,7 @@ class HypothesisNode:
 class ReasoningGraph:
     measurements: tuple[MeasurementNode, ...] = ()
     observations: tuple[ObservationNode, ...] = ()
-    interpretations: tuple[InterpretationNode, ...] = ()
+    interpretations: tuple[InterpretiveFindingNode, ...] = ()
     scenarios: tuple[ScenarioNode, ...] = ()
     hypotheses: tuple[HypothesisNode, ...] = ()
 

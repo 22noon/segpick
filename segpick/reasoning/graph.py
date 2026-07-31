@@ -9,7 +9,7 @@ from segpick.models import (
 )
 from segpick.models.reasoning_graph import (
     HypothesisNode,
-    InterpretationNode,
+    InterpretiveFindingNode,
     MeasurementNode,
     ObservationNode,
     ReasoningGraph,
@@ -47,14 +47,14 @@ def _observation_nodes(
     return tuple(nodes)
 
 
-def _interpretation_nodes(findings: tuple[BiologicalFinding, ...], observations: tuple[ObservationNode, ...]) -> tuple[InterpretationNode, ...]:
+def _interpretation_nodes(findings: tuple[BiologicalFinding, ...], observations: tuple[ObservationNode, ...]) -> tuple[InterpretiveFindingNode, ...]:
     by_source: dict[str, list[str]] = {}
     for node in observations:
         by_source.setdefault(node.source, []).append(node.id)
     nodes = []
     for index, finding in enumerate(findings, 1):
         linked = tuple(dict.fromkeys(node_id for source in finding.sources for node_id in by_source.get(source, ())))
-        nodes.append(InterpretationNode(
+        nodes.append(InterpretiveFindingNode(
             id=f"interpretation:{_slug(finding.title)}:{index}",
             title=finding.title,
             summary=finding.summary,
@@ -63,7 +63,7 @@ def _interpretation_nodes(findings: tuple[BiologicalFinding, ...], observations:
     return tuple(nodes)
 
 
-def _condition_targets(label: str, observations: tuple[ObservationNode, ...], interpretations: tuple[InterpretationNode, ...]) -> tuple[str, ...]:
+def _condition_targets(label: str, observations: tuple[ObservationNode, ...], interpretations: tuple[InterpretiveFindingNode, ...]) -> tuple[str, ...]:
     kind, _, remainder = label.partition(":")
     value, _, source = remainder.partition("@")
     if kind == "observation":
@@ -71,7 +71,7 @@ def _condition_targets(label: str, observations: tuple[ObservationNode, ...], in
     return tuple(node.id for node in interpretations if node.title == value)
 
 
-def _hypothesis_nodes(hypotheses: tuple[BiologicalHypothesis, ...], observations: tuple[ObservationNode, ...], interpretations: tuple[InterpretationNode, ...]) -> tuple[HypothesisNode, ...]:
+def _hypothesis_nodes(hypotheses: tuple[BiologicalHypothesis, ...], observations: tuple[ObservationNode, ...], interpretations: tuple[InterpretiveFindingNode, ...]) -> tuple[HypothesisNode, ...]:
     nodes = []
     for index, hypothesis in enumerate(hypotheses, 1):
         support_labels = hypothesis.matched_required + hypothesis.matched_supporting
@@ -99,7 +99,7 @@ def _hypothesis_nodes(hypotheses: tuple[BiologicalHypothesis, ...], observations
 def _scenario_nodes(
     scenarios: tuple[BiologicalScenario, ...],
     observations: tuple[ObservationNode, ...],
-    interpretations: tuple[InterpretationNode, ...],
+    interpretations: tuple[InterpretiveFindingNode, ...],
 ) -> tuple[ScenarioNode, ...]:
     nodes = []
     for index, scenario in enumerate(scenarios, 1):
