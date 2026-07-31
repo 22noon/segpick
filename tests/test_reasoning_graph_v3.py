@@ -475,3 +475,64 @@ def test_biological_hypothesis_graph_node_separates_definition_and_evaluation():
     assert payload["evaluation"]["candidate_ids"] == ["contig_a"]
     assert payload["evaluation"]["confidence"] == "high"
     assert payload["evaluation"]["supporting_synthesis_ids"] == ["repeat_with_continuity"]
+
+
+def test_graph_inspector_separates_hypothesis_definition_and_current_evaluation():
+    from segpick.models import BiologicalHypothesisNode, EvidenceSynthesisNode, ReasoningGraph
+    from segpick.reporting.view_models import build_reasoning_graph_inspector_view
+
+    _, candidate = _sample()
+    synthesis = EvidenceSynthesisNode(
+        id="synthesis:repeat:1",
+        scenario_id="repeat_with_continuity",
+        title="Repeat with continuity",
+        interpretation="Repeated structure retains coding continuity.",
+        confidence="moderate",
+    )
+    hypothesis = BiologicalHypothesisNode(
+        id="hypothesis:duplication:1",
+        title="Genuine duplication",
+        summary="Repeated structure retains coding continuity.",
+        confidence="high",
+        state="supported",
+        supporting_ids=(synthesis.id,),
+        rule_id="duplication",
+        rule_source="builtin:hypotheses.yml",
+        rule_description="A repeated structure with continuity supports duplication.",
+        rule_references=("doi:10.0000/example",),
+        definition_id="duplication",
+        definition_base_confidence="moderate",
+        definition_supported_by=("repeat_with_continuity",),
+        definition_contradicted_by=("breakpoint_loss",),
+        definition_minimum_support=1,
+        evaluation_candidate_ids=(candidate.id,),
+        evaluation_supporting_synthesis_ids=("repeat_with_continuity",),
+    )
+    candidate.analysis.reasoning_graph = ReasoningGraph(
+        evidence_syntheses=(synthesis,),
+        biological_hypotheses=(hypothesis,),
+    )
+
+    view = build_reasoning_graph_inspector_view(candidate)
+
+    assert len(view.hypotheses) == 1
+    item = view.hypotheses[0]
+    assert item.definition_id == "duplication"
+    assert item.definition_base_confidence == "moderate"
+    assert item.definition_supported_by == ("repeat_with_continuity",)
+    assert item.evaluation_candidate_ids == (candidate.id,)
+    assert item.evaluation_confidence == "high"
+    assert item.evaluation_state == "supported"
+    assert item.evaluation_supporting_synthesis_ids == ("repeat_with_continuity",)
+
+
+def test_graph_inspector_template_labels_definition_and_current_evaluation():
+    from pathlib import Path
+
+    template = Path("segpick/reporting/templates/gene.html").read_text()
+
+    assert "Biological hypothesis evaluations" in template
+    assert "<h4>Definition</h4>" in template
+    assert "<h4>Current evaluation</h4>" in template
+    assert "Supporting evidence syntheses" in template
+    assert "Conflicting evidence syntheses" in template

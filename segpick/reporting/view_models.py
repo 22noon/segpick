@@ -436,6 +436,26 @@ class CrossEvidenceFindingView:
 
 
 @dataclass(frozen=True, slots=True)
+class HypothesisInspectorView:
+    hypothesis_id: str
+    title: str
+    summary: str
+    definition_id: str
+    definition_description: str
+    definition_source: str
+    definition_references: tuple[str, ...]
+    definition_base_confidence: str
+    definition_supported_by: tuple[str, ...]
+    definition_contradicted_by: tuple[str, ...]
+    definition_minimum_support: int
+    evaluation_candidate_ids: tuple[str, ...]
+    evaluation_confidence: str
+    evaluation_state: str
+    evaluation_supporting_synthesis_ids: tuple[str, ...]
+    evaluation_conflicting_synthesis_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class ReasoningGraphInspectorView:
     available: bool
     valid: bool
@@ -448,6 +468,7 @@ class ReasoningGraphInspectorView:
     builtin_sources: tuple[str, ...]
     plugin_sources: tuple[str, ...]
     provenance_paths: tuple[str, ...]
+    hypotheses: tuple[HypothesisInspectorView, ...]
     graph_json: str
 
 
@@ -457,7 +478,7 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
         return ReasoningGraphInspectorView(
             available=False, valid=False, validation_message="Reasoning graph unavailable.",
             measurement_count=0, observation_count=0, interpretation_count=0, scenario_count=0, hypothesis_count=0,
-            builtin_sources=(), plugin_sources=(), provenance_paths=(), graph_json="{}",
+            builtin_sources=(), plugin_sources=(), provenance_paths=(), hypotheses=(), graph_json="{}",
         )
     try:
         graph.validate()
@@ -517,13 +538,34 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
                     paths.append(
                         f"{hypothesis.id} [{hypothesis.state}] → {relation}: {tail}"
                     )
+    hypothesis_views = tuple(
+        HypothesisInspectorView(
+            hypothesis_id=item.id,
+            title=item.title,
+            summary=item.summary,
+            definition_id=item.definition_id or item.rule_id,
+            definition_description=item.rule_description,
+            definition_source=item.rule_source,
+            definition_references=item.rule_references,
+            definition_base_confidence=item.definition_base_confidence,
+            definition_supported_by=item.definition_supported_by,
+            definition_contradicted_by=item.definition_contradicted_by,
+            definition_minimum_support=item.definition_minimum_support,
+            evaluation_candidate_ids=item.evaluation_candidate_ids,
+            evaluation_confidence=item.confidence,
+            evaluation_state=item.state,
+            evaluation_supporting_synthesis_ids=item.evaluation_supporting_synthesis_ids,
+            evaluation_conflicting_synthesis_ids=item.evaluation_conflicting_synthesis_ids,
+        )
+        for item in graph.biological_hypotheses
+    )
     return ReasoningGraphInspectorView(
         available=True, valid=valid, validation_message=message,
         measurement_count=len(graph.measurements), observation_count=len(graph.observations),
         interpretation_count=len(graph.interpretive_findings), scenario_count=len(graph.evidence_syntheses),
         hypothesis_count=len(graph.biological_hypotheses),
         builtin_sources=builtin_sources, plugin_sources=plugin_sources,
-        provenance_paths=tuple(paths),
+        provenance_paths=tuple(paths), hypotheses=hypothesis_views,
         graph_json=json.dumps(graph.to_dict(include_legacy_aliases=False), indent=2, sort_keys=True) if valid else "{}",
     )
 

@@ -1153,6 +1153,48 @@
             <div class="mini"><strong>{{ candidate.reasoning_graph.scenario_count }}</strong><span>Evidence syntheses</span></div>
             <div class="mini"><strong>{{ candidate.reasoning_graph.hypothesis_count }}</strong><span>Hypotheses</span></div>
           </div>
+          <h4>Biological hypothesis evaluations</h4>
+          {% if candidate.reasoning_graph.hypotheses %}
+            {% for hypothesis in candidate.reasoning_graph.hypotheses %}
+              <details class="hypothesis-item graph-hypothesis-evaluation">
+                <summary>
+                  <span class="hypothesis-title">{{ hypothesis.title }}</span>
+                  <span class="rule-status {% if hypothesis.evaluation_state == 'supported' %}triggered{% else %}not-triggered{% endif %}">{{ hypothesis.evaluation_state|replace('_', ' ')|title }}</span>
+                  <span class="hypothesis-scope muted">{{ hypothesis.evaluation_confidence|upper }}</span>
+                </summary>
+                <div class="hypothesis-detail">
+                  {% if hypothesis.summary %}<p>{{ hypothesis.summary }}</p>{% endif %}
+                  <div class="hypothesis-trace">
+                    <div>
+                      <h4>Definition</h4>
+                      <p><strong>ID:</strong> {{ hypothesis.definition_id }}</p>
+                      {% if hypothesis.definition_description %}<p>{{ hypothesis.definition_description }}</p>{% endif %}
+                      <p><strong>Base confidence:</strong> {{ hypothesis.definition_base_confidence|upper }}</p>
+                      <p><strong>Minimum support:</strong> {{ hypothesis.definition_minimum_support }}</p>
+                      <p><strong>Supported by definitions</strong></p>
+                      {% if hypothesis.definition_supported_by %}<ul>{% for item in hypothesis.definition_supported_by %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">None declared.</p>{% endif %}
+                      <p><strong>Contradicted by definitions</strong></p>
+                      {% if hypothesis.definition_contradicted_by %}<ul>{% for item in hypothesis.definition_contradicted_by %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">None declared.</p>{% endif %}
+                      {% if hypothesis.definition_source %}<p class="hypothesis-meta">Source: {{ hypothesis.definition_source }}</p>{% endif %}
+                      {% if hypothesis.definition_references %}<p class="hypothesis-meta">References: {{ hypothesis.definition_references|join(', ') }}</p>{% endif %}
+                    </div>
+                    <div>
+                      <h4>Current evaluation</h4>
+                      <p><strong>State:</strong> {{ hypothesis.evaluation_state|replace('_', ' ')|title }}</p>
+                      <p><strong>Confidence:</strong> {{ hypothesis.evaluation_confidence|upper }}</p>
+                      <p><strong>Candidates:</strong> {% if hypothesis.evaluation_candidate_ids %}{{ hypothesis.evaluation_candidate_ids|join(', ') }}{% else %}<span class="muted">None recorded.</span>{% endif %}</p>
+                      <p><strong>Supporting evidence syntheses</strong></p>
+                      {% if hypothesis.evaluation_supporting_synthesis_ids %}<ul>{% for item in hypothesis.evaluation_supporting_synthesis_ids %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">None matched.</p>{% endif %}
+                      <p><strong>Conflicting evidence syntheses</strong></p>
+                      {% if hypothesis.evaluation_conflicting_synthesis_ids %}<ul>{% for item in hypothesis.evaluation_conflicting_synthesis_ids %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">None matched.</p>{% endif %}
+                    </div>
+                  </div>
+                </div>
+              </details>
+            {% endfor %}
+          {% else %}
+            <p class="muted">No biological hypothesis evaluations are currently present.</p>
+          {% endif %}
           <h4>Built-in evidence sources</h4>
           <div class="graph-source-list">{% for source in candidate.reasoning_graph.builtin_sources %}<span class="graph-source">{{ source }}</span>{% else %}<span class="muted">None recorded.</span>{% endfor %}</div>
           <h4>Plugin evidence sources</h4>
