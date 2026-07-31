@@ -239,3 +239,55 @@ def test_reasoning_graph_builds_interpretive_finding_instances():
     assert len(graph.interpretations) == 1
     assert isinstance(graph.interpretations[0], InterpretiveFindingNode)
     assert graph.interpretations[0].observation_ids == (graph.observations[0].id,)
+
+
+def test_evidence_synthesis_node_is_the_canonical_graph_class():
+    from segpick.models import EvidenceSynthesisNode, ScenarioNode
+
+    node = EvidenceSynthesisNode(
+        id="synthesis:fragmented-structure:1",
+        scenario_id="fragmented_candidate_structure",
+        title="Fragmented candidate structure",
+        interpretation="Several findings form a fragmented-structure evidence pattern.",
+        confidence="moderate",
+        supporting_ids=("finding:fragmented-architecture:1",),
+    )
+
+    assert isinstance(node, EvidenceSynthesisNode)
+    assert ScenarioNode is EvidenceSynthesisNode
+    assert node.to_dict()["title"] == "Fragmented candidate structure"
+
+
+def test_reasoning_graph_exposes_canonical_evidence_syntheses_accessor():
+    from segpick.models import BiologicalScenario, EvidenceSynthesisNode
+    from segpick.reasoning.graph import build_reasoning_graph
+
+    _, candidate = _sample()
+    candidate.analysis.observations = (
+        EvidenceObservation(
+            observation_type="fragmented_alignment",
+            source="structural_alignment",
+            description="The alignment is split across multiple blocks.",
+        ),
+    )
+    candidate.analysis.scenarios = (
+        BiologicalScenario(
+            scenario_id="fragmented_candidate_structure",
+            title="Fragmented candidate structure",
+            category="assembly_structure",
+            scope="candidate",
+            confidence="moderate",
+            severity="review",
+            interpretation="The candidate has fragmented structural support.",
+            candidate_ids=(candidate.id,),
+            matched_required=("observation:fragmented_alignment@structural_alignment",),
+            source="builtin:test-scenarios.yml",
+        ),
+    )
+
+    graph = build_reasoning_graph(candidate)
+
+    assert graph.evidence_syntheses is graph.scenarios
+    assert isinstance(graph.evidence_syntheses[0], EvidenceSynthesisNode)
+    # Keep the serialized key stable during the compatibility migration.
+    assert graph.to_dict()["scenarios"][0]["scenario_id"] == "fragmented_candidate_structure"

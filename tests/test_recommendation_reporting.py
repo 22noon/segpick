@@ -372,3 +372,14 @@ def test_gene_template_explains_structural_integrity_score():
     assert "How the score is calculated" in content
     assert "orientation consistency" in content.lower()
     assert "Nucleotide percentage identity is intentionally excluded" in content
+
+
+def test_graph_inspector_uses_evidence_synthesis_terminology(tmp_path):
+    from segpick.reasoning.graph import build_reasoning_graph
+
+    sample, recommendations = make_sample()
+    for candidate in sample.genes["VP2"].candidates:
+        candidate.analysis.reasoning_graph = build_reasoning_graph(candidate)
+    write_html_dashboard(sample, tmp_path, recommendations=recommendations)
+    html = (tmp_path / "genes" / "VP2.html").read_text()
+    assert "Evidence syntheses" in html

@@ -13,7 +13,7 @@ from segpick.models.reasoning_graph import (
     MeasurementNode,
     ObservationNode,
     ReasoningGraph,
-    ScenarioNode,
+    EvidenceSynthesisNode,
 )
 
 
@@ -100,7 +100,7 @@ def _scenario_nodes(
     scenarios: tuple[BiologicalScenario, ...],
     observations: tuple[ObservationNode, ...],
     interpretations: tuple[InterpretiveFindingNode, ...],
-) -> tuple[ScenarioNode, ...]:
+) -> tuple[EvidenceSynthesisNode, ...]:
     nodes = []
     for index, scenario in enumerate(scenarios, 1):
         support_labels = scenario.matched_required + scenario.matched_supporting
@@ -114,7 +114,7 @@ def _scenario_nodes(
             for label in scenario.matched_conflicting
             for node_id in _condition_targets(label, observations, interpretations)
         ))
-        nodes.append(ScenarioNode(
+        nodes.append(EvidenceSynthesisNode(
             id=f"scenario:{_slug(scenario.scenario_id)}:{index}",
             scenario_id=scenario.scenario_id,
             title=scenario.title,
@@ -133,7 +133,7 @@ def _scenario_nodes(
 
 def _scenario_hypothesis_nodes(
     hypotheses: tuple[ScenarioHypothesis, ...],
-    scenarios: tuple[ScenarioNode, ...],
+    scenarios: tuple[EvidenceSynthesisNode, ...],
 ) -> tuple[HypothesisNode, ...]:
     scenario_by_rule_id = {node.scenario_id: node.id for node in scenarios}
     nodes = []

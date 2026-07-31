@@ -50,7 +50,7 @@ InterpretationNode = InterpretiveFindingNode
 
 
 @dataclass(frozen=True, slots=True)
-class ScenarioNode:
+class EvidenceSynthesisNode:
     id: str
     scenario_id: str
     title: str
@@ -66,6 +66,10 @@ class ScenarioNode:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+# Backward-compatible alias during the terminology migration.
+ScenarioNode = EvidenceSynthesisNode
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,8 +99,13 @@ class ReasoningGraph:
     measurements: tuple[MeasurementNode, ...] = ()
     observations: tuple[ObservationNode, ...] = ()
     interpretations: tuple[InterpretiveFindingNode, ...] = ()
-    scenarios: tuple[ScenarioNode, ...] = ()
+    scenarios: tuple[EvidenceSynthesisNode, ...] = ()
     hypotheses: tuple[HypothesisNode, ...] = ()
+
+    @property
+    def evidence_syntheses(self) -> tuple[EvidenceSynthesisNode, ...]:
+        """Canonical name for the legacy ``scenarios`` graph collection."""
+        return self.scenarios
 
     def validate(self) -> None:
         measurement_ids = {item.id for item in self.measurements}
@@ -120,7 +129,7 @@ class ReasoningGraph:
         for item in self.scenarios:
             missing = (set(item.supporting_ids) | set(item.conflicting_ids)) - lower_ids
             if missing:
-                raise ValueError(f"Scenario {item.id} references missing evidence nodes: {sorted(missing)}")
+                raise ValueError(f"Evidence synthesis {item.id} references missing evidence nodes: {sorted(missing)}")
         hypothesis_evidence_ids = lower_ids | scenario_ids
         for item in self.hypotheses:
             missing = (set(item.supporting_ids) | set(item.conflicting_ids)) - hypothesis_evidence_ids
