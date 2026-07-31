@@ -68,7 +68,9 @@ def test_plugin_observation_can_trigger_hypothesis_and_enter_graph():
     assert graph.measurements[0].channel == "junction_support"
     assert graph.observations[0].source == "plugin:junction_support"
     assert graph.observations[0].measurement_ids == (graph.measurements[0].id,)
-    assert graph.hypotheses[0].supporting_ids == (graph.observations[0].id,)
+    rule_finding = next(item for item in graph.interpretations if item.rule_id == "junction_supported_structure")
+    assert rule_finding.supporting_ids == (graph.observations[0].id,)
+    assert graph.hypotheses == ()
     graph.validate()
 
 
@@ -99,9 +101,13 @@ def test_hypothesis_state_is_preserved_in_reasoning_graph():
     )
     attach_biological_hypotheses(sample, plugin_registry=None)
 
-    hypotheses = {node.rule_id: node for node in candidate.analysis.reasoning_graph.hypotheses}
-    assert hypotheses["possible_repeated_sequence_architecture"].state == "supported"
-    assert hypotheses["possible_repeat_associated_assembly_artefact"].state == "challenged"
+    findings = {
+        node.rule_id: node
+        for node in candidate.analysis.reasoning_graph.interpretations
+        if node.rule_id
+    }
+    assert findings["possible_repeated_sequence_architecture"].state == "supported"
+    assert findings["possible_repeat_associated_assembly_artefact"].state == "challenged"
 
 
 def test_hypothesis_metadata_and_rule_provenance_enter_graph():
@@ -131,14 +137,21 @@ def test_hypothesis_metadata_and_rule_provenance_enter_graph():
         sample, candidate_rules=(rule,), gene_rules=(), plugin_registry=None
     )
 
-    node = candidate.analysis.reasoning_graph.hypotheses[0]
+    node = next(
+        item
+        for item in candidate.analysis.reasoning_graph.interpretations
+        if item.rule_id == "junction_supported_structure"
+    )
     assert node.category == "assembly_structure"
     assert node.scope == "candidate"
     assert node.severity == "review"
     assert node.rule_source == "user:test-rules.yml"
     assert node.rule_description == "Tests preservation of declarative rule provenance."
     assert node.rule_references == ("doi:10.0000/example",)
-    assert candidate.analysis.reasoning_graph.to_dict()["hypotheses"][0]["rule_source"] == "user:test-rules.yml"
+    serialized = candidate.analysis.reasoning_graph.to_dict()
+    rule_findings = [item for item in serialized["interpretations"] if item["rule_id"]]
+    assert rule_findings[0]["rule_source"] == "user:test-rules.yml"
+    assert serialized["hypotheses"] == []
 
 
 def test_scenario_hypotheses_enter_graph_through_scenario_nodes():
@@ -187,7 +200,7 @@ def test_scenario_hypotheses_enter_graph_through_scenario_nodes():
 
     assert len(graph.scenarios) == 1
     assert len(graph.hypotheses) == 3
-    assert {item.hypothesis_type for item in graph.hypotheses} == {"scenario"}
+    assert {item.hypothesis_type for item in graph.hypotheses} == {"biological"}
     scenario_node = graph.scenarios[0]
     assert scenario_node.supporting_ids == (graph.observations[0].id,)
     assert all(item.supporting_ids == (scenario_node.id,) for item in graph.hypotheses)
@@ -291,3 +304,79 @@ def test_reasoning_graph_exposes_canonical_evidence_syntheses_accessor():
     assert isinstance(graph.evidence_syntheses[0], EvidenceSynthesisNode)
     # Keep the serialized key stable during the compatibility migration.
     assert graph.to_dict()["scenarios"][0]["scenario_id"] == "fragmented_candidate_structure"
+
+
+def test_biological_hypothesis_node_is_the_canonical_final_graph_class():
+    from segpick.models import BiologicalHypothesisNode, HypothesisNode
+
+    node = BiologicalHypothesisNode(
+        id="hypothesis:genuine-tandem-duplication:1",
+        title="Genuine tandem duplication",
+        summary="The integrated evidence supports a duplicated biological structure.",
+        confidence="moderate",
+        supporting_ids=("scenario:duplication-pattern:1",),
+    )
+
+    assert isinstance(node, BiologicalHypothesisNode)
+    assert HypothesisNode is BiologicalHypothesisNode
+    assert node.hypothesis_type == "biological"
+
+
+def test_rule_results_are_findings_and_only_scenario_results_are_final_hypotheses():
+    from segpick.models import BiologicalScenario, ScenarioHypothesis
+    from segpick.reasoning.graph import build_reasoning_graph
+
+    sample, candidate = _sample()
+    candidate.analysis.observations = (
+        EvidenceObservation(
+            observation_type="junction_supported",
+            source="plugin:junction_support",
+            description="Reads span the candidate junction.",
+        ),
+    )
+    rule = HypothesisRule(
+        rule_id="junction_supported_structure",
+        title="Junction-supported structure",
+        category="assembly_structure",
+        scope="candidate",
+        severity="informational",
+        base_confidence="moderate",
+        summary="The proposed structure has direct junction support.",
+        requires=(RuleCondition("observation", "junction_supported", "plugin:junction_support"),),
+    )
+    attach_biological_hypotheses(
+        sample, candidate_rules=(rule,), gene_rules=(), plugin_registry=None
+    )
+    candidate.analysis.scenarios = (
+        BiologicalScenario(
+            scenario_id="junction_supported_pattern",
+            title="Junction-supported evidence pattern",
+            category="assembly_structure",
+            scope="candidate",
+            confidence="moderate",
+            severity="informational",
+            interpretation="The available evidence supports structural continuity.",
+            candidate_ids=(candidate.id,),
+            matched_required=("observation:junction_supported@plugin:junction_support",),
+        ),
+    )
+    candidate.analysis.scenario_hypotheses = (
+        ScenarioHypothesis(
+            hypothesis_id="genuine_structure",
+            title="Genuine biological structure",
+            category="assembly_structure",
+            scope="candidate",
+            confidence="moderate",
+            severity="informational",
+            explanation="The evidence pattern supports a genuine structure.",
+            candidate_ids=(candidate.id,),
+            supporting_scenarios=("junction_supported_pattern",),
+        ),
+    )
+
+    graph = build_reasoning_graph(candidate)
+
+    assert any(item.rule_id == "junction_supported_structure" for item in graph.interpretations)
+    assert len(graph.biological_hypotheses) == 1
+    assert graph.biological_hypotheses is graph.hypotheses
+    assert graph.biological_hypotheses[0].title == "Genuine biological structure"

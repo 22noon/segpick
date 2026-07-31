@@ -8,7 +8,7 @@ from segpick.models import (
     EvidenceObservation, ScenarioHypothesis,
 )
 from segpick.models.reasoning_graph import (
-    HypothesisNode,
+    BiologicalHypothesisNode,
     InterpretiveFindingNode,
     MeasurementNode,
     ObservationNode,
@@ -71,24 +71,47 @@ def _condition_targets(label: str, observations: tuple[ObservationNode, ...], in
     return tuple(node.id for node in interpretations if node.title == value)
 
 
-def _hypothesis_nodes(hypotheses: tuple[BiologicalHypothesis, ...], observations: tuple[ObservationNode, ...], interpretations: tuple[InterpretiveFindingNode, ...]) -> tuple[HypothesisNode, ...]:
+def _rule_finding_nodes(
+    hypotheses: tuple[BiologicalHypothesis, ...],
+    observations: tuple[ObservationNode, ...],
+    interpretations: tuple[InterpretiveFindingNode, ...],
+) -> tuple[InterpretiveFindingNode, ...]:
+    """Represent legacy rule-generated hypotheses as interpretive findings.
+
+    These rules interpret local observations/findings; final biological
+    hypotheses are reserved for explanations aggregated from evidence syntheses.
+    """
+
     nodes = []
     for index, hypothesis in enumerate(hypotheses, 1):
         support_labels = hypothesis.matched_required + hypothesis.matched_supporting
-        supporting = tuple(dict.fromkeys(node_id for label in support_labels for node_id in _condition_targets(label, observations, interpretations)))
-        conflicting = tuple(dict.fromkeys(node_id for label in hypothesis.matched_conflicting for node_id in _condition_targets(label, observations, interpretations)))
-        nodes.append(HypothesisNode(
-            id=f"hypothesis:{_slug(hypothesis.rule_id)}:{index}",
-            rule_id=hypothesis.rule_id,
+        supporting = tuple(dict.fromkeys(
+            node_id
+            for label in support_labels
+            for node_id in _condition_targets(label, observations, interpretations)
+        ))
+        conflicting = tuple(dict.fromkeys(
+            node_id
+            for label in hypothesis.matched_conflicting
+            for node_id in _condition_targets(label, observations, interpretations)
+        ))
+        direct_observations = tuple(
+            node_id for node_id in supporting if node_id.startswith("observation:")
+        )
+        nodes.append(InterpretiveFindingNode(
+            id=f"finding:rule:{_slug(hypothesis.rule_id)}:{index}",
             title=hypothesis.title,
             summary=hypothesis.summary,
-            confidence=hypothesis.confidence,
+            observation_ids=direct_observations,
             supporting_ids=supporting,
             conflicting_ids=conflicting,
+            source="rule",
+            confidence=hypothesis.confidence,
             state=hypothesis.state,
             category=hypothesis.category,
             scope=hypothesis.scope,
             severity=hypothesis.severity,
+            rule_id=hypothesis.rule_id,
             rule_source=hypothesis.rule_source,
             rule_description=hypothesis.rule_description,
             rule_references=hypothesis.rule_references,
@@ -134,7 +157,7 @@ def _scenario_nodes(
 def _scenario_hypothesis_nodes(
     hypotheses: tuple[ScenarioHypothesis, ...],
     scenarios: tuple[EvidenceSynthesisNode, ...],
-) -> tuple[HypothesisNode, ...]:
+) -> tuple[BiologicalHypothesisNode, ...]:
     scenario_by_rule_id = {node.scenario_id: node.id for node in scenarios}
     nodes = []
     for index, hypothesis in enumerate(hypotheses, 1):
@@ -148,7 +171,7 @@ def _scenario_hypothesis_nodes(
             for item in hypothesis.conflicting_scenarios
             if item in scenario_by_rule_id
         )
-        nodes.append(HypothesisNode(
+        nodes.append(BiologicalHypothesisNode(
             id=f"hypothesis:scenario:{_slug(hypothesis.hypothesis_id)}:{index}",
             rule_id=hypothesis.hypothesis_id,
             title=hypothesis.title,
@@ -162,7 +185,7 @@ def _scenario_hypothesis_nodes(
             severity=hypothesis.severity,
             rule_source=hypothesis.source,
             rule_references=hypothesis.references,
-            hypothesis_type="scenario",
+            hypothesis_type="biological",
         ))
     return tuple(nodes)
 
@@ -170,10 +193,11 @@ def _scenario_hypothesis_nodes(
 def build_reasoning_graph(candidate) -> ReasoningGraph:
     measurements = tuple(candidate.analysis.plugin_measurements)
     observation_nodes = _observation_nodes(candidate.analysis.observations, measurements)
-    interpretation_nodes = _interpretation_nodes(candidate.analysis.findings, observation_nodes)
-    rule_hypothesis_nodes = _hypothesis_nodes(
-        candidate.analysis.hypotheses, observation_nodes, interpretation_nodes
+    base_finding_nodes = _interpretation_nodes(candidate.analysis.findings, observation_nodes)
+    rule_finding_nodes = _rule_finding_nodes(
+        candidate.analysis.hypotheses, observation_nodes, base_finding_nodes
     )
+    interpretation_nodes = base_finding_nodes + rule_finding_nodes
     scenario_nodes = _scenario_nodes(
         candidate.analysis.scenarios, observation_nodes, interpretation_nodes
     )
@@ -185,7 +209,7 @@ def build_reasoning_graph(candidate) -> ReasoningGraph:
         observations=observation_nodes,
         interpretations=interpretation_nodes,
         scenarios=scenario_nodes,
-        hypotheses=rule_hypothesis_nodes + scenario_hypothesis_nodes,
+        hypotheses=scenario_hypothesis_nodes,
     )
     graph.validate()
     return graph

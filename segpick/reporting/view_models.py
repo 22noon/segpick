@@ -473,13 +473,22 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
     interpretation_by_id = {item.id: item for item in graph.interpretations}
     scenario_by_id = {item.id: item for item in graph.scenarios}
 
-    def evidence_paths(evidence_id: str) -> tuple[str, ...]:
+    def evidence_paths(evidence_id: str, visited: frozenset[str] = frozenset()) -> tuple[str, ...]:
+        if evidence_id in visited:
+            return (f"{evidence_id} → (cycle)",)
         if evidence_id in interpretation_by_id:
-            interpretation = interpretation_by_id[evidence_id]
-            return tuple(
-                f"{interpretation.id} → {observation_id}"
-                for observation_id in interpretation.observation_ids or ("(no observation link)",)
-            )
+            finding = interpretation_by_id[evidence_id]
+            nested_ids = tuple(dict.fromkeys(
+                finding.supporting_ids + finding.conflicting_ids + finding.observation_ids
+            ))
+            if not nested_ids:
+                return (f"{finding.id} → (no observation link)",)
+            paths = []
+            for nested_id in nested_ids:
+                relation = "contradicts" if nested_id in finding.conflicting_ids else "derived from"
+                for tail in evidence_paths(nested_id, visited | {evidence_id}):
+                    paths.append(f"{finding.id} → {relation}: {tail}")
+            return tuple(paths)
         if evidence_id in observation_by_id:
             return (evidence_id,)
         return (f"{evidence_id} (missing)",)

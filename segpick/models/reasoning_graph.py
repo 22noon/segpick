@@ -39,7 +39,18 @@ class InterpretiveFindingNode:
     title: str
     summary: str
     observation_ids: tuple[str, ...] = ()
+    supporting_ids: tuple[str, ...] = ()
+    conflicting_ids: tuple[str, ...] = ()
     source: str = "finding"
+    confidence: str = ""
+    state: str = "provisional"
+    category: str = ""
+    scope: str = "candidate"
+    severity: str = "informational"
+    rule_id: str = ""
+    rule_source: str = ""
+    rule_description: str = ""
+    rule_references: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -73,7 +84,7 @@ ScenarioNode = EvidenceSynthesisNode
 
 
 @dataclass(frozen=True, slots=True)
-class HypothesisNode:
+class BiologicalHypothesisNode:
     id: str
     title: str
     summary: str
@@ -88,10 +99,14 @@ class HypothesisNode:
     rule_source: str = ""
     rule_description: str = ""
     rule_references: tuple[str, ...] = ()
-    hypothesis_type: str = "rule"
+    hypothesis_type: str = "biological"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+# Backward-compatible alias during the final hypothesis-layer migration.
+HypothesisNode = BiologicalHypothesisNode
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,12 +115,17 @@ class ReasoningGraph:
     observations: tuple[ObservationNode, ...] = ()
     interpretations: tuple[InterpretiveFindingNode, ...] = ()
     scenarios: tuple[EvidenceSynthesisNode, ...] = ()
-    hypotheses: tuple[HypothesisNode, ...] = ()
+    hypotheses: tuple[BiologicalHypothesisNode, ...] = ()
 
     @property
     def evidence_syntheses(self) -> tuple[EvidenceSynthesisNode, ...]:
         """Canonical name for the legacy ``scenarios`` graph collection."""
         return self.scenarios
+
+    @property
+    def biological_hypotheses(self) -> tuple[BiologicalHypothesisNode, ...]:
+        """Canonical name for the final graph hypothesis collection."""
+        return self.hypotheses
 
     def validate(self) -> None:
         measurement_ids = {item.id for item in self.measurements}
@@ -122,9 +142,19 @@ class ReasoningGraph:
             if missing:
                 raise ValueError(f"Observation {item.id} references missing measurements: {sorted(missing)}")
         for item in self.interpretations:
-            missing = set(item.observation_ids) - observation_ids
-            if missing:
-                raise ValueError(f"Interpretation {item.id} references missing observations: {sorted(missing)}")
+            missing_observations = set(item.observation_ids) - observation_ids
+            if missing_observations:
+                raise ValueError(
+                    f"Interpretive finding {item.id} references missing observations: "
+                    f"{sorted(missing_observations)}"
+                )
+            allowed_evidence_ids = observation_ids | (interpretation_ids - {item.id})
+            missing_evidence = (set(item.supporting_ids) | set(item.conflicting_ids)) - allowed_evidence_ids
+            if missing_evidence:
+                raise ValueError(
+                    f"Interpretive finding {item.id} references missing evidence nodes: "
+                    f"{sorted(missing_evidence)}"
+                )
         lower_ids = observation_ids | interpretation_ids
         for item in self.scenarios:
             missing = (set(item.supporting_ids) | set(item.conflicting_ids)) - lower_ids

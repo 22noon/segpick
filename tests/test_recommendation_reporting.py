@@ -238,7 +238,7 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert 'href="#biological-scenarios-panel"' in html
     assert 'href="#biological-hypotheses-panel"' in html
     assert 'href="#biological-interpretation-panel"' in html
-    assert 'reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Biological interpretation"])' in html
+    assert 'reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Interpretive findings"])' in html
     assert 'initialiseSectionNavigation("reasoning-navigation", "reasoning")' in html
     assert 'href="#structural-integrity-panel"' in html
     assert 'href="#reference-compatibility-panel"' in html
@@ -288,7 +288,7 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "Assembly-level review" in html
     assert "Local evidence convergence" in html
     assert "AA 39–45" in html
-    assert "Biological interpretation" in html
+    assert "Interpretive findings" in html
     assert "Possible assembly interruption" in html
     assert "Possible split assembly" in html
     assert "Required matches" in html
@@ -345,9 +345,9 @@ def test_dashboard_shows_empty_hypothesis_state(tmp_path) -> None:
 
     html = (tmp_path / "genes" / "VP2.html").read_text()
 
-    assert "Biological interpretation" in html
-    assert "No rule-based biological hypotheses were generated." in html
-    assert "No current hypothesis rule matched" in html
+    assert "Interpretive findings" in html
+    assert "No rule-based interpretive findings were generated." in html
+    assert "No current interpretive rule matched" in html
 
 
 def test_gene_template_contains_reference_dotplot_panel():

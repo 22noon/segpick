@@ -34,6 +34,7 @@ from .reasoning_graph import (
     InterpretationNode,
     EvidenceSynthesisNode,
     ScenarioNode,
+    BiologicalHypothesisNode,
     HypothesisNode,
     ReasoningGraph,
 )
