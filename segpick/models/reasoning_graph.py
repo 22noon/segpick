@@ -52,10 +52,6 @@ class InterpretiveFindingNode:
         return asdict(self)
 
 
-# Backward-compatible alias during the terminology migration.
-InterpretationNode = InterpretiveFindingNode
-
-
 @dataclass(frozen=True, slots=True)
 class EvidenceSynthesisNode:
     id: str
@@ -71,10 +67,6 @@ class EvidenceSynthesisNode:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-
-
-# Backward-compatible alias during the terminology migration.
-ScenarioNode = EvidenceSynthesisNode
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,10 +115,6 @@ class BiologicalHypothesisNode:
         return data
 
 
-# Backward-compatible alias during the final hypothesis-layer migration.
-HypothesisNode = BiologicalHypothesisNode
-
-
 @dataclass(frozen=True, slots=True)
 class ReasoningEdge:
     source_id: str
@@ -147,21 +135,6 @@ class ReasoningGraph:
     edges: tuple[ReasoningEdge, ...] = ()
 
     SCHEMA_VERSION = "4.0"
-
-    @property
-    def interpretations(self) -> tuple[InterpretiveFindingNode, ...]:
-        """Backward-compatible alias for ``interpretive_findings``."""
-        return self.interpretive_findings
-
-    @property
-    def scenarios(self) -> tuple[EvidenceSynthesisNode, ...]:
-        """Backward-compatible alias for ``evidence_syntheses``."""
-        return self.evidence_syntheses
-
-    @property
-    def hypotheses(self) -> tuple[BiologicalHypothesisNode, ...]:
-        """Backward-compatible alias for ``biological_hypotheses``."""
-        return self.biological_hypotheses
 
     def provenance_edges(self) -> tuple[ReasoningEdge, ...]:
         """Return the graph's explicit immutable provenance edges."""

@@ -70,11 +70,11 @@ def test_plugin_observation_can_trigger_hypothesis_and_enter_graph():
     assert ReasoningEdge(
         graph.observations[0].id, graph.measurements[0].id, "supported_by"
     ) in graph.edges
-    rule_finding = next(item for item in graph.interpretations if item.rule_id == "junction_supported_structure")
+    rule_finding = next(item for item in graph.interpretive_findings if item.rule_id == "junction_supported_structure")
     assert ReasoningEdge(
         rule_finding.id, graph.observations[0].id, "supported_by"
     ) in graph.edges
-    assert graph.hypotheses == ()
+    assert graph.biological_hypotheses == ()
     graph.validate()
 
 
@@ -107,7 +107,7 @@ def test_hypothesis_state_is_preserved_in_reasoning_graph():
 
     findings = {
         node.rule_id: node
-        for node in candidate.analysis.reasoning_graph.interpretations
+        for node in candidate.analysis.reasoning_graph.interpretive_findings
         if node.rule_id
     }
     assert findings["possible_repeated_sequence_architecture"].state == "supported"
@@ -143,7 +143,7 @@ def test_hypothesis_metadata_and_rule_provenance_enter_graph():
 
     node = next(
         item
-        for item in candidate.analysis.reasoning_graph.interpretations
+        for item in candidate.analysis.reasoning_graph.interpretive_findings
         if item.rule_id == "junction_supported_structure"
     )
     assert node.category == "assembly_structure"
@@ -202,23 +202,23 @@ def test_scenario_hypotheses_enter_graph_through_scenario_nodes():
 
     graph = build_reasoning_graph(candidate)
 
-    assert len(graph.scenarios) == 1
-    assert len(graph.hypotheses) == 3
-    assert {item.hypothesis_type for item in graph.hypotheses} == {"biological"}
-    scenario_node = graph.scenarios[0]
+    assert len(graph.evidence_syntheses) == 1
+    assert len(graph.biological_hypotheses) == 3
+    assert {item.hypothesis_type for item in graph.biological_hypotheses} == {"biological"}
+    scenario_node = graph.evidence_syntheses[0]
     assert ReasoningEdge(
         scenario_node.id, graph.observations[0].id, "composed_from"
     ) in graph.edges
     assert all(
         ReasoningEdge(item.id, scenario_node.id, "supported_by") in graph.edges
-        for item in graph.hypotheses
+        for item in graph.biological_hypotheses
     )
     assert len(graph.to_dict()["biological_hypotheses"]) == 3
     graph.validate()
 
 
 def test_interpretive_finding_node_is_the_canonical_graph_class():
-    from segpick.models import InterpretationNode, InterpretiveFindingNode
+    from segpick.models import InterpretiveFindingNode
 
     node = InterpretiveFindingNode(
         id="finding:fragmented-architecture:1",
@@ -227,7 +227,6 @@ def test_interpretive_finding_node_is_the_canonical_graph_class():
     )
 
     assert isinstance(node, InterpretiveFindingNode)
-    assert InterpretationNode is InterpretiveFindingNode
     assert node.to_dict()["title"] == "Fragmented architecture"
 
 
@@ -257,15 +256,15 @@ def test_reasoning_graph_builds_interpretive_finding_instances():
 
     graph = build_reasoning_graph(candidate)
 
-    assert len(graph.interpretations) == 1
-    assert isinstance(graph.interpretations[0], InterpretiveFindingNode)
+    assert len(graph.interpretive_findings) == 1
+    assert isinstance(graph.interpretive_findings[0], InterpretiveFindingNode)
     assert ReasoningEdge(
-        graph.interpretations[0].id, graph.observations[0].id, "derived_from"
+        graph.interpretive_findings[0].id, graph.observations[0].id, "derived_from"
     ) in graph.edges
 
 
 def test_evidence_synthesis_node_is_the_canonical_graph_class():
-    from segpick.models import EvidenceSynthesisNode, ScenarioNode
+    from segpick.models import EvidenceSynthesisNode
 
     node = EvidenceSynthesisNode(
         id="synthesis:fragmented-structure:1",
@@ -276,7 +275,6 @@ def test_evidence_synthesis_node_is_the_canonical_graph_class():
     )
 
     assert isinstance(node, EvidenceSynthesisNode)
-    assert ScenarioNode is EvidenceSynthesisNode
     assert node.to_dict()["title"] == "Fragmented candidate structure"
 
 
@@ -309,13 +307,12 @@ def test_reasoning_graph_exposes_canonical_evidence_syntheses_accessor():
 
     graph = build_reasoning_graph(candidate)
 
-    assert graph.evidence_syntheses is graph.scenarios
     assert isinstance(graph.evidence_syntheses[0], EvidenceSynthesisNode)
     assert graph.to_dict()["evidence_syntheses"][0]["scenario_id"] == "fragmented_candidate_structure"
 
 
 def test_biological_hypothesis_node_is_the_canonical_final_graph_class():
-    from segpick.models import BiologicalHypothesisNode, HypothesisNode
+    from segpick.models import BiologicalHypothesisNode
 
     node = BiologicalHypothesisNode(
         id="hypothesis:genuine-tandem-duplication:1",
@@ -325,7 +322,6 @@ def test_biological_hypothesis_node_is_the_canonical_final_graph_class():
     )
 
     assert isinstance(node, BiologicalHypothesisNode)
-    assert HypothesisNode is BiologicalHypothesisNode
     assert node.hypothesis_type == "biological"
 
 
@@ -383,13 +379,12 @@ def test_rule_results_are_findings_and_only_scenario_results_are_final_hypothese
 
     graph = build_reasoning_graph(candidate)
 
-    assert any(item.rule_id == "junction_supported_structure" for item in graph.interpretations)
+    assert any(item.rule_id == "junction_supported_structure" for item in graph.interpretive_findings)
     assert len(graph.biological_hypotheses) == 1
-    assert graph.biological_hypotheses is graph.hypotheses
     assert graph.biological_hypotheses[0].title == "Genuine biological structure"
 
 
-def test_reasoning_graph_uses_canonical_collection_fields_with_legacy_aliases():
+def test_reasoning_graph_exposes_only_canonical_collection_fields():
     from segpick.models import ReasoningGraph
 
     graph = ReasoningGraph()
@@ -397,9 +392,9 @@ def test_reasoning_graph_uses_canonical_collection_fields_with_legacy_aliases():
     assert graph.interpretive_findings == ()
     assert graph.evidence_syntheses == ()
     assert graph.biological_hypotheses == ()
-    assert graph.interpretations is graph.interpretive_findings
-    assert graph.scenarios is graph.evidence_syntheses
-    assert graph.hypotheses is graph.biological_hypotheses
+    assert not hasattr(graph, "interpretations")
+    assert not hasattr(graph, "scenarios")
+    assert not hasattr(graph, "hypotheses")
 
 
 def test_reasoning_graph_export_uses_single_canonical_schema():

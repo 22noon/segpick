@@ -1154,8 +1154,8 @@
             <div class="mini"><strong>{{ candidate.reasoning_graph.hypothesis_count }}</strong><span>Hypotheses</span></div>
           </div>
           <h4>Biological hypothesis evaluations</h4>
-          {% if candidate.reasoning_graph.hypotheses %}
-            {% for hypothesis in candidate.reasoning_graph.hypotheses %}
+          {% if candidate.reasoning_graph.biological_hypotheses %}
+            {% for hypothesis in candidate.reasoning_graph.biological_hypotheses %}
               <details class="hypothesis-item graph-hypothesis-evaluation">
                 <summary>
                   <span class="hypothesis-title">{{ hypothesis.title }}</span>
