@@ -149,9 +149,9 @@ def test_hypothesis_metadata_and_rule_provenance_enter_graph():
     assert node.rule_description == "Tests preservation of declarative rule provenance."
     assert node.rule_references == ("doi:10.0000/example",)
     serialized = candidate.analysis.reasoning_graph.to_dict()
-    rule_findings = [item for item in serialized["interpretations"] if item["rule_id"]]
+    rule_findings = [item for item in serialized["interpretive_findings"] if item["rule_id"]]
     assert rule_findings[0]["rule_source"] == "user:test-rules.yml"
-    assert serialized["hypotheses"] == []
+    assert serialized["biological_hypotheses"] == []
 
 
 def test_scenario_hypotheses_enter_graph_through_scenario_nodes():
@@ -204,7 +204,7 @@ def test_scenario_hypotheses_enter_graph_through_scenario_nodes():
     scenario_node = graph.scenarios[0]
     assert scenario_node.supporting_ids == (graph.observations[0].id,)
     assert all(item.supporting_ids == (scenario_node.id,) for item in graph.hypotheses)
-    assert len(graph.to_dict()["hypotheses"]) == 3
+    assert len(graph.to_dict()["biological_hypotheses"]) == 3
     graph.validate()
 
 
@@ -302,8 +302,7 @@ def test_reasoning_graph_exposes_canonical_evidence_syntheses_accessor():
 
     assert graph.evidence_syntheses is graph.scenarios
     assert isinstance(graph.evidence_syntheses[0], EvidenceSynthesisNode)
-    # Keep the serialized key stable during the compatibility migration.
-    assert graph.to_dict()["scenarios"][0]["scenario_id"] == "fragmented_candidate_structure"
+    assert graph.to_dict()["evidence_syntheses"][0]["scenario_id"] == "fragmented_candidate_structure"
 
 
 def test_biological_hypothesis_node_is_the_canonical_final_graph_class():
@@ -395,13 +394,13 @@ def test_reasoning_graph_uses_canonical_collection_fields_with_legacy_aliases():
     assert graph.hypotheses is graph.biological_hypotheses
 
 
-def test_reasoning_graph_schema_v21_is_canonical_and_versioned():
+def test_reasoning_graph_export_uses_single_canonical_schema():
     from segpick.models import ReasoningGraph
 
     graph = ReasoningGraph()
-    payload = graph.to_dict(include_legacy_aliases=False)
+    payload = graph.to_dict()
 
-    assert payload["schema_version"] == "2.1"
+    assert payload["schema_version"] == "3.0"
     assert set(payload) == {
         "schema_version",
         "measurements",
@@ -414,66 +413,16 @@ def test_reasoning_graph_schema_v21_is_canonical_and_versioned():
 
 
 
-def test_reasoning_graph_can_emit_schema_v20_without_edges():
-    from segpick.models import ReasoningGraph
-
-    payload = ReasoningGraph().to_dict(schema_version="2.0")
-
-    assert payload["schema_version"] == "2.0"
-    assert set(payload) == {
-        "schema_version",
-        "measurements",
-        "observations",
-        "interpretive_findings",
-        "evidence_syntheses",
-        "biological_hypotheses",
-    }
-
-
 def test_reasoning_graph_serializes_explicit_provenance_edges():
     from segpick.models import ReasoningEdge, ReasoningGraph
 
     graph = ReasoningGraph(edges=(
         ReasoningEdge("observation:a", "measurement:a", "supported_by"),
     ))
-    # Validation correctly rejects edges until both endpoint nodes exist.
     import pytest
     with pytest.raises(ValueError, match="references missing node"):
-        graph.to_dict(include_legacy_aliases=False)
+        graph.to_dict()
 
-def test_reasoning_graph_default_export_preserves_legacy_collection_aliases():
-    from segpick.models import ReasoningGraph
-
-    payload = ReasoningGraph().to_dict()
-
-    assert payload["interpretations"] is payload["interpretive_findings"]
-    assert payload["scenarios"] is payload["evidence_syntheses"]
-    assert payload["hypotheses"] is payload["biological_hypotheses"]
-
-
-def test_reasoning_graph_can_emit_explicit_schema_v1_payload():
-    from segpick.models import ReasoningGraph
-
-    payload = ReasoningGraph().to_legacy_dict()
-
-    assert payload["schema_version"] == "1.0"
-    assert set(payload) == {
-        "schema_version",
-        "measurements",
-        "observations",
-        "interpretations",
-        "scenarios",
-        "hypotheses",
-    }
-
-
-def test_reasoning_graph_rejects_unknown_schema_version():
-    import pytest
-
-    from segpick.models import ReasoningGraph
-
-    with pytest.raises(ValueError, match="Unsupported reasoning graph schema version"):
-        ReasoningGraph().to_dict(schema_version="99")
 
 
 def test_biological_hypothesis_graph_node_separates_definition_and_evaluation():
@@ -676,7 +625,7 @@ def test_graph_inspector_consumes_explicit_reasoning_edges():
     assert tuple(step.relationship for step in view.provenance_paths[0].steps) == (
         "", "supported by", "composed from", "derived from", "supported by",
     )
-    payload = candidate.analysis.reasoning_graph.to_dict(include_legacy_aliases=False)
+    payload = candidate.analysis.reasoning_graph.to_dict()
     assert payload["edges"] == [edge.to_dict() for edge in edges]
 
 def test_graph_inspector_template_renders_typed_provenance_relationships():

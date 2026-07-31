@@ -156,9 +156,7 @@ class ReasoningGraph:
     biological_hypotheses: tuple[BiologicalHypothesisNode, ...] = ()
     edges: tuple[ReasoningEdge, ...] = ()
 
-    SCHEMA_VERSION = "2.1"
-    PREVIOUS_SCHEMA_VERSION = "2.0"
-    LEGACY_SCHEMA_VERSION = "1.0"
+    SCHEMA_VERSION = "3.0"
 
     @property
     def interpretations(self) -> tuple[InterpretiveFindingNode, ...]:
@@ -261,51 +259,14 @@ class ReasoningGraph:
             "edges": [item.to_dict() for item in self.provenance_edges()],
         }
 
-    def to_dict(
-        self,
-        *,
-        schema_version: str = SCHEMA_VERSION,
-        include_legacy_aliases: bool = True,
-    ) -> dict[str, Any]:
-        """Serialize the graph using a versioned compatibility schema.
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize the canonical reasoning graph schema.
 
-        Schema 2.1 adds explicit immutable provenance edges. Schema 2.0 keeps
-        the canonical node collections without edges. Schema 1 uses legacy
-        collection names. Legacy aliases may be included in the latest schema
-        during the migration period.
+        Graph exports intentionally provide one current contract only. The
+        export contains the scientific collection names and explicit typed
+        provenance edges; legacy collection aliases and historical schema
+        variants are not emitted.
         """
         self.validate()
-        canonical = self._canonical_payload()
-        if schema_version in {"1", self.LEGACY_SCHEMA_VERSION}:
-            return {
-                "schema_version": self.LEGACY_SCHEMA_VERSION,
-                "measurements": canonical["measurements"],
-                "observations": canonical["observations"],
-                "interpretations": canonical["interpretive_findings"],
-                "scenarios": canonical["evidence_syntheses"],
-                "hypotheses": canonical["biological_hypotheses"],
-            }
-        if schema_version in {"2", self.PREVIOUS_SCHEMA_VERSION}:
-            return {
-                "schema_version": self.PREVIOUS_SCHEMA_VERSION,
-                "measurements": canonical["measurements"],
-                "observations": canonical["observations"],
-                "interpretive_findings": canonical["interpretive_findings"],
-                "evidence_syntheses": canonical["evidence_syntheses"],
-                "biological_hypotheses": canonical["biological_hypotheses"],
-            }
-        if schema_version not in {"2.1", self.SCHEMA_VERSION}:
-            raise ValueError(f"Unsupported reasoning graph schema version: {schema_version}")
-        payload = {"schema_version": self.SCHEMA_VERSION, **canonical}
-        if include_legacy_aliases:
-            payload.update({
-                "interpretations": canonical["interpretive_findings"],
-                "scenarios": canonical["evidence_syntheses"],
-                "hypotheses": canonical["biological_hypotheses"],
-            })
-        return payload
-
-    def to_legacy_dict(self) -> dict[str, Any]:
-        """Return the explicit schema-v1 compatibility representation."""
-        return self.to_dict(schema_version=self.LEGACY_SCHEMA_VERSION)
+        return {"schema_version": self.SCHEMA_VERSION, **self._canonical_payload()}
 

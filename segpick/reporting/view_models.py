@@ -669,7 +669,7 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
         hypothesis_count=len(graph.biological_hypotheses),
         builtin_sources=builtin_sources, plugin_sources=plugin_sources,
         provenance_paths=tuple(paths), hypotheses=hypothesis_views,
-        graph_json=json.dumps(graph.to_dict(include_legacy_aliases=False), indent=2, sort_keys=True) if valid else "{}",
+        graph_json=json.dumps(graph.to_dict(), indent=2, sort_keys=True) if valid else "{}",
     )
 
 
