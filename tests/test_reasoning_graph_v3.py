@@ -395,11 +395,29 @@ def test_reasoning_graph_uses_canonical_collection_fields_with_legacy_aliases():
     assert graph.hypotheses is graph.biological_hypotheses
 
 
-def test_reasoning_graph_schema_v2_is_canonical_and_versioned():
+def test_reasoning_graph_schema_v21_is_canonical_and_versioned():
     from segpick.models import ReasoningGraph
 
     graph = ReasoningGraph()
     payload = graph.to_dict(include_legacy_aliases=False)
+
+    assert payload["schema_version"] == "2.1"
+    assert set(payload) == {
+        "schema_version",
+        "measurements",
+        "observations",
+        "interpretive_findings",
+        "evidence_syntheses",
+        "biological_hypotheses",
+        "edges",
+    }
+
+
+
+def test_reasoning_graph_can_emit_schema_v20_without_edges():
+    from segpick.models import ReasoningGraph
+
+    payload = ReasoningGraph().to_dict(schema_version="2.0")
 
     assert payload["schema_version"] == "2.0"
     assert set(payload) == {
@@ -411,6 +429,17 @@ def test_reasoning_graph_schema_v2_is_canonical_and_versioned():
         "biological_hypotheses",
     }
 
+
+def test_reasoning_graph_serializes_explicit_provenance_edges():
+    from segpick.models import ReasoningEdge, ReasoningGraph
+
+    graph = ReasoningGraph(edges=(
+        ReasoningEdge("observation:a", "measurement:a", "supported_by"),
+    ))
+    # Validation correctly rejects edges until both endpoint nodes exist.
+    import pytest
+    with pytest.raises(ValueError, match="references missing node"):
+        graph.to_dict(include_legacy_aliases=False)
 
 def test_reasoning_graph_default_export_preserves_legacy_collection_aliases():
     from segpick.models import ReasoningGraph
@@ -615,6 +644,40 @@ def test_graph_inspector_builds_typed_path_from_hypothesis_to_measurement():
     )
     assert path.steps[-1].title == "alignment block count: 4 blocks"
 
+
+
+def test_graph_inspector_consumes_explicit_reasoning_edges():
+    from segpick.models import (
+        BiologicalHypothesisNode, EvidenceSynthesisNode, InterpretiveFindingNode,
+        MeasurementNode, ObservationNode, ReasoningEdge, ReasoningGraph,
+    )
+    from segpick.reporting.view_models import build_reasoning_graph_inspector_view
+
+    _, candidate = _sample()
+    measurement = MeasurementNode("measurement:m:1", "test", "metric", 1)
+    observation = ObservationNode("observation:o:1", "observed", "test", "Observed evidence")
+    finding = InterpretiveFindingNode("finding:f:1", "Finding", "Interpretation")
+    synthesis = EvidenceSynthesisNode("synthesis:s:1", "s", "Synthesis", "Integrated", "high")
+    hypothesis = BiologicalHypothesisNode("hypothesis:h:1", "Hypothesis", "Explanation", "high")
+    edges = (
+        ReasoningEdge(hypothesis.id, synthesis.id, "supported_by"),
+        ReasoningEdge(synthesis.id, finding.id, "composed_from"),
+        ReasoningEdge(finding.id, observation.id, "derived_from"),
+        ReasoningEdge(observation.id, measurement.id, "supported_by"),
+    )
+    candidate.analysis.reasoning_graph = ReasoningGraph(
+        measurements=(measurement,), observations=(observation,),
+        interpretive_findings=(finding,), evidence_syntheses=(synthesis,),
+        biological_hypotheses=(hypothesis,), edges=edges,
+    )
+
+    view = build_reasoning_graph_inspector_view(candidate)
+
+    assert tuple(step.relationship for step in view.provenance_paths[0].steps) == (
+        "", "supported by", "composed from", "derived from", "supported by",
+    )
+    payload = candidate.analysis.reasoning_graph.to_dict(include_legacy_aliases=False)
+    assert payload["edges"] == [edge.to_dict() for edge in edges]
 
 def test_graph_inspector_template_renders_typed_provenance_relationships():
     from pathlib import Path

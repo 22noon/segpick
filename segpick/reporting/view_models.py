@@ -512,6 +512,13 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
     observation_by_id = {item.id: item for item in graph.observations}
     finding_by_id = {item.id: item for item in graph.interpretive_findings}
     synthesis_by_id = {item.id: item for item in graph.evidence_syntheses}
+    edges_by_source: dict[str, tuple[object, ...]] = {}
+    for edge in graph.provenance_edges():
+        edges_by_source.setdefault(edge.source_id, ())
+        edges_by_source[edge.source_id] += (edge,)
+
+    def linked_edges(node_id: str) -> tuple[object, ...]:
+        return edges_by_source.get(node_id, ())
 
     def missing_step(node_id: str, relationship: str) -> ProvenanceStepView:
         return ProvenanceStepView(
@@ -536,14 +543,10 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
                 node_id=finding.id, node_type="interpretive finding", title=finding.title,
                 relationship=relationship, state=finding.state,
             )
-            links = []
-            for nested_id in finding.supporting_ids:
-                links.append((nested_id, "supported by"))
-            for nested_id in finding.conflicting_ids:
-                links.append((nested_id, "contradicted by"))
-            for nested_id in finding.observation_ids:
-                if nested_id not in finding.supporting_ids and nested_id not in finding.conflicting_ids:
-                    links.append((nested_id, "derived from"))
+            links = [
+                (edge.target_id, edge.relationship.replace("_", " "))
+                for edge in linked_edges(finding.id)
+            ]
             if not links:
                 return ((head, missing_step(finding.id, "no evidence link")),)
             return tuple(
@@ -558,10 +561,12 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
                 title=observation.description, relationship=relationship,
                 state=observation.severity,
             )
-            if not observation.measurement_ids:
+            measurement_edges = linked_edges(observation.id)
+            if not measurement_edges:
                 return ((head,),)
             paths = []
-            for measurement_id in observation.measurement_ids:
+            for edge in measurement_edges:
+                measurement_id = edge.target_id
                 measurement = measurement_by_id.get(measurement_id)
                 if measurement is None:
                     paths.append((head, missing_step(measurement_id, "supported by")))
@@ -571,7 +576,7 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
                         value = f"{value} {measurement.unit}"
                     paths.append((head, ProvenanceStepView(
                         node_id=measurement.id, node_type="measurement",
-                        title=f"{measurement.name}: {value}", relationship="supported by",
+                        title=f"{measurement.name}: {value}", relationship=edge.relationship.replace("_", " "),
                         state=measurement.channel,
                     )))
             return tuple(paths)
@@ -594,8 +599,8 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
             title=hypothesis.title, state=hypothesis.state,
         )
         hypothesis_links = [
-            *((item, "supported by") for item in hypothesis.supporting_ids),
-            *((item, "contradicted by") for item in hypothesis.conflicting_ids),
+            (edge.target_id, edge.relationship.replace("_", " "))
+            for edge in linked_edges(hypothesis.id)
         ]
         if not hypothesis_links:
             paths.append(ProvenancePathView(
@@ -612,8 +617,8 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
                     title=synthesis.title, relationship=relation, state=synthesis.confidence,
                 )
                 synthesis_links = [
-                    *((item, "composed from") for item in synthesis.supporting_ids),
-                    *((item, "conflicted by") for item in synthesis.conflicting_ids),
+                    (edge.target_id, edge.relationship.replace("_", " "))
+                    for edge in linked_edges(synthesis.id)
                 ]
                 if not synthesis_links:
                     paths.append(ProvenancePathView(

@@ -138,14 +138,26 @@ HypothesisNode = BiologicalHypothesisNode
 
 
 @dataclass(frozen=True, slots=True)
+class ReasoningEdge:
+    source_id: str
+    target_id: str
+    relationship: str
+
+    def to_dict(self) -> dict[str, str]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
 class ReasoningGraph:
     measurements: tuple[MeasurementNode, ...] = ()
     observations: tuple[ObservationNode, ...] = ()
     interpretive_findings: tuple[InterpretiveFindingNode, ...] = ()
     evidence_syntheses: tuple[EvidenceSynthesisNode, ...] = ()
     biological_hypotheses: tuple[BiologicalHypothesisNode, ...] = ()
+    edges: tuple[ReasoningEdge, ...] = ()
 
-    SCHEMA_VERSION = "2.0"
+    SCHEMA_VERSION = "2.1"
+    PREVIOUS_SCHEMA_VERSION = "2.0"
     LEGACY_SCHEMA_VERSION = "1.0"
 
     @property
@@ -162,6 +174,26 @@ class ReasoningGraph:
     def hypotheses(self) -> tuple[BiologicalHypothesisNode, ...]:
         """Backward-compatible alias for ``biological_hypotheses``."""
         return self.biological_hypotheses
+
+    def provenance_edges(self) -> tuple[ReasoningEdge, ...]:
+        """Return explicit edges, deriving them for schema-2.0 graphs if needed."""
+        if self.edges:
+            return self.edges
+        edges: list[ReasoningEdge] = []
+        for observation in self.observations:
+            edges.extend(ReasoningEdge(observation.id, node_id, "supported_by") for node_id in observation.measurement_ids)
+        for finding in self.interpretive_findings:
+            edges.extend(ReasoningEdge(finding.id, node_id, "supported_by") for node_id in finding.supporting_ids)
+            edges.extend(ReasoningEdge(finding.id, node_id, "contradicted_by") for node_id in finding.conflicting_ids)
+            linked = set(finding.supporting_ids) | set(finding.conflicting_ids)
+            edges.extend(ReasoningEdge(finding.id, node_id, "derived_from") for node_id in finding.observation_ids if node_id not in linked)
+        for synthesis in self.evidence_syntheses:
+            edges.extend(ReasoningEdge(synthesis.id, node_id, "composed_from") for node_id in synthesis.supporting_ids)
+            edges.extend(ReasoningEdge(synthesis.id, node_id, "conflicted_by") for node_id in synthesis.conflicting_ids)
+        for hypothesis in self.biological_hypotheses:
+            edges.extend(ReasoningEdge(hypothesis.id, node_id, "supported_by") for node_id in hypothesis.supporting_ids)
+            edges.extend(ReasoningEdge(hypothesis.id, node_id, "contradicted_by") for node_id in hypothesis.conflicting_ids)
+        return tuple(edges)
 
     def validate(self) -> None:
         measurement_ids = {item.id for item in self.measurements}
@@ -201,6 +233,23 @@ class ReasoningGraph:
             missing = (set(item.supporting_ids) | set(item.conflicting_ids)) - hypothesis_evidence_ids
             if missing:
                 raise ValueError(f"Hypothesis {item.id} references missing evidence nodes: {sorted(missing)}")
+        edge_keys: set[tuple[str, str, str]] = set()
+        allowed_relationships = {
+            "supported_by", "contradicted_by", "composed_from",
+            "conflicted_by", "derived_from",
+        }
+        for edge in self.provenance_edges():
+            if edge.source_id not in all_ids or edge.target_id not in all_ids:
+                raise ValueError(
+                    f"Reasoning edge references missing node: "
+                    f"{edge.source_id} -[{edge.relationship}]-> {edge.target_id}"
+                )
+            if edge.relationship not in allowed_relationships:
+                raise ValueError(f"Unsupported reasoning edge relationship: {edge.relationship}")
+            key = (edge.source_id, edge.target_id, edge.relationship)
+            if key in edge_keys:
+                raise ValueError(f"Duplicate reasoning edge: {key}")
+            edge_keys.add(key)
 
     def _canonical_payload(self) -> dict[str, Any]:
         return {
@@ -209,6 +258,7 @@ class ReasoningGraph:
             "interpretive_findings": [item.to_dict() for item in self.interpretive_findings],
             "evidence_syntheses": [item.to_dict() for item in self.evidence_syntheses],
             "biological_hypotheses": [item.to_dict() for item in self.biological_hypotheses],
+            "edges": [item.to_dict() for item in self.provenance_edges()],
         }
 
     def to_dict(
@@ -219,11 +269,10 @@ class ReasoningGraph:
     ) -> dict[str, Any]:
         """Serialize the graph using a versioned compatibility schema.
 
-        Schema 2 uses the canonical scientific terminology. During migration,
-        legacy aliases are included by default so existing consumers of
-        ``interpretations``, ``scenarios`` and ``hypotheses`` continue to work.
-        Pass ``include_legacy_aliases=False`` for a canonical-only payload.
-        Schema 1 returns only the legacy collection names.
+        Schema 2.1 adds explicit immutable provenance edges. Schema 2.0 keeps
+        the canonical node collections without edges. Schema 1 uses legacy
+        collection names. Legacy aliases may be included in the latest schema
+        during the migration period.
         """
         self.validate()
         canonical = self._canonical_payload()
@@ -236,7 +285,16 @@ class ReasoningGraph:
                 "scenarios": canonical["evidence_syntheses"],
                 "hypotheses": canonical["biological_hypotheses"],
             }
-        if schema_version not in {"2", self.SCHEMA_VERSION}:
+        if schema_version in {"2", self.PREVIOUS_SCHEMA_VERSION}:
+            return {
+                "schema_version": self.PREVIOUS_SCHEMA_VERSION,
+                "measurements": canonical["measurements"],
+                "observations": canonical["observations"],
+                "interpretive_findings": canonical["interpretive_findings"],
+                "evidence_syntheses": canonical["evidence_syntheses"],
+                "biological_hypotheses": canonical["biological_hypotheses"],
+            }
+        if schema_version not in {"2.1", self.SCHEMA_VERSION}:
             raise ValueError(f"Unsupported reasoning graph schema version: {schema_version}")
         payload = {"schema_version": self.SCHEMA_VERSION, **canonical}
         if include_legacy_aliases:

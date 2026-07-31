@@ -36,6 +36,7 @@ from .reasoning_graph import (
     ScenarioNode,
     BiologicalHypothesisNode,
     HypothesisNode,
+    ReasoningEdge,
     ReasoningGraph,
 )
 from .sample import Sample

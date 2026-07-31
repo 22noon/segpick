@@ -14,6 +14,7 @@ from segpick.models.reasoning_graph import (
     ObservationNode,
     ReasoningGraph,
     EvidenceSynthesisNode,
+    ReasoningEdge,
 )
 
 
@@ -198,6 +199,36 @@ def _scenario_hypothesis_nodes(
     return tuple(nodes)
 
 
+def _reasoning_edges(
+    observations: tuple[ObservationNode, ...],
+    findings: tuple[InterpretiveFindingNode, ...],
+    syntheses: tuple[EvidenceSynthesisNode, ...],
+    hypotheses: tuple[BiologicalHypothesisNode, ...],
+) -> tuple[ReasoningEdge, ...]:
+    edges: list[ReasoningEdge] = []
+    for observation in observations:
+        edges.extend(
+            ReasoningEdge(observation.id, measurement_id, "supported_by")
+            for measurement_id in observation.measurement_ids
+        )
+    for finding in findings:
+        edges.extend(ReasoningEdge(finding.id, node_id, "supported_by") for node_id in finding.supporting_ids)
+        edges.extend(ReasoningEdge(finding.id, node_id, "contradicted_by") for node_id in finding.conflicting_ids)
+        linked = set(finding.supporting_ids) | set(finding.conflicting_ids)
+        edges.extend(
+            ReasoningEdge(finding.id, node_id, "derived_from")
+            for node_id in finding.observation_ids
+            if node_id not in linked
+        )
+    for synthesis in syntheses:
+        edges.extend(ReasoningEdge(synthesis.id, node_id, "composed_from") for node_id in synthesis.supporting_ids)
+        edges.extend(ReasoningEdge(synthesis.id, node_id, "conflicted_by") for node_id in synthesis.conflicting_ids)
+    for hypothesis in hypotheses:
+        edges.extend(ReasoningEdge(hypothesis.id, node_id, "supported_by") for node_id in hypothesis.supporting_ids)
+        edges.extend(ReasoningEdge(hypothesis.id, node_id, "contradicted_by") for node_id in hypothesis.conflicting_ids)
+    return tuple(edges)
+
+
 def build_reasoning_graph(candidate) -> ReasoningGraph:
     measurements = tuple(candidate.analysis.plugin_measurements)
     observation_nodes = _observation_nodes(candidate.analysis.observations, measurements)
@@ -218,6 +249,10 @@ def build_reasoning_graph(candidate) -> ReasoningGraph:
         interpretive_findings=interpretation_nodes,
         evidence_syntheses=scenario_nodes,
         biological_hypotheses=scenario_hypothesis_nodes,
+        edges=_reasoning_edges(
+            observation_nodes, interpretation_nodes, scenario_nodes,
+            scenario_hypothesis_nodes,
+        ),
     )
     graph.validate()
     return graph
