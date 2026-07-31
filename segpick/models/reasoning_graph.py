@@ -55,6 +55,12 @@ class HypothesisNode:
     conflicting_ids: tuple[str, ...] = ()
     rule_id: str = ""
     state: str = "provisional"
+    category: str = ""
+    scope: str = "candidate"
+    severity: str = "informational"
+    rule_source: str = ""
+    rule_description: str = ""
+    rule_references: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

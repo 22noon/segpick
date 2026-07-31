@@ -82,6 +82,12 @@ def _hypothesis_nodes(hypotheses: tuple[BiologicalHypothesis, ...], observations
             supporting_ids=supporting,
             conflicting_ids=conflicting,
             state=hypothesis.state,
+            category=hypothesis.category,
+            scope=hypothesis.scope,
+            severity=hypothesis.severity,
+            rule_source=hypothesis.rule_source,
+            rule_description=hypothesis.rule_description,
+            rule_references=hypothesis.rule_references,
         ))
     return tuple(nodes)
 

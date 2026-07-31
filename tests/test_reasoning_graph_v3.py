@@ -102,3 +102,40 @@ def test_hypothesis_state_is_preserved_in_reasoning_graph():
     hypotheses = {node.rule_id: node for node in candidate.analysis.reasoning_graph.hypotheses}
     assert hypotheses["possible_repeated_sequence_architecture"].state == "supported"
     assert hypotheses["possible_repeat_associated_assembly_artefact"].state == "challenged"
+
+
+def test_hypothesis_metadata_and_rule_provenance_enter_graph():
+    sample, candidate = _sample()
+    candidate.analysis.observations = (
+        EvidenceObservation(
+            observation_type="junction_supported",
+            source="plugin:junction_support",
+            description="Reads span the candidate junction.",
+        ),
+    )
+    rule = HypothesisRule(
+        rule_id="junction_supported_structure",
+        title="Junction-supported structure",
+        category="assembly_structure",
+        scope="candidate",
+        severity="review",
+        base_confidence="moderate",
+        summary="The proposed structure has direct junction support.",
+        description="Tests preservation of declarative rule provenance.",
+        references=("doi:10.0000/example",),
+        source="user:test-rules.yml",
+        requires=(RuleCondition("observation", "junction_supported", "plugin:junction_support"),),
+    )
+
+    attach_biological_hypotheses(
+        sample, candidate_rules=(rule,), gene_rules=(), plugin_registry=None
+    )
+
+    node = candidate.analysis.reasoning_graph.hypotheses[0]
+    assert node.category == "assembly_structure"
+    assert node.scope == "candidate"
+    assert node.severity == "review"
+    assert node.rule_source == "user:test-rules.yml"
+    assert node.rule_description == "Tests preservation of declarative rule provenance."
+    assert node.rule_references == ("doi:10.0000/example",)
+    assert candidate.analysis.reasoning_graph.to_dict()["hypotheses"][0]["rule_source"] == "user:test-rules.yml"
