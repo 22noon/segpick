@@ -496,6 +496,7 @@ class ReasoningGraphInspectorView:
     provenance_paths: tuple[ProvenancePathView, ...]
     hypotheses: tuple[HypothesisInspectorView, ...]
     graph_json: str
+    normalized_graph_json: str
     llm_bundle_json: str
     llm_bundle_schema_json: str
     llm_output_schema_json: str
@@ -508,7 +509,7 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
         return ReasoningGraphInspectorView(
             available=False, valid=False, validation_message="Reasoning graph unavailable.",
             measurement_count=0, observation_count=0, interpretation_count=0, evidence_pattern_count=0, hypothesis_count=0,
-            builtin_sources=(), plugin_sources=(), provenance_paths=(), hypotheses=(), graph_json="{}",
+            builtin_sources=(), plugin_sources=(), provenance_paths=(), hypotheses=(), graph_json="{}", normalized_graph_json="{}",
             llm_bundle_json="{}", llm_bundle_schema_json="{}", llm_output_schema_json="{}",
             llm_review_package_base64="",
         )
@@ -677,6 +678,7 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
         for item in graph.biological_hypotheses
     )
     graph_json = json.dumps(graph.to_dict(), indent=2, sort_keys=True) if valid else "{}"
+    normalized_graph_json = json.dumps(graph.to_normalized_dict(), indent=2, sort_keys=True) if valid else "{}"
     if valid:
         llm_bundle = build_llm_reasoning_bundle(graph, candidate_id=candidate.id)
         llm_bundle_schema = load_llm_bundle_schema()
@@ -699,7 +701,7 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
         hypothesis_count=len(graph.biological_hypotheses),
         builtin_sources=builtin_sources, plugin_sources=plugin_sources,
         provenance_paths=tuple(paths), hypotheses=hypothesis_views,
-        graph_json=graph_json,
+        graph_json=graph_json, normalized_graph_json=normalized_graph_json,
         llm_bundle_json=llm_bundle_json,
         llm_bundle_schema_json=llm_bundle_schema_json,
         llm_output_schema_json=llm_output_schema_json,

@@ -1241,6 +1241,7 @@
           </details>
           <div class="graph-download-actions">
             <button type="button" data-graph-download data-candidate-id="{{ candidate.candidate_id }}">Download reasoning graph JSON</button>
+            <button type="button" data-normalized-graph-download data-candidate-id="{{ candidate.candidate_id }}">Download normalized graph JSON</button>
             <button type="button" data-llm-bundle-download data-candidate-id="{{ candidate.candidate_id }}">Download LLM reasoning bundle</button>
             <button type="button" data-llm-bundle-schema-download data-candidate-id="{{ candidate.candidate_id }}">Download bundle schema</button>
             <button type="button" data-llm-output-schema-download data-candidate-id="{{ candidate.candidate_id }}">Download AI output schema</button>
@@ -1248,6 +1249,7 @@
           </div>
           <p class="muted">These files are generated locally in the static dashboard. No candidate data is sent to an external model.</p>
           <script type="application/json" id="reasoning-graph-json-{{ loop.index0 }}" data-graph-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.graph_json|safe }}</script>
+          <script type="application/json" data-normalized-graph-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.normalized_graph_json|safe }}</script>
           <script type="application/json" data-llm-bundle-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.llm_bundle_json|safe }}</script>
           <script type="application/json" data-llm-bundle-schema-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.llm_bundle_schema_json|safe }}</script>
           <script type="application/json" data-llm-output-schema-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.llm_output_schema_json|safe }}</script>
@@ -2186,6 +2188,7 @@ function downloadBase64Zip(button){
 }
 document.addEventListener("click",event=>{
   const graph=event.target.closest("[data-graph-download]");if(graph)return downloadReasoningGraph(graph);
+  const normalized=event.target.closest("[data-normalized-graph-download]");if(normalized)return downloadTextAsset("script[data-normalized-graph-candidate]",normalized.dataset.candidateId,`${safeFilename(normalized.dataset.candidateId)}.normalized_reasoning_graph.json`);
   const bundle=event.target.closest("[data-llm-bundle-download]");if(bundle)return downloadTextAsset("script[data-llm-bundle-candidate]",bundle.dataset.candidateId,`${safeFilename(bundle.dataset.candidateId)}.llm_reasoning_bundle.json`);
   const inputSchema=event.target.closest("[data-llm-bundle-schema-download]");if(inputSchema)return downloadTextAsset("script[data-llm-bundle-schema-candidate]",inputSchema.dataset.candidateId,"llm_reasoning_bundle.schema.json");
   const outputSchema=event.target.closest("[data-llm-output-schema-download]");if(outputSchema)return downloadTextAsset("script[data-llm-output-schema-candidate]",outputSchema.dataset.candidateId,"llm_output.schema.json");

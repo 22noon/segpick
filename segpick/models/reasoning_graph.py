@@ -197,6 +197,62 @@ class ReasoningGraph:
             "edges": [item.to_dict() for item in self.provenance_edges()],
         }
 
+
+    def to_normalized_dict(self) -> dict[str, Any]:
+        """Serialize a generic node/edge graph for external graph tools.
+
+        Unlike :meth:`to_dict`, this representation places all scientific
+        entities in one ``nodes`` collection and keeps relationships in one
+        ``edges`` collection. Collection names from the domain-oriented schema
+        therefore do not appear as pseudo-edges in generic JSON visualizers.
+        """
+        self.validate()
+        node_groups = (
+            ("measurement", self.measurements),
+            ("observation", self.observations),
+            ("interpretive_finding", self.interpretive_findings),
+            ("evidence_pattern", self.evidence_patterns),
+            ("biological_hypothesis", self.biological_hypotheses),
+        )
+        nodes: list[dict[str, Any]] = []
+        for node_type, items in node_groups:
+            for item in items:
+                data = item.to_dict()
+                node_id = str(data.pop("id"))
+                if node_type == "measurement":
+                    title = str(data.get("name", node_id))
+                elif node_type == "observation":
+                    title = str(data.get("description", node_id))
+                else:
+                    title = str(data.get("title", node_id))
+                summary = str(
+                    data.get("summary")
+                    or data.get("interpretation")
+                    or data.get("description")
+                    or title
+                )
+                nodes.append({
+                    "id": node_id,
+                    "type": node_type,
+                    "label": title,
+                    "summary": summary,
+                    "data": data,
+                })
+        return {
+            "schema_version": "1.0",
+            "format": "segpick-normalized-reasoning-graph",
+            "nodes": nodes,
+            "edges": [
+                {
+                    "source": edge.source_id,
+                    "target": edge.target_id,
+                    "relationship": edge.relationship,
+                    "label": edge.relationship.replace("_", " "),
+                }
+                for edge in self.provenance_edges()
+            ],
+        }
+
     def to_dict(self) -> dict[str, Any]:
         """Serialize the canonical reasoning graph schema.
 
