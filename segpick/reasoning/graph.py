@@ -4,7 +4,7 @@ import re
 
 from segpick.models import (
     BiologicalFinding, BiologicalHypothesis, EvidencePatternEvaluation,
-    EvidenceObservation, ScenarioHypothesis,
+    EvidenceObservation, HypothesisEvaluation,
 )
 from segpick.models.reasoning_graph import (
     BiologicalHypothesisNode,
@@ -186,7 +186,7 @@ def _evidence_pattern_nodes(
 
 
 def _biological_hypothesis_nodes(
-    hypotheses: tuple[ScenarioHypothesis, ...],
+    hypotheses: tuple[HypothesisEvaluation, ...],
     patterns: tuple[EvidencePatternNode, ...],
 ) -> tuple[tuple[BiologicalHypothesisNode, ...], tuple[ReasoningEdge, ...]]:
     pattern_by_id = {node.pattern_id: node.id for node in patterns}
@@ -203,7 +203,7 @@ def _biological_hypothesis_nodes(
             if item in pattern_by_id
         )
         node = BiologicalHypothesisNode(
-            id=f"hypothesis:scenario:{_slug(hypothesis.hypothesis_id)}:{index}",
+            id=f"hypothesis:evidence-pattern:{_slug(hypothesis.hypothesis_id)}:{index}",
             rule_id=hypothesis.hypothesis_id,
             title=hypothesis.title,
             summary=hypothesis.explanation,

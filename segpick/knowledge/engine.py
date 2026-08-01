@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from segpick.models import EvidencePatternEvaluation, EvidencePatternProvenance
-from .schema import KnowledgeModule
+from .schema import EvidencePatternDefinition
 
 _ORDER = ("low", "moderate", "high")
 
@@ -77,19 +77,19 @@ def _condition_provenance(condition, observations, findings):
     )
 
 
-def evaluate_scenarios(modules, observations, findings, candidate_ids=(), include_incomplete=False):
+def evaluate_evidence_patterns(definitions, observations, findings, candidate_ids=(), include_incomplete=False):
     out = []
-    for module in modules:
-        required_conditions = tuple(c for c in module.requires if c.matches(observations, findings))
-        missing_required = tuple(c for c in module.requires if c not in required_conditions)
+    for definition in definitions:
+        required_conditions = tuple(c for c in definition.requires if c.matches(observations, findings))
+        missing_required = tuple(c for c in definition.requires if c not in required_conditions)
         if missing_required and not include_incomplete:
             continue
 
-        supporting_conditions = tuple(c for c in module.supports if c.matches(observations, findings))
-        missing_supporting = tuple(c for c in module.supports if c not in supporting_conditions)
-        conflicting_conditions = tuple(c for c in module.conflicts if c.matches(observations, findings))
+        supporting_conditions = tuple(c for c in definition.supports if c.matches(observations, findings))
+        missing_supporting = tuple(c for c in definition.supports if c not in supporting_conditions)
+        conflicting_conditions = tuple(c for c in definition.conflicts if c.matches(observations, findings))
 
-        confidence_index = _ORDER.index(module.base_confidence)
+        confidence_index = _ORDER.index(definition.base_confidence)
         if supporting_conditions and not conflicting_conditions:
             confidence_index = min(2, confidence_index + 1)
         if conflicting_conditions:
@@ -103,7 +103,7 @@ def evaluate_scenarios(modules, observations, findings, candidate_ids=(), includ
 
         referenced_finding_titles = {
             condition.value
-            for condition in module.requires + module.supports + module.conflicts
+            for condition in definition.requires + definition.supports + definition.conflicts
             if condition.kind == "finding"
         }
         unused_findings = tuple(dict.fromkeys(
@@ -112,23 +112,23 @@ def evaluate_scenarios(modules, observations, findings, candidate_ids=(), includ
         ))
 
         out.append(EvidencePatternEvaluation(
-            pattern_id=module.pattern_id,
-            title=module.title,
-            category=module.category,
-            scope=module.scope,
+            pattern_id=definition.pattern_id,
+            title=definition.title,
+            category=definition.category,
+            scope=definition.scope,
             confidence=_ORDER[confidence_index],
-            severity=module.severity,
-            interpretation=module.interpretation,
+            severity=definition.severity,
+            interpretation=definition.interpretation,
             candidate_ids=candidate_ids,
             matched_required=tuple(c.label for c in required_conditions),
             matched_supporting=tuple(c.label for c in supporting_conditions),
             matched_conflicting=tuple(c.label for c in conflicting_conditions),
-            suggested_actions=module.suggested_actions,
-            source=module.source,
-            references=module.references,
+            suggested_actions=definition.suggested_actions,
+            source=definition.source,
+            references=definition.references,
             evidence_provenance=provenance,
             state=(
-                "not_evaluable" if len(missing_required) == len(module.requires) and not supporting_conditions and not conflicting_conditions
+                "not_evaluable" if len(missing_required) == len(definition.requires) and not supporting_conditions and not conflicting_conditions
                 else "partially_matched" if missing_required
                 else "contradicted" if conflicting_conditions
                 else "matched"

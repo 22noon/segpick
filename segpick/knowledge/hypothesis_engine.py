@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from segpick.models import BiologicalScenario, HypothesisEvaluation
+from segpick.models import EvidencePatternEvaluation, HypothesisEvaluation
 
 from .hypothesis_definition import HypothesisDefinition
 
@@ -9,19 +9,19 @@ _ORDER = ("low", "moderate", "high")
 
 def evaluate_hypotheses(
     definitions: tuple[HypothesisDefinition, ...],
-    scenarios: tuple[BiologicalScenario, ...],
+    patterns: tuple[EvidencePatternEvaluation, ...],
     candidate_ids: tuple[str, ...] = (),
 ) -> tuple[HypothesisEvaluation, ...]:
-    scenario_by_id = {item.pattern_id: item for item in scenarios}
+    pattern_by_id = {item.pattern_id: item for item in patterns}
     results: list[HypothesisEvaluation] = []
     for module in definitions:
         supporting = tuple(
-            scenario_by_id[sid] for sid in module.supported_by if sid in scenario_by_id
+            pattern_by_id[sid] for sid in module.supported_by if sid in pattern_by_id
         )
         if len(supporting) < module.minimum_support:
             continue
         conflicting = tuple(
-            scenario_by_id[sid] for sid in module.contradicted_by if sid in scenario_by_id
+            pattern_by_id[sid] for sid in module.contradicted_by if sid in pattern_by_id
         )
         confidence_index = _ORDER.index(module.base_confidence)
         if len(supporting) >= 2 and not conflicting:
@@ -29,7 +29,7 @@ def evaluate_hypotheses(
         if conflicting:
             confidence_index = max(0, confidence_index - 1)
         inferred_candidates = tuple(dict.fromkeys(
-            candidate_id for scenario in supporting for candidate_id in scenario.candidate_ids
+            candidate_id for pattern in supporting for candidate_id in pattern.candidate_ids
         ))
         results.append(HypothesisEvaluation(
             hypothesis_id=module.hypothesis_id,

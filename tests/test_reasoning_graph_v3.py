@@ -158,8 +158,8 @@ def test_hypothesis_metadata_and_rule_provenance_enter_graph():
     assert serialized["biological_hypotheses"] == []
 
 
-def test_scenario_hypotheses_enter_graph_through_scenario_nodes():
-    from segpick.models import BiologicalScenario, ScenarioHypothesis
+def test_biological_hypothesis_evaluations_enter_graph_through_pattern_nodes():
+    from segpick.models import EvidencePatternEvaluation, HypothesisEvaluation
     from segpick.reasoning.graph import build_reasoning_graph
 
     _, candidate = _sample()
@@ -171,7 +171,7 @@ def test_scenario_hypotheses_enter_graph_through_scenario_nodes():
         ),
     )
     candidate.analysis.evidence_patterns = (
-        BiologicalScenario(
+        EvidencePatternEvaluation(
             pattern_id="fragmented_candidate_structure",
             title="Fragmented candidate structure",
             category="assembly_structure",
@@ -181,18 +181,18 @@ def test_scenario_hypotheses_enter_graph_through_scenario_nodes():
             interpretation="The candidate has fragmented structural support.",
             candidate_ids=(candidate.id,),
             matched_required=("observation:fragmented_alignment@structural_alignment",),
-            source="builtin:test-scenarios.yml",
+            source="builtin:test-patterns.yml",
         ),
     )
     candidate.analysis.biological_hypothesis_evaluations = tuple(
-        ScenarioHypothesis(
-            hypothesis_id=f"scenario_hypothesis_{index}",
-            title=f"Scenario hypothesis {index}",
+        HypothesisEvaluation(
+            hypothesis_id=f"pattern_hypothesis_{index}",
+            title=f"EvidencePattern hypothesis {index}",
             category="assembly_structure",
             scope="candidate",
             confidence="moderate",
             severity="review",
-            explanation="A scenario-derived explanation.",
+            explanation="A pattern-derived explanation.",
             candidate_ids=(candidate.id,),
             supporting_patterns=("fragmented_candidate_structure",),
             source="builtin:test-hypotheses.yml",
@@ -205,12 +205,12 @@ def test_scenario_hypotheses_enter_graph_through_scenario_nodes():
     assert len(graph.evidence_patterns) == 1
     assert len(graph.biological_hypotheses) == 3
     assert {item.hypothesis_type for item in graph.biological_hypotheses} == {"biological"}
-    scenario_node = graph.evidence_patterns[0]
+    pattern_node = graph.evidence_patterns[0]
     assert ReasoningEdge(
-        scenario_node.id, graph.observations[0].id, "composed_from"
+        pattern_node.id, graph.observations[0].id, "composed_from"
     ) in graph.edges
     assert all(
-        ReasoningEdge(item.id, scenario_node.id, "supported_by") in graph.edges
+        ReasoningEdge(item.id, pattern_node.id, "supported_by") in graph.edges
         for item in graph.biological_hypotheses
     )
     assert len(graph.to_dict()["biological_hypotheses"]) == 3
@@ -279,7 +279,7 @@ def test_evidence_synthesis_node_is_the_canonical_graph_class():
 
 
 def test_reasoning_graph_exposes_canonical_evidence_patterns_accessor():
-    from segpick.models import BiologicalScenario, EvidencePatternNode
+    from segpick.models import EvidencePatternEvaluation, EvidencePatternNode
     from segpick.reasoning.graph import build_reasoning_graph
 
     _, candidate = _sample()
@@ -291,7 +291,7 @@ def test_reasoning_graph_exposes_canonical_evidence_patterns_accessor():
         ),
     )
     candidate.analysis.evidence_patterns = (
-        BiologicalScenario(
+        EvidencePatternEvaluation(
             pattern_id="fragmented_candidate_structure",
             title="Fragmented candidate structure",
             category="assembly_structure",
@@ -301,7 +301,7 @@ def test_reasoning_graph_exposes_canonical_evidence_patterns_accessor():
             interpretation="The candidate has fragmented structural support.",
             candidate_ids=(candidate.id,),
             matched_required=("observation:fragmented_alignment@structural_alignment",),
-            source="builtin:test-scenarios.yml",
+            source="builtin:test-patterns.yml",
         ),
     )
 
@@ -325,8 +325,8 @@ def test_biological_hypothesis_node_is_the_canonical_final_graph_class():
     assert node.hypothesis_type == "biological"
 
 
-def test_rule_results_are_findings_and_only_scenario_results_are_final_hypotheses():
-    from segpick.models import BiologicalScenario, ScenarioHypothesis
+def test_rule_results_are_findings_and_only_pattern_results_are_final_hypotheses():
+    from segpick.models import EvidencePatternEvaluation, HypothesisEvaluation
     from segpick.reasoning.graph import build_reasoning_graph
 
     sample, candidate = _sample()
@@ -351,7 +351,7 @@ def test_rule_results_are_findings_and_only_scenario_results_are_final_hypothese
         sample, candidate_rules=(rule,), gene_rules=(), plugin_registry=None
     )
     candidate.analysis.evidence_patterns = (
-        BiologicalScenario(
+        EvidencePatternEvaluation(
             pattern_id="junction_supported_pattern",
             title="Junction-supported evidence pattern",
             category="assembly_structure",
@@ -364,7 +364,7 @@ def test_rule_results_are_findings_and_only_scenario_results_are_final_hypothese
         ),
     )
     candidate.analysis.biological_hypothesis_evaluations = (
-        ScenarioHypothesis(
+        HypothesisEvaluation(
             hypothesis_id="genuine_structure",
             title="Genuine biological structure",
             category="assembly_structure",
@@ -393,7 +393,7 @@ def test_reasoning_graph_exposes_only_canonical_collection_fields():
     assert graph.evidence_patterns == ()
     assert graph.biological_hypotheses == ()
     assert not hasattr(graph, "interpretations")
-    assert not hasattr(graph, "scenarios")
+    assert not hasattr(graph, "patterns")
     assert not hasattr(graph, "hypotheses")
 
 

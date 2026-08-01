@@ -25,12 +25,12 @@ from segpick.analysis.contig_dotplot import attach_contig_dotplots
 from segpick.analysis.structural_integrity import attach_structural_integrity
 from segpick.analysis.reference_compatibility import attach_reference_compatibility
 from segpick.analysis.hypotheses import attach_biological_hypotheses
-from segpick.analysis.scenarios import attach_biological_scenarios
-from segpick.analysis.scenario_hypotheses import attach_scenario_hypotheses
+from segpick.analysis.evidence_patterns import attach_evidence_patterns
+from segpick.analysis.biological_hypotheses import attach_biological_hypotheses
 from segpick.analysis.cross_evidence import attach_cross_evidence
 from segpick.config import RunConfig, load_config, resolve_config
 from segpick.reasoning import load_active_rules
-from segpick.knowledge import load_active_hypotheses, load_active_scenarios
+from segpick.knowledge import load_active_hypotheses, load_active_evidence_patterns
 from segpick.io.builder import build_sample
 from segpick.provenance import write_provenance
 from segpick.reporting import (
@@ -83,7 +83,7 @@ def _add_run_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--knowledge-file", dest="knowledge_files", action="append", default=None,
-        help="Additional YAML biological scenario file; may be supplied more than once",
+        help="Additional YAML evidence-pattern file; may be supplied more than once",
     )
     parser.add_argument("--outdir", default=None)
     parser.add_argument("--sample-name", default=None)
@@ -331,7 +331,7 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
         candidate_rules=candidate_rules,
         gene_rules=gene_rules,
     )
-    candidate_modules, gene_modules = load_active_scenarios(config.knowledge_files)
+    candidate_pattern_definitions, gene_pattern_definitions = load_active_evidence_patterns(config.knowledge_files)
     candidate_hypotheses, gene_hypotheses = load_active_hypotheses(config.knowledge_files)
 
     coverage_plot_paths = {}
@@ -354,8 +354,8 @@ def execute_run(config: RunConfig, argv: list[str], show_config: bool = False) -
     cross_count = attach_cross_evidence(sample, recommendations)
     if cross_count:
         print(f"Cross-evidence reasoning: {cross_count} findings generated")
-    attach_biological_scenarios(sample, candidate_modules, gene_modules)
-    attach_scenario_hypotheses(sample, candidate_hypotheses, gene_hypotheses)
+    attach_evidence_patterns(sample, candidate_pattern_definitions, gene_pattern_definitions)
+    attach_biological_hypotheses(sample, candidate_hypotheses, gene_hypotheses)
 
     write_summary_tsv(
         sample,

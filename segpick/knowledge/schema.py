@@ -22,12 +22,3 @@ class EvidencePatternDefinition:
     suggested_actions: tuple[str, ...] = ()
     references: tuple[str, ...] = ()
     source: str = "builtin"
-
-    @property
-    def scenario_id(self) -> str:
-        """Temporary compatibility accessor for pre-pattern consumers."""
-        return self.pattern_id
-
-
-# Temporary compatibility alias during the analysis-layer migration.
-KnowledgeModule = EvidencePatternDefinition

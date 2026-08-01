@@ -11,13 +11,8 @@ from .contig_dotplot import ContigDotplot
 from .gene import Gene
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
-from .scenario import (
-    BiologicalScenario,
-    EvidencePatternEvaluation,
-    EvidencePatternProvenance,
-    ScenarioEvidenceProvenance,
-)
-from .hypothesis_evaluation import HypothesisEvaluation, ScenarioHypothesis
+from .evidence_pattern import EvidencePatternEvaluation, EvidencePatternProvenance
+from .hypothesis_evaluation import HypothesisEvaluation
 from .metadata import ContigMetadata
 from .manifest import AnalysisManifest
 from .orf import ORFHit, ORFMetrics
@@ -49,12 +44,9 @@ __all__ = [
     "Gene",
     "BiologicalFinding",
     "BiologicalHypothesis",
-    "BiologicalScenario",
     "EvidencePatternEvaluation",
     "EvidencePatternProvenance",
-    "ScenarioEvidenceProvenance",
     "HypothesisEvaluation",
-    "ScenarioHypothesis",
     "CandidateContig",
     "ContigDotplot",
     "ReferenceSequence",

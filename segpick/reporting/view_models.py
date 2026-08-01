@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import json
 
 from segpick.analysis import analyse_protein_continuity, build_evidence_assessments
-from segpick.models import BiologicalHypothesis, BiologicalScenario, CandidateContig, Gene, RuleEvaluation, ScenarioHypothesis
+from segpick.models import BiologicalHypothesis, EvidencePatternEvaluation, CandidateContig, Gene, RuleEvaluation, HypothesisEvaluation
 from segpick.scoring import GeneRecommendation
 from segpick.knowledge.vocabulary import ConditionDisplay, describe_condition
 
@@ -14,7 +14,7 @@ from segpick.knowledge.vocabulary import ConditionDisplay, describe_condition
 
 
 @dataclass(frozen=True, slots=True)
-class ScenarioEvidenceView:
+class EvidencePatternEvidenceView:
     identifier: str
     display_name: str
     description: str
@@ -32,7 +32,7 @@ class ScenarioEvidenceView:
 
 
 @dataclass(frozen=True, slots=True)
-class ScenarioView:
+class EvidencePatternView:
     pattern_id: str
     title: str
     category: str
@@ -41,25 +41,21 @@ class ScenarioView:
     severity: str
     interpretation: str
     candidate_ids: tuple[str, ...]
-    matched_required: tuple[ScenarioEvidenceView, ...]
-    matched_supporting: tuple[ScenarioEvidenceView, ...]
-    matched_conflicting: tuple[ScenarioEvidenceView, ...]
+    matched_required: tuple[EvidencePatternEvidenceView, ...]
+    matched_supporting: tuple[EvidencePatternEvidenceView, ...]
+    matched_conflicting: tuple[EvidencePatternEvidenceView, ...]
     suggested_actions: tuple[str, ...]
     source: str
     references: tuple[str, ...]
     state: str
-    missing_required: tuple[ScenarioEvidenceView, ...]
-    missing_supporting: tuple[ScenarioEvidenceView, ...]
-
-    @property
-    def scenario_id(self) -> str:
-        return self.pattern_id
+    missing_required: tuple[EvidencePatternEvidenceView, ...]
+    missing_supporting: tuple[EvidencePatternEvidenceView, ...]
 
 
-def _scenario_evidence_view(label: str, provenance_by_condition: dict[str, object]) -> ScenarioEvidenceView:
+def _evidence_pattern_evidence_view(label: str, provenance_by_condition: dict[str, object]) -> EvidencePatternEvidenceView:
     display = describe_condition(label)
     provenance = provenance_by_condition.get(label)
-    return ScenarioEvidenceView(
+    return EvidencePatternEvidenceView(
         identifier=display.identifier,
         display_name=display.display_name,
         description=display.description,
@@ -73,9 +69,9 @@ def _scenario_evidence_view(label: str, provenance_by_condition: dict[str, objec
     )
 
 
-def build_scenario_view(item: BiologicalScenario) -> ScenarioView:
+def build_evidence_pattern_view(item: EvidencePatternEvaluation) -> EvidencePatternView:
     provenance = {entry.condition: entry for entry in item.evidence_provenance}
-    return ScenarioView(
+    return EvidencePatternView(
         pattern_id=item.pattern_id,
         title=item.title,
         category=item.category,
@@ -84,20 +80,20 @@ def build_scenario_view(item: BiologicalScenario) -> ScenarioView:
         severity=item.severity,
         interpretation=item.interpretation,
         candidate_ids=item.candidate_ids,
-        matched_required=tuple(_scenario_evidence_view(value, provenance) for value in item.matched_required),
-        matched_supporting=tuple(_scenario_evidence_view(value, provenance) for value in item.matched_supporting),
-        matched_conflicting=tuple(_scenario_evidence_view(value, provenance) for value in item.matched_conflicting),
+        matched_required=tuple(_evidence_pattern_evidence_view(value, provenance) for value in item.matched_required),
+        matched_supporting=tuple(_evidence_pattern_evidence_view(value, provenance) for value in item.matched_supporting),
+        matched_conflicting=tuple(_evidence_pattern_evidence_view(value, provenance) for value in item.matched_conflicting),
         suggested_actions=item.suggested_actions,
         source=item.source,
         references=item.references,
         state=item.state,
-        missing_required=tuple(_scenario_evidence_view(value, provenance) for value in item.missing_required),
-        missing_supporting=tuple(_scenario_evidence_view(value, provenance) for value in item.missing_supporting),
+        missing_required=tuple(_evidence_pattern_evidence_view(value, provenance) for value in item.missing_required),
+        missing_supporting=tuple(_evidence_pattern_evidence_view(value, provenance) for value in item.missing_supporting),
     )
 
 
 @dataclass(frozen=True, slots=True)
-class ScenarioHypothesisView:
+class HypothesisEvaluationView:
     hypothesis_id: str
     title: str
     category: str
@@ -112,17 +108,9 @@ class ScenarioHypothesisView:
     source: str
     references: tuple[str, ...]
 
-    @property
-    def supporting_scenario_titles(self):
-        return self.supporting_pattern_titles
 
-    @property
-    def conflicting_scenario_titles(self):
-        return self.conflicting_pattern_titles
-
-
-def build_scenario_hypothesis_view(item: ScenarioHypothesis) -> ScenarioHypothesisView:
-    return ScenarioHypothesisView(
+def build_biological_hypothesis_evaluation_view(item: HypothesisEvaluation) -> HypothesisEvaluationView:
+    return HypothesisEvaluationView(
         hypothesis_id=item.hypothesis_id, title=item.title, category=item.category,
         scope=item.scope, confidence=item.confidence, severity=item.severity,
         explanation=item.explanation, candidate_ids=item.candidate_ids,
@@ -499,7 +487,7 @@ class ReasoningGraphInspectorView:
     measurement_count: int
     observation_count: int
     interpretation_count: int
-    scenario_count: int
+    evidence_pattern_count: int
     hypothesis_count: int
     builtin_sources: tuple[str, ...]
     plugin_sources: tuple[str, ...]
@@ -513,7 +501,7 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
     if graph is None:
         return ReasoningGraphInspectorView(
             available=False, valid=False, validation_message="Reasoning graph unavailable.",
-            measurement_count=0, observation_count=0, interpretation_count=0, scenario_count=0, hypothesis_count=0,
+            measurement_count=0, observation_count=0, interpretation_count=0, evidence_pattern_count=0, hypothesis_count=0,
             builtin_sources=(), plugin_sources=(), provenance_paths=(), hypotheses=(), graph_json="{}",
         )
     try:
@@ -683,7 +671,7 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
     return ReasoningGraphInspectorView(
         available=True, valid=valid, validation_message=message,
         measurement_count=len(graph.measurements), observation_count=len(graph.observations),
-        interpretation_count=len(graph.interpretive_findings), scenario_count=len(graph.evidence_patterns),
+        interpretation_count=len(graph.interpretive_findings), evidence_pattern_count=len(graph.evidence_patterns),
         hypothesis_count=len(graph.biological_hypotheses),
         builtin_sources=builtin_sources, plugin_sources=plugin_sources,
         provenance_paths=tuple(paths), hypotheses=hypothesis_views,
@@ -727,9 +715,9 @@ class CandidateView:
     convergence_review_required: bool
     hypotheses: tuple[HypothesisView, ...]
     boundary_coverage: tuple[BoundaryCoverageView, ...]
-    scenarios: tuple[ScenarioView, ...]
-    unresolved_evidence_patterns: tuple[ScenarioView, ...]
-    scenario_hypotheses: tuple[ScenarioHypothesisView, ...]
+    evidence_patterns: tuple[EvidencePatternView, ...]
+    unresolved_evidence_patterns: tuple[EvidencePatternView, ...]
+    biological_hypothesis_evaluations: tuple[HypothesisEvaluationView, ...]
     cross_evidence_findings: tuple[CrossEvidenceFindingView, ...]
     reasoning_graph: ReasoningGraphInspectorView
 
@@ -745,8 +733,8 @@ class GenePageView:
     protein_continuity: ProteinContinuityView
     hypotheses: tuple[HypothesisView, ...]
     rule_evaluations: tuple[RuleEvaluationView, ...]
-    scenarios: tuple[ScenarioView, ...]
-    scenario_hypotheses: tuple[ScenarioHypothesisView, ...]
+    evidence_patterns: tuple[EvidencePatternView, ...]
+    biological_hypothesis_evaluations: tuple[HypothesisEvaluationView, ...]
 
 
 def build_recommendation_view(
@@ -1029,9 +1017,9 @@ def build_gene_page_view(
                 )
                 for item in candidate.analysis.boundary_coverage
             ),
-            scenarios=tuple(build_scenario_view(item) for item in candidate.analysis.evidence_patterns),
-            unresolved_evidence_patterns=tuple(build_scenario_view(item) for item in candidate.analysis.unresolved_evidence_patterns),
-            scenario_hypotheses=tuple(build_scenario_hypothesis_view(item) for item in candidate.analysis.biological_hypothesis_evaluations),
+            evidence_patterns=tuple(build_evidence_pattern_view(item) for item in candidate.analysis.evidence_patterns),
+            unresolved_evidence_patterns=tuple(build_evidence_pattern_view(item) for item in candidate.analysis.unresolved_evidence_patterns),
+            biological_hypothesis_evaluations=tuple(build_biological_hypothesis_evaluation_view(item) for item in candidate.analysis.biological_hypothesis_evaluations),
             cross_evidence_findings=tuple(
                 CrossEvidenceFindingView(
                     finding_id=item.finding_id,
@@ -1117,8 +1105,8 @@ def build_gene_page_view(
         protein_coordinates=protein_coordinates,
         hypotheses=hypotheses,
         rule_evaluations=tuple(build_rule_evaluation_view(item) for item in gene.rule_evaluations),
-        scenarios=tuple(build_scenario_view(item) for item in gene.evidence_patterns),
-        scenario_hypotheses=tuple(build_scenario_hypothesis_view(item) for item in gene.biological_hypothesis_evaluations),
+        evidence_patterns=tuple(build_evidence_pattern_view(item) for item in gene.evidence_patterns),
+        biological_hypothesis_evaluations=tuple(build_biological_hypothesis_evaluation_view(item) for item in gene.biological_hypothesis_evaluations),
         protein_continuity=ProteinContinuityView(
             classification=continuity.classification,
             candidate_count=continuity.candidate_count,

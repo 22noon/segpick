@@ -27,7 +27,7 @@ def load_hypothesis_file(path: str | Path, *, source_label: str | None = None) -
         hid = _text(item.get("id"), "id", source)
         supported_by = tuple(str(x).strip() for x in item.get("supported_by", []) if str(x).strip())
         if not supported_by:
-            raise ValueError(f"{source}: hypothesis '{hid}' requires at least one supported_by scenario")
+            raise ValueError(f"{source}: hypothesis '{hid}' requires at least one supported_by evidence pattern")
         modules.append(HypothesisDefinition(
             hypothesis_id=hid,
             title=_text(item.get("title"), "title", source),

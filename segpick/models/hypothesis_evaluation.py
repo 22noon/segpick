@@ -27,22 +27,6 @@ class HypothesisEvaluation:
     source: str = "builtin"
     references: tuple[str, ...] = ()
 
-    @property
-    def supporting_scenarios(self):
-        return self.supporting_patterns
-
-    @property
-    def supporting_scenario_titles(self):
-        return self.supporting_pattern_titles
-
-    @property
-    def conflicting_scenarios(self):
-        return self.conflicting_patterns
-
-    @property
-    def conflicting_scenario_titles(self):
-        return self.conflicting_pattern_titles
-
     def to_dict(self) -> dict[str, object]:
         data = asdict(self)
         for key in (
@@ -53,7 +37,3 @@ class HypothesisEvaluation:
         ):
             data[key] = list(data[key])
         return data
-
-
-# Compatibility name retained during the terminology migration.
-ScenarioHypothesis = HypothesisEvaluation
