@@ -25,3 +25,19 @@ __all__ = [
 
 from .graph import build_reasoning_graph
 __all__.append("build_reasoning_graph")
+
+from .llm_bundle import (
+    LLM_BUNDLE_VERSION,
+    build_llm_reasoning_bundle,
+    load_llm_bundle_schema,
+    load_llm_output_schema,
+    write_llm_reasoning_bundle,
+)
+
+__all__.extend([
+    "LLM_BUNDLE_VERSION",
+    "build_llm_reasoning_bundle",
+    "load_llm_bundle_schema",
+    "load_llm_output_schema",
+    "write_llm_reasoning_bundle",
+])

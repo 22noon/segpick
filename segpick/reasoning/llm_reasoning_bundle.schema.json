@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://segpick.dev/schemas/llm-reasoning-bundle-1.0.json",
+  "title": "SegPick LLM Reasoning Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["bundle_version", "task_context", "reasoning_model", "graph", "open_questions", "pruning_summary"],
+  "properties": {
+    "bundle_version": {"const": "1.0"},
+    "task_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "candidate_id", "gene", "segment"],
+      "properties": {
+        "domain": {"type": "string"},
+        "candidate_id": {"type": "string", "minLength": 1},
+        "gene": {"type": ["string", "null"]},
+        "segment": {"type": ["string", "null"]}
+      }
+    },
+    "reasoning_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["layer_order", "edge_direction", "edge_semantics", "missing_evidence_policy", "authority_policy"],
+      "properties": {
+        "layer_order": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "measurement"},
+            {"const": "observation"},
+            {"const": "interpretive_finding"},
+            {"const": "evidence_pattern"},
+            {"const": "biological_hypothesis"}
+          ],
+          "items": false
+        },
+        "edge_direction": {"const": "explanatory"},
+        "edge_semantics": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        },
+        "missing_evidence_policy": {"type": "string"},
+        "authority_policy": {"type": "string"}
+      }
+    },
+    "graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nodes", "edges"],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["node_id", "node_type", "summary", "data"],
+            "properties": {
+              "node_id": {"type": "string", "minLength": 1},
+              "node_type": {
+                "enum": ["measurement", "observation", "interpretive_finding", "evidence_pattern", "biological_hypothesis"]
+              },
+              "summary": {"type": "string", "minLength": 1},
+              "data": {"type": "object"}
+            }
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["source_id", "target_id", "relationship"],
+            "properties": {
+              "source_id": {"type": "string"},
+              "target_id": {"type": "string"},
+              "relationship": {
+                "enum": ["supported_by", "contradicted_by", "derived_from", "composed_from", "conflicted_by"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "open_questions": {"type": "array", "items": {"type": "string"}},
+    "pruning_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["measurement_only_components_omitted"],
+      "properties": {
+        "measurement_only_components_omitted": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

@@ -15,6 +15,7 @@ dependencies = [
     "jinja2",
     "pyyaml",
     "matplotlib",
+    "jsonschema",
 ]
 
 [project.optional-dependencies]
