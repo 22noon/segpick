@@ -1024,7 +1024,7 @@
     <h2>Reasoning explorer</h2>
     <a href="#reasoning-path-panel">Reasoning path</a>
     <a href="#cross-evidence-panel">Cross-evidence findings</a>
-    <a href="#biological-scenarios-panel">Biological scenarios</a>
+    <a href="#biological-scenarios-panel">Evidence patterns</a>
     <a href="#unresolved-evidence-patterns-panel">Unresolved evidence patterns</a>
     <a href="#biological-hypotheses-panel">Biological hypotheses</a>
     <a href="#biological-interpretation-panel">Rule-based interpretation</a>
@@ -1038,7 +1038,7 @@
         <div class="reasoning-path" aria-label="Reasoning path for {{ candidate.candidate_id }}">
           <div class="reasoning-step"><strong>Evidence assessments</strong><span>Structural, reference, read and ORF evidence</span><a href="#structural-integrity-panel">Inspect evidence →</a></div>
           <div class="reasoning-step"><strong>Cross-evidence findings</strong><span>{{ candidate.cross_evidence_findings|length }} finding{% if candidate.cross_evidence_findings|length != 1 %}s{% endif %}</span><a href="#cross-evidence-panel">Open findings →</a></div>
-          <div class="reasoning-step"><strong>Biological scenarios</strong><span>{{ candidate.scenarios|length }} scenario{% if candidate.scenarios|length != 1 %}s{% endif %}</span><a href="#biological-scenarios-panel">Open scenarios →</a></div>
+          <div class="reasoning-step"><strong>Evidence patterns</strong><span>{{ candidate.scenarios|length }} pattern{% if candidate.scenarios|length != 1 %}s{% endif %}</span><a href="#biological-scenarios-panel">Open patterns →</a></div>
           <div class="reasoning-step"><strong>Biological hypotheses</strong><span>{% if candidate.scenario_hypotheses|length == 1 %}1 hypothesis{% else %}{{ candidate.scenario_hypotheses|length }} hypotheses{% endif %}</span><a href="#biological-hypotheses-panel">Open hypotheses →</a></div>
           <div class="reasoning-step"><strong>Recommendation context</strong><span>Interpretation supporting expert review</span><a href="#biological-interpretation-panel">Open interpretation →</a></div>
         </div>
@@ -1081,8 +1081,8 @@
   </section>
 
   <section id="biological-scenarios-panel" class="card hypothesis-card">
-    <h2>Biological scenarios</h2>
-    <p class="muted">Named biological situations inferred from observations and findings. Select a scenario, then an observation, to inspect its evidence provenance. Scenarios are descriptive and do not alter ranking.</p>
+    <h2>Evidence patterns</h2>
+    <p class="muted">Recognised combinations of interpretive findings that may support or contradict biological hypotheses. Select a pattern, then its supporting evidence, to inspect provenance. Evidence patterns are descriptive and do not alter ranking.</p>
     {% if view.scenarios %}{% for scenario in view.scenarios %}{{ scenario_card(scenario) }}{% endfor %}{% endif %}
     {% for candidate in view.candidates %}
       <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
@@ -1166,7 +1166,7 @@
             <div class="mini"><strong>{{ candidate.reasoning_graph.measurement_count }}</strong><span>Measurements</span></div>
             <div class="mini"><strong>{{ candidate.reasoning_graph.observation_count }}</strong><span>Observations</span></div>
             <div class="mini"><strong>{{ candidate.reasoning_graph.interpretation_count }}</strong><span>Interpretive findings</span></div>
-            <div class="mini"><strong>{{ candidate.reasoning_graph.scenario_count }}</strong><span>Evidence syntheses</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.scenario_count }}</strong><span>Evidence patterns</span></div>
             <div class="mini"><strong>{{ candidate.reasoning_graph.hypothesis_count }}</strong><span>Hypotheses</span></div>
           </div>
           <h4>Biological hypothesis evaluations</h4>
@@ -1199,9 +1199,9 @@
                       <p><strong>State:</strong> {{ hypothesis.evaluation_state|replace('_', ' ')|title }}</p>
                       <p><strong>Confidence:</strong> {{ hypothesis.evaluation_confidence|upper }}</p>
                       <p><strong>Candidates:</strong> {% if hypothesis.evaluation_candidate_ids %}{{ hypothesis.evaluation_candidate_ids|join(', ') }}{% else %}<span class="muted">None recorded.</span>{% endif %}</p>
-                      <p><strong>Supporting evidence syntheses</strong></p>
+                      <p><strong>Supporting evidence patterns</strong></p>
                       {% if hypothesis.evaluation_supporting_synthesis_ids %}<ul>{% for item in hypothesis.evaluation_supporting_synthesis_ids %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">None matched.</p>{% endif %}
-                      <p><strong>Conflicting evidence syntheses</strong></p>
+                      <p><strong>Conflicting evidence patterns</strong></p>
                       {% if hypothesis.evaluation_conflicting_synthesis_ids %}<ul>{% for item in hypothesis.evaluation_conflicting_synthesis_ids %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">None matched.</p>{% endif %}
                     </div>
                   </div>
@@ -2169,7 +2169,7 @@ const DashboardTabs = {
   summary: new Set(["Recommended candidate"]),
   comparison: new Set(["Evidence table"]),
   evidence: new Set(["Structural integrity", "Reference compatibility", "Read evidence", "ORF structural evidence"]),
-  reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Unresolved evidence patterns", "Interpretive findings"]),
+  reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Evidence patterns", "Unresolved evidence patterns", "Interpretive findings"]),
   plots: new Set(["Visualizations", "Candidate-to-candidate structural comparison", "Candidates aligned to shared nucleotide reference", "Candidate versus closest nucleotide reference", "Protein coordinate map", "Protein relatedness", "Read coverage"]),
   downloads: new Set(["Download selected sequences", "Selected candidate sequence"]),
   expert: new Set(["Reasoning graph inspector", "Rule explorer"])

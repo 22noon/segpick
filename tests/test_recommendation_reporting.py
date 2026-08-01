@@ -238,7 +238,7 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert 'href="#biological-scenarios-panel"' in html
     assert 'href="#biological-hypotheses-panel"' in html
     assert 'href="#biological-interpretation-panel"' in html
-    assert 'reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Unresolved evidence patterns", "Interpretive findings"])' in html
+    assert 'reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Evidence patterns", "Unresolved evidence patterns", "Interpretive findings"])' in html
     assert 'initialiseSectionNavigation("reasoning-navigation", "reasoning")' in html
     assert 'href="#structural-integrity-panel"' in html
     assert 'href="#reference-compatibility-panel"' in html
@@ -382,4 +382,4 @@ def test_graph_inspector_uses_evidence_synthesis_terminology(tmp_path):
         candidate.analysis.reasoning_graph = build_reasoning_graph(candidate)
     write_html_dashboard(sample, tmp_path, recommendations=recommendations)
     html = (tmp_path / "genes" / "VP2.html").read_text()
-    assert "Evidence syntheses" in html
+    assert "Evidence patterns" in html

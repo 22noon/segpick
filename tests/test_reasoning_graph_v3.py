@@ -514,8 +514,8 @@ def test_graph_inspector_template_labels_definition_and_current_evaluation():
     assert "Biological hypothesis evaluations" in template
     assert "<h4>Definition</h4>" in template
     assert "<h4>Current evaluation</h4>" in template
-    assert "Supporting evidence syntheses" in template
-    assert "Conflicting evidence syntheses" in template
+    assert "Supporting evidence patterns" in template
+    assert "Conflicting evidence patterns" in template
 
 
 def test_graph_inspector_builds_typed_path_from_hypothesis_to_measurement():
