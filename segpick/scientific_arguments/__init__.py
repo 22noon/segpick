@@ -1,1 +1,1 @@
-from .models import *
+"""Scientific Argument API."""
