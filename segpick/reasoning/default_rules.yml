@@ -56,3 +56,95 @@ rules:
       so selecting one contig may not recover the complete gene.
     requires:
       - finding: Possible split assembly
+
+  - id: reference_supported_architecture
+    title: Reference-supported candidate architecture
+    description: >
+      Represents the conservative explanation that the candidate follows the
+      organisation of its closest nucleotide reference without a major
+      structural interruption.
+    category: assembly_structure
+    scope: candidate
+    severity: informational
+    base_confidence: moderate
+    summary: >
+      Candidate structure is continuous and compatible with the closest
+      reference organisation.
+    requires:
+      - observation: continuous_reference_structure
+        source: structural_alignment
+      - observation: reference_organisation_compatible
+        source: reference_compatibility
+    supports:
+      - observation: complete_orf_read_coverage
+        source: read_coverage
+    conflicts:
+      - observation: internal_coverage_interruption
+        source: read_coverage
+      - observation: duplicated_reference_mapping
+        source: reference_compatibility
+
+  - id: possible_repeated_sequence_architecture
+    title: Possible repeated-sequence architecture
+    description: >
+      Represents the possibility that separate candidate regions genuinely
+      contain related or duplicated sequence corresponding to the same
+      reference interval. Independent junction or continuous read support can
+      strengthen this interpretation.
+    category: assembly_structure
+    scope: candidate
+    severity: review
+    base_confidence: low
+    summary: >
+      Separate candidate regions map to overlapping reference coordinates,
+      which may represent a genuine repeated-sequence architecture.
+    requires:
+      - observation: duplicated_reference_mapping
+        source: reference_compatibility
+    supports:
+      - observation: complete_orf_read_coverage
+        source: read_coverage
+      - observation: coverage_continuous_across_reference_gap
+        source: cross_evidence
+      - observation: junction_supported
+        source: plugin:junction_support
+    conflicts:
+      - observation: internal_coverage_interruption
+        source: read_coverage
+      - observation: coverage_gap_at_reference_boundary
+        source: cross_evidence
+
+  - id: possible_repeat_associated_assembly_artefact
+    title: Possible repeat-associated assembly artefact
+    description: >
+      Represents the competing explanation that repeated mapping reflects an
+      assembly error or repeat-resolution problem rather than a genuine
+      biological duplication.
+    category: assembly_structure
+    scope: candidate
+    severity: warning
+    base_confidence: moderate
+    summary: >
+      Repeated reference mapping is accompanied by evidence that may indicate
+      a repeat-associated assembly artefact.
+    requires:
+      - observation: duplicated_reference_mapping
+        source: reference_compatibility
+    supports:
+      - observation: reference_structural_discontinuity
+        source: structural_alignment
+      - observation: reference_block_order_disrupted
+        source: reference_compatibility
+      - observation: unexpected_reference_orientation_switch
+        source: reference_compatibility
+      - observation: internal_coverage_interruption
+        source: read_coverage
+      - observation: coverage_gap_at_reference_boundary
+        source: cross_evidence
+    conflicts:
+      - observation: complete_orf_read_coverage
+        source: read_coverage
+      - observation: coverage_continuous_across_reference_gap
+        source: cross_evidence
+      - observation: junction_supported
+        source: plugin:junction_support

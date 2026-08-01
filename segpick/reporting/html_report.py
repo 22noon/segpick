@@ -177,6 +177,16 @@ def render_gene_page(
             "figure": figure.to_plotly_json(),
             "reference_id": result.reference_id,
             "block_count": result.block_count,
+            "repeated_reference_pairs": list(result.repeated_reference_pairs()),
+            "repeated_reference_pair_count": len(result.repeated_reference_pairs()),
+            "repeated_reference_hsp_count": len(result.repeated_reference_hsp_indices),
+            "architecture_blocks": list(result.architecture_blocks()),
+            "architecture_summary": result.architecture_summary(),
+            "duplicated_reference_bases": (
+                candidate.analysis.reference_compatibility.duplicated_reference_bases
+                if candidate.analysis.reference_compatibility is not None
+                else 0
+            ),
             "query_coverage": result.query_coverage,
             "reference_coverage": result.reference_coverage,
             "identity_min": result.identity_min,

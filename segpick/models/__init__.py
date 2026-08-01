@@ -12,7 +12,7 @@ from .gene import Gene
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
 from .scenario import BiologicalScenario, ScenarioEvidenceProvenance
-from .scenario_hypothesis import ScenarioHypothesis
+from .hypothesis_evaluation import HypothesisEvaluation, ScenarioHypothesis
 from .metadata import ContigMetadata
 from .manifest import AnalysisManifest
 from .orf import ORFHit, ORFMetrics
@@ -27,6 +27,15 @@ from .reference_dotplot import BlastNHSP, ReferenceDotplot
 from .reference_compatibility import ReferenceCompatibility
 from .structural_integrity import StructuralIntegrity
 from .rule_evaluation import RuleEvaluation
+from .reasoning_graph import (
+    MeasurementNode,
+    ObservationNode,
+    InterpretiveFindingNode,
+    EvidenceSynthesisNode,
+    BiologicalHypothesisNode,
+    ReasoningEdge,
+    ReasoningGraph,
+)
 from .sample import Sample
 from .read_support import ReadSupportMetrics
 
@@ -37,6 +46,7 @@ __all__ = [
     "BiologicalHypothesis",
     "BiologicalScenario",
     "ScenarioEvidenceProvenance",
+    "HypothesisEvaluation",
     "ScenarioHypothesis",
     "CandidateContig",
     "ContigDotplot",

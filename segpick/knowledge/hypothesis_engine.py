@@ -1,20 +1,20 @@
 from __future__ import annotations
 
-from segpick.models import BiologicalScenario, ScenarioHypothesis
+from segpick.models import BiologicalScenario, HypothesisEvaluation
 
-from .hypothesis_schema import HypothesisModule
+from .hypothesis_definition import HypothesisDefinition
 
 _ORDER = ("low", "moderate", "high")
 
 
 def evaluate_hypotheses(
-    modules: tuple[HypothesisModule, ...],
+    definitions: tuple[HypothesisDefinition, ...],
     scenarios: tuple[BiologicalScenario, ...],
     candidate_ids: tuple[str, ...] = (),
-) -> tuple[ScenarioHypothesis, ...]:
+) -> tuple[HypothesisEvaluation, ...]:
     scenario_by_id = {item.scenario_id: item for item in scenarios}
-    results: list[ScenarioHypothesis] = []
-    for module in modules:
+    results: list[HypothesisEvaluation] = []
+    for module in definitions:
         supporting = tuple(
             scenario_by_id[sid] for sid in module.supported_by if sid in scenario_by_id
         )
@@ -31,7 +31,7 @@ def evaluate_hypotheses(
         inferred_candidates = tuple(dict.fromkeys(
             candidate_id for scenario in supporting for candidate_id in scenario.candidate_ids
         ))
-        results.append(ScenarioHypothesis(
+        results.append(HypothesisEvaluation(
             hypothesis_id=module.hypothesis_id,
             title=module.title,
             category=module.category,
@@ -39,6 +39,10 @@ def evaluate_hypotheses(
             confidence=_ORDER[confidence_index],
             severity=module.severity,
             explanation=module.explanation,
+            base_confidence=module.base_confidence,
+            definition_supported_by=module.supported_by,
+            definition_contradicted_by=module.contradicted_by,
+            minimum_support=module.minimum_support,
             candidate_ids=candidate_ids or inferred_candidates,
             supporting_scenarios=tuple(item.scenario_id for item in supporting),
             supporting_scenario_titles=tuple(item.title for item in supporting),

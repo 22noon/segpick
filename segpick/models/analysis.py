@@ -25,6 +25,7 @@ from .containment import ContainmentMetrics
 from .rule_evaluation import RuleEvaluation
 from .cross_evidence import CrossEvidenceFinding
 from .evidence_assessment import EvidenceAssessment
+from .reasoning_graph import MeasurementNode, ReasoningGraph
 
 
 @dataclass(slots=True)
@@ -56,3 +57,5 @@ class ContigAnalysis:
     depth_profile: dict[int, int] = field(default_factory=dict)
     boundary_coverage: tuple[BoundaryCoverageAssessment, ...] = ()
     recommendation_reason: str | None = None
+    plugin_measurements: tuple[MeasurementNode, ...] = ()
+    reasoning_graph: ReasoningGraph | None = None

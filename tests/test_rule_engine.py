@@ -133,3 +133,53 @@ def test_gene_rule_wraps_split_assembly_finding():
     assert len(result) == 1
     assert result[0].rule_id == "possible_split_assembly"
     assert result[0].scope == "gene"
+
+
+def test_repeated_mapping_emits_competing_structural_hypotheses():
+    candidate = make_candidate()
+    candidate.analysis.observations = (
+        observation("duplicated_reference_mapping", "reference_compatibility"),
+    )
+
+    result = candidate_biological_hypotheses(candidate)
+    by_id = {item.rule_id: item for item in result}
+
+    assert "possible_repeated_sequence_architecture" in by_id
+    assert "possible_repeat_associated_assembly_artefact" in by_id
+    assert by_id["possible_repeated_sequence_architecture"].state == "provisional"
+    assert by_id["possible_repeat_associated_assembly_artefact"].state == "provisional"
+
+
+def test_plugin_junction_support_flows_into_hypothesis_state():
+    candidate = make_candidate()
+    candidate.analysis.observations = (
+        observation("duplicated_reference_mapping", "reference_compatibility"),
+        observation("junction_supported", "plugin:junction_support"),
+    )
+
+    result = candidate_biological_hypotheses(candidate)
+    by_id = {item.rule_id: item for item in result}
+
+    repeated = by_id["possible_repeated_sequence_architecture"]
+    artefact = by_id["possible_repeat_associated_assembly_artefact"]
+    assert repeated.state == "supported"
+    assert repeated.confidence == "moderate"
+    assert "observation:junction_supported@plugin:junction_support" in repeated.matched_supporting
+    assert artefact.state == "challenged"
+    assert artefact.confidence == "low"
+    assert "observation:junction_supported@plugin:junction_support" in artefact.matched_conflicting
+
+
+def test_mixed_evidence_marks_hypothesis_contested():
+    candidate = make_candidate()
+    candidate.analysis.observations = (
+        observation("duplicated_reference_mapping", "reference_compatibility"),
+        observation("complete_orf_read_coverage", "read_coverage"),
+        observation("internal_coverage_interruption", "read_coverage"),
+    )
+
+    result = candidate_biological_hypotheses(candidate)
+    by_id = {item.rule_id: item for item in result}
+
+    assert by_id["possible_repeated_sequence_architecture"].state == "contested"
+    assert by_id["possible_repeat_associated_assembly_artefact"].state == "contested"

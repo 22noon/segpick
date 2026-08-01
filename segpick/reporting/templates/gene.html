@@ -850,12 +850,45 @@
     .plot-panel { margin-left: 236px; scroll-margin-top: 6.5rem; }
     .plot-panel::after { content: ""; display: table; clear: both; }
     .view-visualization-link { display: inline-block; margin-top: .7rem; color: #2563eb; font-weight: 700; text-decoration: none; }
-    @media (max-width: 900px) {
-      .section-nav, .visualization-nav { position: static; float: none; width: auto; margin-right: 0; display: flex; gap: .4rem; overflow-x: auto; }
-      .section-nav h2, .visualization-nav h2 { display: none; }
-      .section-nav a, .visualization-nav a { flex: 0 0 auto; white-space: nowrap; }
-      .section-panel, .plot-panel { margin-left: 0; }
+    .reasoning-nav {
+      position: sticky;
+      top: 5.4rem;
+      float: left;
+      width: 220px;
+      margin: 0 1rem 1rem 0;
+      padding: .85rem;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      z-index: 4;
     }
+    .reasoning-nav h2 { margin: 0 0 .65rem; font-size: 1rem; }
+    .reasoning-nav a { display:block; padding:.48rem .55rem; border-radius:8px; color:#334155; text-decoration:none; font-weight:650; font-size:.88rem; }
+    .reasoning-nav a:hover, .reasoning-nav a.active { background:#dbeafe; color:#1d4ed8; }
+    #tab-reasoning > .reasoning-panel { margin-left:236px; scroll-margin-top:6.5rem; }
+    .reasoning-path { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.6rem; align-items:stretch; }
+    .reasoning-step { position:relative; border:1px solid var(--line); border-radius:10px; padding:.75rem; background:#f8fafc; }
+    .reasoning-step:not(:last-child)::after { content:"→"; position:absolute; right:-.52rem; top:50%; transform:translateY(-50%); color:#64748b; font-weight:800; z-index:2; }
+    .reasoning-step strong { display:block; margin-bottom:.25rem; }
+    .reasoning-step span { color:var(--muted); font-size:.84rem; }
+    .reasoning-step a { display:inline-block; margin-top:.45rem; font-size:.82rem; font-weight:700; text-decoration:none; color:#2563eb; }
+    @media (max-width: 900px) {
+      .section-nav, .visualization-nav, .reasoning-nav { position: static; float: none; width: auto; margin-right: 0; display: flex; gap: .4rem; overflow-x: auto; }
+      .section-nav h2, .visualization-nav h2, .reasoning-nav h2 { display: none; }
+      .section-nav a, .visualization-nav a, .reasoning-nav a { flex: 0 0 auto; white-space: nowrap; }
+      .section-panel, .plot-panel, #tab-reasoning > .reasoning-panel { margin-left: 0; }
+      .reasoning-path { grid-template-columns:1fr; }
+      .reasoning-step:not(:last-child)::after { content:"↓"; right:auto; left:50%; top:auto; bottom:-.75rem; transform:translateX(-50%); }
+    }
+
+    .graph-status { display:inline-flex; align-items:center; gap:.35rem; font-weight:750; }
+    .graph-status.valid { color:#166534; }
+    .graph-status.invalid { color:#b91c1c; }
+    .graph-source-list { display:flex; flex-wrap:wrap; gap:.45rem; margin:.5rem 0; }
+    .graph-source { border:1px solid var(--line); border-radius:999px; padding:.25rem .55rem; background:#f8fafc; font-size:.82rem; }
+    .graph-source.plugin { background:#fff7ed; border-color:#fdba74; }
+    .graph-paths { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.82rem; }
+    .graph-json-preview { max-height:24rem; overflow:auto; white-space:pre; padding:.8rem; border:1px solid var(--line); border-radius:8px; background:#f8fafc; font-size:.78rem; }
 
 </style>
 </head>
@@ -887,6 +920,10 @@
   </section>
 
 
+  {% macro display_measurement(value) -%}
+    {%- if value is number -%}{{ "%.2f"|format(value) }}{%- else -%}{{ value }}{%- endif -%}
+  {%- endmacro %}
+
   {% macro evidence_group(title, items) -%}
     {% if items %}
       <h4>{{ title }}</h4>
@@ -907,7 +944,7 @@
               <h5>Measurements</h5>
               <dl class="provenance-measurements">
               {% for measurement in item.measurements %}
-                <dt>{{ measurement.name|replace('_', ' ')|title }}</dt><dd>{{ measurement.value }}</dd>
+                <dt>{{ measurement.name|replace('_', ' ')|title }}</dt><dd>{{ display_measurement(measurement.value) }}</dd>
               {% endfor %}
               </dl>
             {% endif %}
@@ -920,7 +957,7 @@
               <p class="provenance-links">
               {% for target in item.visualisations %}
                 {% if target == 'coverage_plot' %}<a href="#coverage-panel">Coverage plot</a>
-                {% elif target == 'reference_dotplot' %}<a href="#reference-dotplot-panel">Reference dot plot</a>
+                {% elif target == 'reference_dotplot' %}<a href="#closest-reference-panel" class="structural-alignment-link">Reference dot plot · repeated mappings highlighted</a>
                 {% elif target == 'protein_alignment' %}<a href="#protein-evidence-panel">Protein alignment</a>
                 {% else %}<span class="muted">{{ target|replace('_', ' ')|title }}</span>{% endif %}
               {% endfor %}
@@ -980,7 +1017,32 @@
     </details>
   {%- endmacro %}
 
-  <section class="card hypothesis-card">
+  <nav id="reasoning-navigation" class="reasoning-nav" aria-label="Reasoning sections">
+    <h2>Reasoning explorer</h2>
+    <a href="#reasoning-path-panel">Reasoning path</a>
+    <a href="#cross-evidence-panel">Cross-evidence findings</a>
+    <a href="#biological-scenarios-panel">Biological scenarios</a>
+    <a href="#biological-hypotheses-panel">Biological hypotheses</a>
+    <a href="#biological-interpretation-panel">Rule-based interpretation</a>
+  </nav>
+
+  <section id="reasoning-path-panel" class="card hypothesis-card">
+    <h2>Reasoning path</h2>
+    <p class="muted">Trace how the selected candidate moves from evidence integration to biological explanation. Counts update with the candidate selector.</p>
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+        <div class="reasoning-path" aria-label="Reasoning path for {{ candidate.candidate_id }}">
+          <div class="reasoning-step"><strong>Evidence assessments</strong><span>Structural, reference, read and ORF evidence</span><a href="#structural-integrity-panel">Inspect evidence →</a></div>
+          <div class="reasoning-step"><strong>Cross-evidence findings</strong><span>{{ candidate.cross_evidence_findings|length }} finding{% if candidate.cross_evidence_findings|length != 1 %}s{% endif %}</span><a href="#cross-evidence-panel">Open findings →</a></div>
+          <div class="reasoning-step"><strong>Biological scenarios</strong><span>{{ candidate.scenarios|length }} scenario{% if candidate.scenarios|length != 1 %}s{% endif %}</span><a href="#biological-scenarios-panel">Open scenarios →</a></div>
+          <div class="reasoning-step"><strong>Biological hypotheses</strong><span>{% if candidate.scenario_hypotheses|length == 1 %}1 hypothesis{% else %}{{ candidate.scenario_hypotheses|length }} hypotheses{% endif %}</span><a href="#biological-hypotheses-panel">Open hypotheses →</a></div>
+          <div class="reasoning-step"><strong>Recommendation context</strong><span>Interpretation supporting expert review</span><a href="#biological-interpretation-panel">Open interpretation →</a></div>
+        </div>
+      </div>
+    {% endfor %}
+  </section>
+
+  <section id="biological-hypotheses-panel" class="card hypothesis-card">
     <h2>Biological hypotheses</h2>
     <p class="muted">Biological explanations aggregated from recognised scenarios. Hypotheses are descriptive and do not alter candidate ranking.</p>
     {% if view.scenario_hypotheses %}{% for hypothesis in view.scenario_hypotheses %}{{ scenario_hypothesis_card(hypothesis) }}{% endfor %}{% endif %}
@@ -991,7 +1053,7 @@
     {% endfor %}
   </section>
 
-  <section class="card hypothesis-card">
+  <section id="cross-evidence-panel" class="card hypothesis-card">
     <h2>Cross-evidence findings</h2>
     <p class="muted">Interpretations that emerge only when independent evidence channels are considered together. They are explanatory and do not alter ranking.</p>
     {% for candidate in view.candidates %}
@@ -1014,7 +1076,7 @@
     {% endfor %}
   </section>
 
-  <section class="card hypothesis-card">
+  <section id="biological-scenarios-panel" class="card hypothesis-card">
     <h2>Biological scenarios</h2>
     <p class="muted">Named biological situations inferred from observations and findings. Select a scenario, then an observation, to inspect its evidence provenance. Scenarios are descriptive and do not alter ranking.</p>
     {% if view.scenarios %}{% for scenario in view.scenarios %}{{ scenario_card(scenario) }}{% endfor %}{% endif %}
@@ -1025,17 +1087,17 @@
     {% endfor %}
   </section>
 
-  <section class="card hypothesis-card">
-    <h2>Biological interpretation</h2>
+  <section id="biological-interpretation-panel" class="card hypothesis-card">
+    <h2>Interpretive findings</h2>
     {% if view.hypotheses %}
-      <p class="muted">Hypotheses generated by transparent rules from the available observations and findings.</p>
+      <p class="muted">Interpretive findings generated by transparent rules from the available observations and lower-level findings.</p>
       <div class="hypothesis-grid">
         {% for hypothesis in view.hypotheses %}
           <details class="hypothesis-item">
             <summary>
               <span class="hypothesis-title">{{ hypothesis.title }}</span>
               <span class="hypothesis-badge confidence-{{ hypothesis.confidence }}">{{ hypothesis.confidence|upper }}</span>
-              <span class="hypothesis-scope muted">{{ hypothesis.scope|title }}</span>
+              <span class="hypothesis-scope muted">{{ hypothesis.scope|title }} · {{ hypothesis.state|title }}</span>
             </summary>
             <div class="hypothesis-detail">
               <p>{{ hypothesis.summary }}</p>
@@ -1069,9 +1131,105 @@
         {% endfor %}
       </div>
     {% else %}
-      <p><strong>No rule-based biological hypotheses were generated.</strong></p>
-      <p class="muted">No current hypothesis rule matched the available observations and findings.</p>
+      <p><strong>No rule-based interpretive findings were generated.</strong></p>
+      <p class="muted">No current interpretive rule matched the available observations and findings.</p>
     {% endif %}
+  </section>
+
+
+  <section id="reasoning-graph-inspector" class="card reasoning-graph-inspector">
+    <h2>Reasoning graph inspector</h2>
+    <p class="muted">Expert diagnostic view of the immutable V3 graph. It confirms which evidence sources contributed nodes and whether every provenance reference resolves.</p>
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail{% if candidate.recommended %} active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+        <h3>{{ candidate.candidate_id }}</h3>
+        {% if candidate.reasoning_graph.available %}
+          <p class="graph-status {% if candidate.reasoning_graph.valid %}valid{% else %}invalid{% endif %}">{% if candidate.reasoning_graph.valid %}✓ Valid graph{% else %}⚠ Invalid graph{% endif %}</p>
+          <p class="muted">{{ candidate.reasoning_graph.validation_message }}</p>
+          <div class="mini-grid">
+            <div class="mini"><strong>{{ candidate.reasoning_graph.measurement_count }}</strong><span>Measurements</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.observation_count }}</strong><span>Observations</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.interpretation_count }}</strong><span>Interpretive findings</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.scenario_count }}</strong><span>Evidence syntheses</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.hypothesis_count }}</strong><span>Hypotheses</span></div>
+          </div>
+          <h4>Biological hypothesis evaluations</h4>
+          {% if candidate.reasoning_graph.biological_hypotheses %}
+            {% for hypothesis in candidate.reasoning_graph.biological_hypotheses %}
+              <details class="hypothesis-item graph-hypothesis-evaluation">
+                <summary>
+                  <span class="hypothesis-title">{{ hypothesis.title }}</span>
+                  <span class="rule-status {% if hypothesis.evaluation_state == 'supported' %}triggered{% else %}not-triggered{% endif %}">{{ hypothesis.evaluation_state|replace('_', ' ')|title }}</span>
+                  <span class="hypothesis-scope muted">{{ hypothesis.evaluation_confidence|upper }}</span>
+                </summary>
+                <div class="hypothesis-detail">
+                  {% if hypothesis.summary %}<p>{{ hypothesis.summary }}</p>{% endif %}
+                  <div class="hypothesis-trace">
+                    <div>
+                      <h4>Definition</h4>
+                      <p><strong>ID:</strong> {{ hypothesis.definition_id }}</p>
+                      {% if hypothesis.definition_description %}<p>{{ hypothesis.definition_description }}</p>{% endif %}
+                      <p><strong>Base confidence:</strong> {{ hypothesis.definition_base_confidence|upper }}</p>
+                      <p><strong>Minimum support:</strong> {{ hypothesis.definition_minimum_support }}</p>
+                      <p><strong>Supported by definitions</strong></p>
+                      {% if hypothesis.definition_supported_by %}<ul>{% for item in hypothesis.definition_supported_by %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">None declared.</p>{% endif %}
+                      <p><strong>Contradicted by definitions</strong></p>
+                      {% if hypothesis.definition_contradicted_by %}<ul>{% for item in hypothesis.definition_contradicted_by %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">None declared.</p>{% endif %}
+                      {% if hypothesis.definition_source %}<p class="hypothesis-meta">Source: {{ hypothesis.definition_source }}</p>{% endif %}
+                      {% if hypothesis.definition_references %}<p class="hypothesis-meta">References: {{ hypothesis.definition_references|join(', ') }}</p>{% endif %}
+                    </div>
+                    <div>
+                      <h4>Current evaluation</h4>
+                      <p><strong>State:</strong> {{ hypothesis.evaluation_state|replace('_', ' ')|title }}</p>
+                      <p><strong>Confidence:</strong> {{ hypothesis.evaluation_confidence|upper }}</p>
+                      <p><strong>Candidates:</strong> {% if hypothesis.evaluation_candidate_ids %}{{ hypothesis.evaluation_candidate_ids|join(', ') }}{% else %}<span class="muted">None recorded.</span>{% endif %}</p>
+                      <p><strong>Supporting evidence syntheses</strong></p>
+                      {% if hypothesis.evaluation_supporting_synthesis_ids %}<ul>{% for item in hypothesis.evaluation_supporting_synthesis_ids %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">None matched.</p>{% endif %}
+                      <p><strong>Conflicting evidence syntheses</strong></p>
+                      {% if hypothesis.evaluation_conflicting_synthesis_ids %}<ul>{% for item in hypothesis.evaluation_conflicting_synthesis_ids %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">None matched.</p>{% endif %}
+                    </div>
+                  </div>
+                </div>
+              </details>
+            {% endfor %}
+          {% else %}
+            <p class="muted">No biological hypothesis evaluations are currently present.</p>
+          {% endif %}
+          <h4>Built-in evidence sources</h4>
+          <div class="graph-source-list">{% for source in candidate.reasoning_graph.builtin_sources %}<span class="graph-source">{{ source }}</span>{% else %}<span class="muted">None recorded.</span>{% endfor %}</div>
+          <h4>Plugin evidence sources</h4>
+          <div class="graph-source-list">{% for source in candidate.reasoning_graph.plugin_sources %}<span class="graph-source plugin">{{ source }}</span>{% else %}<span class="muted">No plugin evidence contributed to this candidate.</span>{% endfor %}</div>
+          <details>
+            <summary><strong>Typed hypothesis provenance</strong></summary>
+            {% if candidate.reasoning_graph.provenance_paths %}
+              <div class="graph-paths">
+                {% for path in candidate.reasoning_graph.provenance_paths %}
+                  <ol class="graph-typed-path">
+                    {% for step in path.steps %}
+                      <li class="graph-path-step{% if step.missing %} missing{% endif %}">
+                        {% if step.relationship %}<span class="graph-relation">{{ step.relationship }}</span>{% endif %}
+                        <span class="graph-node-type">{{ step.node_type }}</span>
+                        <strong>{{ step.title }}</strong>
+                        <code>{{ step.node_id }}</code>
+                        {% if step.state %}<span class="graph-node-state">{{ step.state }}</span>{% endif %}
+                      </li>
+                    {% endfor %}
+                  </ol>
+                {% endfor %}
+              </div>
+            {% else %}<p class="muted">No hypothesis provenance paths are currently present.</p>{% endif %}
+          </details>
+          <details>
+            <summary><strong>Graph JSON preview</strong></summary>
+            <pre class="graph-json-preview">{{ candidate.reasoning_graph.graph_json }}</pre>
+          </details>
+          <p><button type="button" data-graph-download data-candidate-id="{{ candidate.candidate_id }}">Download reasoning graph JSON</button></p>
+          <script type="application/json" id="reasoning-graph-json-{{ loop.index0 }}" data-graph-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.graph_json|safe }}</script>
+        {% else %}
+          <p class="muted">No V3 reasoning graph was generated for this candidate.</p>
+        {% endif %}
+      </div>
+    {% endfor %}
   </section>
 
   <section class="card rule-explorer">
@@ -1132,7 +1290,7 @@
 
       <div class="recommendation-score">
         Overall evidence score:
-        <strong>{{ "%.3f"|format(view.recommendation.score) }}</strong>
+        <strong>{{ "%.2f"|format(view.recommendation.score) }}</strong>
       </div>
 
       <div class="overall-assessment">
@@ -1165,7 +1323,7 @@
               <td>{{ item.name|replace("_", " ")|title }}</td>
               <td><span class="agreement-status agreement-{{ item.status }}">{{ item.status|replace("_", " ") }}</span></td>
               <td>{{ item.winners|join(", ") }}</td>
-              <td>{% if item.recommended_value is none %}—{% else %}{{ "%.3f"|format(item.recommended_value) }}{% endif %}</td>
+              <td>{% if item.recommended_value is none %}—{% else %}{{ "%.2f"|format(item.recommended_value) }}{% endif %}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -1269,12 +1427,12 @@
 
           <div>
             Score:
-            {{ "%.3f"|format(view.recommendation.runner_up_score) }}
+            {{ "%.2f"|format(view.recommendation.runner_up_score) }}
           </div>
 
           <div>
             Score gap:
-            {{ "%.3f"|format(view.recommendation.score_gap) }}
+            {{ "%.2f"|format(view.recommendation.score_gap) }}
           </div>
 
           {% if view.recommendation.runner_up_strength == "close" %}
@@ -1299,7 +1457,7 @@
             {% for comparison in view.recommendation.comparisons %}
             <div class="alternative-card{% if comparison.close_alternative %} close-alternative{% endif %}">
               <h4>{{ comparison.candidate_id }}</h4>
-              <p class="runner-up-note">Score {{ "%.3f"|format(comparison.score) }} · gap {{ "%.3f"|format(comparison.score_gap) }}{% if comparison.close_alternative %} · close alternative{% endif %}</p>
+              <p class="runner-up-note">Score {{ "%.2f"|format(comparison.score) }} · gap {{ "%.2f"|format(comparison.score_gap) }}{% if comparison.close_alternative %} · close alternative{% endif %}</p>
               <p><strong>Why it ranked lower</strong></p>
               <ul class="traffic-list">
                 {% for message in comparison.reasons_not_selected %}
@@ -1334,7 +1492,7 @@
               <span class="evidence-status-dot" aria-hidden="true"></span>
               <span class="evidence-label">{{ item.channel_title }}</span>
               <span class="evidence-result">{{ item.status|replace("_", " ")|title }} · {{ item.confidence_level|replace("_", " ")|title }} confidence</span>
-              <span class="evidence-score">{% if item.score is none %}—{% else %}{{ "%.3f"|format(item.score) }}{% endif %}</span>
+              <span class="evidence-score">{% if item.score is none %}—{% else %}{{ "%.2f"|format(item.score) }}{% endif %}</span>
             </summary>
             <div class="evidence-detail">
               <div class="evidence-detail-item"><strong>Key finding</strong><span>{{ item.key_finding }}</span></div>
@@ -1416,7 +1574,7 @@
 
   <section id="closest-reference-panel" class="card reference-dotplot-panel">
     <h2>Candidate versus closest nucleotide reference</h2>
-    <p class="muted">MegaBLAST alignment blocks are drawn as diagonal segments. Upward slopes indicate forward orientation; downward slopes indicate reverse-complement alignment.</p>
+    <p class="muted">MegaBLAST alignment blocks are drawn as diagonal segments. Upward slopes indicate forward orientation; downward slopes indicate reverse-complement alignment. Distinct candidate blocks that map to overlapping reference coordinates are drawn last as orange dashed lines, with the shared reference interval shaded. A contig-centric architecture track orders every block along the candidate and reports the corresponding reference interval. When repeated mappings occur, a separate HSP lane track prevents shorter blocks from being hidden by drawing order.</p>
     <div id="reference-dotplot-placeholder" class="reference-dotplot-placeholder">
       Select a candidate to view its structural alignment to the closest nucleotide reference.
     </div>
@@ -1444,7 +1602,7 @@
             <strong>{{ coordinate.candidate_id }}{% if coordinate.recommended %} ★{% endif %}</strong>
             <span>{{ coordinate.subject_start }}–{{ coordinate.subject_end }} / {{ coordinate.subject_length }} aa · {{ coordinate.subject_id }}</span>
           </div>
-          <div class="protein-coordinate-track" title="{{ coordinate.candidate_id }} covers {{ '%.1f'|format(coordinate.start_fraction * 100) }}–{{ '%.1f'|format(coordinate.end_fraction * 100) }}% of {{ coordinate.subject_id }}">
+          <div class="protein-coordinate-track" title="{{ coordinate.candidate_id }} covers {{ '%.2f'|format(coordinate.start_fraction * 100) }}–{{ '%.2f'|format(coordinate.end_fraction * 100) }}% of {{ coordinate.subject_id }}">
             <span
               class="protein-coordinate-segment{% if coordinate.recommended %} recommended{% endif %}"
               style="left: {{ '%.4f'|format(coordinate.start_fraction * 100) }}%; width: {{ '%.4f'|format((coordinate.end_fraction - coordinate.start_fraction) * 100) }}%;"
@@ -1457,8 +1615,8 @@
       <h3>Assembly-level protein continuity</h3>
       <p><strong>{{ view.protein_continuity.summary }}</strong></p>
       <div class="protein-continuity-metrics">
-        <span>Combined coverage: {{ "%.1f%%"|format(view.protein_continuity.combined_coverage * 100) }}</span>
-        <span>Best single candidate: {{ "%.1f%%"|format(view.protein_continuity.best_single_coverage * 100) }}</span>
+        <span>Combined coverage: {{ "%.2f%%"|format(view.protein_continuity.combined_coverage * 100) }}</span>
+        <span>Best single candidate: {{ "%.2f%%"|format(view.protein_continuity.best_single_coverage * 100) }}</span>
       </div>
       {% if view.protein_continuity.findings %}
         <ul>
@@ -1519,34 +1677,34 @@
 
           <td>{{ candidate.length }}</td>
 
-          <td>{{ "%.3f"|format(candidate.confidence) }}</td>
+          <td>{{ "%.2f"|format(candidate.confidence) }}</td>
 
           <td>
             {% if candidate.z is none %}
               —
             {% else %}
-              {{ "%.3f"|format(candidate.z) }}
+              {{ "%.2f"|format(candidate.z) }}
             {% endif %}
           </td>
 
           <td>{{ candidate.cluster }}</td>
 
-          <td>{% if candidate.candidate_coverage is not none %}{{ "%.1f%%"|format(candidate.candidate_coverage * 100) }}{% else %}—{% endif %}</td>
+          <td>{% if candidate.candidate_coverage is not none %}{{ "%.2f%%"|format(candidate.candidate_coverage * 100) }}{% else %}—{% endif %}</td>
 
-          <td>{% if candidate.reference_coverage is not none %}{{ "%.1f%%"|format(candidate.reference_coverage * 100) }}{% else %}—{% endif %}</td>
+          <td>{% if candidate.reference_coverage is not none %}{{ "%.2f%%"|format(candidate.reference_coverage * 100) }}{% else %}—{% endif %}</td>
 
           <td>{{ candidate.block_count if candidate.block_count is not none else "—" }}</td>
 
           <td>{{ candidate.largest_reference_gap if candidate.largest_reference_gap is not none else "—" }}</td>
 
-          <td>{% if candidate.structural_integrity is not none %}{{ "%.3f"|format(candidate.structural_integrity) }}{% else %}—{% endif %}</td>
+          <td>{% if candidate.structural_integrity is not none %}{{ "%.2f"|format(candidate.structural_integrity) }}{% else %}—{% endif %}</td>
 
           <td>{{ candidate.structural_status }}</td>
 
           <td>
             {% if candidate.read_support.available %}
-              {{ "%.3f"|format(candidate.read_support.coverage_sufficiency) }} /
-              {{ "%.3f"|format(candidate.read_support.coverage_integrity) }}
+              {{ "%.2f"|format(candidate.read_support.coverage_sufficiency) }} /
+              {{ "%.2f"|format(candidate.read_support.coverage_integrity) }}
             {% else %}
               <span class="unavailable">—</span>
             {% endif %}
@@ -1554,7 +1712,7 @@
 
           <td>
             {% if candidate.orf.score is not none %}
-              {{ "%.3f"|format(candidate.orf.score) }}
+              {{ "%.2f"|format(candidate.orf.score) }}
             {% else %}
               <span class="unavailable">—</span>
             {% endif %}
@@ -1591,16 +1749,16 @@
         {% if candidate.structural_integrity is not none %}
           <p><strong>{{ candidate.structural_status|replace("_", " ")|title }}</strong> relative to {{ candidate.structural_reference_id }}</p>
           <div class="mini-grid">
-            <div class="mini"><strong>{{ "%.3f"|format(candidate.structural_integrity) }}</strong><span>Structural integrity</span></div>
-            <div class="mini"><strong>{{ "%.1f%%"|format(candidate.candidate_coverage * 100) }}</strong><span>Candidate coverage</span></div>
-            <div class="mini"><strong>{{ "%.1f%%"|format(candidate.reference_coverage * 100) }}</strong><span>Reference coverage</span></div>
+            <div class="mini"><strong>{{ "%.2f"|format(candidate.structural_integrity) }}</strong><span>Structural integrity</span></div>
+            <div class="mini"><strong>{{ "%.2f%%"|format(candidate.candidate_coverage * 100) }}</strong><span>Candidate coverage</span></div>
+            <div class="mini"><strong>{{ "%.2f%%"|format(candidate.reference_coverage * 100) }}</strong><span>Reference coverage</span></div>
             <div class="mini"><strong>{{ candidate.block_count }}</strong><span>MegaBLAST blocks</span></div>
-            <div class="mini"><strong>{{ "%.1f%%"|format(candidate.longest_block_fraction * 100) }}</strong><span>Longest block</span></div>
+            <div class="mini"><strong>{{ "%.2f%%"|format(candidate.longest_block_fraction * 100) }}</strong><span>Longest block</span></div>
             <div class="mini"><strong>{{ candidate.largest_candidate_gap }} nt</strong><span>Largest candidate gap</span></div>
             <div class="mini"><strong>{{ candidate.largest_reference_gap }} nt</strong><span>Largest reference gap</span></div>
-            <div class="mini"><strong>{{ "%.3f"|format(candidate.structural_continuity) }}</strong><span>Continuity</span></div>
-            <div class="mini"><strong>{{ "%.3f"|format(candidate.orientation_consistency) }}</strong><span>Orientation consistency</span></div>
-            <div class="mini"><strong>{{ "%.3f"|format(candidate.order_consistency) }}</strong><span>HSP order consistency</span></div>
+            <div class="mini"><strong>{{ "%.2f"|format(candidate.structural_continuity) }}</strong><span>Continuity</span></div>
+            <div class="mini"><strong>{{ "%.2f"|format(candidate.orientation_consistency) }}</strong><span>Orientation consistency</span></div>
+            <div class="mini"><strong>{{ "%.2f"|format(candidate.order_consistency) }}</strong><span>HSP order consistency</span></div>
           </div>
           <details class="evidence-summary-row explanatory-details">
             <summary>How the score is calculated</summary>
@@ -1625,14 +1783,14 @@
         {% if candidate.reference_compatibility is not none %}
           <p><strong>{{ candidate.reference_compatibility_status|replace("_", " ")|title }}</strong></p>
           <div class="mini-grid">
-            <div class="mini"><strong>{{ "%.3f"|format(candidate.reference_compatibility) }}</strong><span>Reference compatibility</span></div>
+            <div class="mini"><strong>{{ "%.2f"|format(candidate.reference_compatibility) }}</strong><span>Reference compatibility</span></div>
             <div class="mini"><strong>{{ candidate.unsupported_internal_candidate_bases }} nt</strong><span>Unsupported internal candidate sequence</span></div>
             <div class="mini"><strong>{{ candidate.missing_internal_reference_bases }} nt</strong><span>Missing expected internal reference sequence</span></div>
             <div class="mini"><strong>{{ candidate.duplicated_reference_bases }} nt</strong><span>Repeated reference mapping</span></div>
-            <div class="mini"><strong>{{ "%.3f"|format(candidate.expected_reference_completeness) }}</strong><span>Expected reference completeness</span></div>
-            <div class="mini"><strong>{{ "%.3f"|format(candidate.reference_block_order_compatibility) }}</strong><span>Block-order compatibility</span></div>
-            <div class="mini"><strong>{{ "%.3f"|format(candidate.reference_orientation_compatibility) }}</strong><span>Orientation compatibility</span></div>
-            <div class="mini"><strong>{{ "%.3f"|format(candidate.duplication_compatibility) }}</strong><span>Duplication compatibility</span></div>
+            <div class="mini"><strong>{{ "%.2f"|format(candidate.expected_reference_completeness) }}</strong><span>Expected reference completeness</span></div>
+            <div class="mini"><strong>{{ "%.2f"|format(candidate.reference_block_order_compatibility) }}</strong><span>Block-order compatibility</span></div>
+            <div class="mini"><strong>{{ "%.2f"|format(candidate.reference_orientation_compatibility) }}</strong><span>Orientation compatibility</span></div>
+            <div class="mini"><strong>{{ "%.2f"|format(candidate.duplication_compatibility) }}</strong><span>Duplication compatibility</span></div>
           </div>
           <details class="evidence-summary-row explanatory-details">
             <summary>How this differs from structural integrity</summary>
@@ -1659,22 +1817,22 @@
           <p class="muted">Primary region: {{ candidate.read_support.region_source|replace("_", " ") }}; contig coordinates {{ candidate.read_support.region_start + 1 }}–{{ candidate.read_support.region_end }} ({{ candidate.read_support.region_length }} nt).</p>
           <div class="evidence-list">
             <details class="evidence-summary-row" open>
-              <summary><span class="evidence-label">Coverage sufficiency</span><span class="evidence-score">{{ "%.3f"|format(candidate.read_support.coverage_sufficiency) }}</span></summary>
+              <summary><span class="evidence-label">Coverage sufficiency</span><span class="evidence-score">{{ "%.2f"|format(candidate.read_support.coverage_sufficiency) }}</span></summary>
               <div class="evidence-detail">
-                <div class="evidence-detail-item">Median ORF depth <strong>{{ "%.1f"|format(candidate.read_support.median_depth) }}×</strong></div>
-                <div class="evidence-detail-item">ORF breadth ≥ minimum depth <strong>{{ "%.1f%%"|format(candidate.read_support.covered_fraction * 100) }}</strong></div>
-                <div class="evidence-detail-item">ORF breadth with any reads <strong>{{ "%.1f%%"|format(candidate.read_support.any_covered_fraction * 100) }}</strong></div>
-                <div class="evidence-detail-item">Whole-contig breadth ≥ minimum depth <strong>{{ "%.1f%%"|format(candidate.read_support.whole_contig_covered_fraction * 100) }}</strong></div>
+                <div class="evidence-detail-item">Median ORF depth <strong>{{ "%.2f"|format(candidate.read_support.median_depth) }}×</strong></div>
+                <div class="evidence-detail-item">ORF breadth ≥ minimum depth <strong>{{ "%.2f%%"|format(candidate.read_support.covered_fraction * 100) }}</strong></div>
+                <div class="evidence-detail-item">ORF breadth with any reads <strong>{{ "%.2f%%"|format(candidate.read_support.any_covered_fraction * 100) }}</strong></div>
+                <div class="evidence-detail-item">Whole-contig breadth ≥ minimum depth <strong>{{ "%.2f%%"|format(candidate.read_support.whole_contig_covered_fraction * 100) }}</strong></div>
               </div>
             </details>
             <details class="evidence-summary-row" open>
-              <summary><span class="evidence-label">Coverage integrity</span><span class="evidence-score">{{ "%.3f"|format(candidate.read_support.coverage_integrity) }}</span></summary>
+              <summary><span class="evidence-label">Coverage integrity</span><span class="evidence-score">{{ "%.2f"|format(candidate.read_support.coverage_integrity) }}</span></summary>
               <div class="evidence-detail">
-                <div class="evidence-detail-item">Uniformity <strong>{{ "%.3f"|format(candidate.read_support.uniformity) }}</strong></div>
+                <div class="evidence-detail-item">Uniformity <strong>{{ "%.2f"|format(candidate.read_support.uniformity) }}</strong></div>
                 <div class="evidence-detail-item">Longest low-depth interval <strong>{{ candidate.read_support.longest_low_depth_interval }} nt</strong></div>
                 <div class="evidence-detail-item">Internal low-depth interruptions <strong>{{ candidate.read_support.internal_low_depth_interruption_count }}</strong></div>
-                <div class="evidence-detail-item">5′ terminal support <strong>{{ "%.3f"|format(candidate.read_support.left_terminal_support) }}</strong></div>
-                <div class="evidence-detail-item">3′ terminal support <strong>{{ "%.3f"|format(candidate.read_support.right_terminal_support) }}</strong></div>
+                <div class="evidence-detail-item">5′ terminal support <strong>{{ "%.2f"|format(candidate.read_support.left_terminal_support) }}</strong></div>
+                <div class="evidence-detail-item">3′ terminal support <strong>{{ "%.2f"|format(candidate.read_support.right_terminal_support) }}</strong></div>
               </div>
             </details>
           </div>
@@ -1694,11 +1852,11 @@
                 </summary>
                 <div class="evidence-detail">
                   <p><strong>{{ boundary.summary }}</strong></p>
-                  <div class="evidence-detail-item">Median depth before gap <strong>{{ "%.1f"|format(boundary.left_median_depth) }}×</strong></div>
-                  <div class="evidence-detail-item">Median depth within gap <strong>{{ "%.1f"|format(boundary.gap_median_depth) }}×</strong></div>
-                  <div class="evidence-detail-item">Median depth after gap <strong>{{ "%.1f"|format(boundary.right_median_depth) }}×</strong></div>
-                  <div class="evidence-detail-item">Gap-to-flank depth ratio <strong>{{ "%.3f"|format(boundary.gap_to_baseline_ratio) if boundary.gap_to_baseline_ratio is not none else "—" }}</strong></div>
-                  <div class="evidence-detail-item">Uncovered bases in gap <strong>{{ "%.1f%%"|format(boundary.zero_fraction * 100) }}</strong></div>
+                  <div class="evidence-detail-item">Median depth before gap <strong>{{ "%.2f"|format(boundary.left_median_depth) }}×</strong></div>
+                  <div class="evidence-detail-item">Median depth within gap <strong>{{ "%.2f"|format(boundary.gap_median_depth) }}×</strong></div>
+                  <div class="evidence-detail-item">Median depth after gap <strong>{{ "%.2f"|format(boundary.right_median_depth) }}×</strong></div>
+                  <div class="evidence-detail-item">Gap-to-flank depth ratio <strong>{{ "%.2f"|format(boundary.gap_to_baseline_ratio) if boundary.gap_to_baseline_ratio is not none else "—" }}</strong></div>
+                  <div class="evidence-detail-item">Uncovered bases in gap <strong>{{ "%.2f%%"|format(boundary.zero_fraction * 100) }}</strong></div>
                 </div>
               </details>
             {% endfor %}
@@ -1727,7 +1885,7 @@
                 <summary>
                   <span class="hypothesis-title">{{ hypothesis.title }}</span>
                   <span class="hypothesis-badge confidence-{{ hypothesis.confidence }}">{{ hypothesis.confidence|upper }}</span>
-                  <span class="hypothesis-scope muted">Rule interpretation</span>
+                  <span class="hypothesis-scope muted">Interpretive finding</span>
                 </summary>
                 <div class="hypothesis-detail">
                   <p>{{ hypothesis.summary }}</p>
@@ -1772,7 +1930,7 @@
           <p class="unavailable">No ORF evidence is available.</p>
         {% else %}
           <div class="mini-grid">
-            <div class="mini"><strong>{{ "%.3f"|format(candidate.orf.score) if candidate.orf.score is not none else "—" }}</strong><span>ORF quality</span></div>
+            <div class="mini"><strong>{{ "%.2f"|format(candidate.orf.score) if candidate.orf.score is not none else "—" }}</strong><span>ORF quality</span></div>
             <div class="mini"><strong>{{ candidate.orf.protein_length }} aa</strong><span>Protein length</span></div>
             <div class="mini"><strong>{{ candidate.orf.strand }} / frame {{ candidate.orf.frame }}</strong><span>Strand and frame</span></div>
             <div class="mini"><strong>{{ candidate.orf.start }}–{{ candidate.orf.end }}</strong><span>Contig coordinates</span></div>
@@ -1859,7 +2017,7 @@
             <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.percent_identity) }}</strong><span>DIAMOND identity</span></div>
             <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.subject_coverage * 100) }}</strong><span>Subject coverage</span></div>
             <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.query_coverage * 100) }}</strong><span>Query coverage</span></div>
-            <div class="mini"><strong>{{ "%.1f%%"|format(candidate.orf.relatedness.top_hit_gene_agreement * 100) if candidate.orf.relatedness.top_hit_gene_agreement is not none else "—" }}</strong><span>Top-hit gene agreement</span></div>
+            <div class="mini"><strong>{{ "%.2f%%"|format(candidate.orf.relatedness.top_hit_gene_agreement * 100) if candidate.orf.relatedness.top_hit_gene_agreement is not none else "—" }}</strong><span>Top-hit gene agreement</span></div>
           </div>
           <p class="muted">Closest protein: {{ candidate.orf.relatedness.subject_id }} — {{ candidate.orf.relatedness.subject_title }}</p>
         {% endif %}
@@ -1978,6 +2136,15 @@ function handleProteinAction(button){
   if(action==="download-reference"&&reference)triggerDownload(reference,`${safeFilename(candidateId)}.reference.faa`);
   if(action==="download-both"&&reference)triggerDownload(predicted+reference,`${safeFilename(candidateId)}.predicted_with_reference.faa`);
 }
+
+function downloadReasoningGraph(button){
+  const candidateId=button.dataset.candidateId;
+  const node=[...document.querySelectorAll("script[data-graph-candidate]")].find(x=>x.dataset.graphCandidate===candidateId);
+  if(!node)return;
+  triggerDownload(node.textContent,`${safeFilename(candidateId)}.reasoning_graph.json`,"application/json");
+}
+document.addEventListener("click",event=>{const button=event.target.closest("[data-graph-download]");if(button)downloadReasoningGraph(button);});
+
 function traceSequence(trace){return trace.meta&&trace.meta.sequence_id?trace.meta.sequence_id:null;}
 function highlightPlot(divId,id){const div=document.getElementById(divId);if(!div||!div.data)return;const op=div.data.map(t=>!id||traceSequence(t)===id?1:0.16);const widths=div.data.map(t=>{const w=(t.line&&t.line.width)||4;return !id||traceSequence(t)===id?Math.max(w,6):Math.max(2,w*.55);});Plotly.restyle(div,{opacity:op,"line.width":widths});}
 function clearSelection(){DashboardState.selectedCandidate=null;document.querySelectorAll(".selected,.candidate-detail.active").forEach(x=>x.classList.remove("selected","active"));}
@@ -1986,10 +2153,10 @@ const DashboardTabs = {
   summary: new Set(["Recommended candidate"]),
   comparison: new Set(["Evidence table"]),
   evidence: new Set(["Structural integrity", "Reference compatibility", "Read evidence", "ORF structural evidence"]),
-  reasoning: new Set(["Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Biological interpretation"]),
+  reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Interpretive findings"]),
   plots: new Set(["Visualizations", "Candidate-to-candidate structural comparison", "Candidates aligned to shared nucleotide reference", "Candidate versus closest nucleotide reference", "Protein coordinate map", "Protein relatedness", "Read coverage"]),
   downloads: new Set(["Download selected sequences", "Selected candidate sequence"]),
-  expert: new Set(["Rule explorer"])
+  expert: new Set(["Reasoning graph inspector", "Rule explorer"])
 };
 
 function classifyDashboardSections() {
@@ -2004,6 +2171,11 @@ function classifyDashboardSections() {
     evidenceNav.dataset.dashboardTab = "evidence";
     evidenceNav.classList.add("dashboard-panel");
   }
+  const reasoningNav = document.getElementById("reasoning-navigation");
+  if (reasoningNav) {
+    reasoningNav.dataset.dashboardTab = "reasoning";
+    reasoningNav.classList.add("dashboard-panel");
+  }
   document.querySelectorAll("main > section.card").forEach((section) => {
     const heading = section.querySelector(":scope > h2");
     if (!heading) return;
@@ -2014,6 +2186,7 @@ function classifyDashboardSections() {
         section.classList.add("dashboard-panel");
         if (tab === "plots") section.classList.add("plot-panel");
         if (tab === "evidence") section.classList.add("section-panel", "evidence-panel");
+        if (tab === "reasoning") section.classList.add("reasoning-panel");
         assigned.add(section);
         break;
       }
@@ -2085,6 +2258,7 @@ window.addEventListener("load",()=>{
   initialiseDashboardTabs();
   initialiseSectionNavigation("visualization-navigation", "plots");
   initialiseSectionNavigation("evidence-navigation", "evidence");
+  initialiseSectionNavigation("reasoning-navigation", "reasoning");
   document.querySelectorAll(".candidate-switch").forEach((button) => {
     button.addEventListener("click", () => selectCandidate(button.dataset.candidateId));
   });
@@ -2174,7 +2348,9 @@ function updateContigDotplot(candidateId, targetId) {
     : `${item.identity_min.toFixed(1)}–${item.identity_max.toFixed(1)}%`;
   summary.innerHTML = [
     `<span><strong>Pair:</strong> ${item.query_id} vs ${item.target_id}</span>`,
+    `<span><strong>Architecture:</strong> ${item.architecture_summary ? item.architecture_summary.primary_classification : "—"}</span>`,
     `<span><strong>Blocks:</strong> ${item.block_count}</span>`,
+    `<span><strong>Internal gaps:</strong> ${item.architecture_summary ? item.architecture_summary.substantial_internal_gap_count : 0}</span>`,
     `<span><strong>${item.query_id} covered:</strong> ${formatPercent(item.query_coverage)}</span>`,
     `<span><strong>${item.target_id} covered:</strong> ${formatPercent(item.target_coverage)}</span>`,
     `<span><strong>Identity:</strong> ${identity}</span>`,
@@ -2223,7 +2399,11 @@ function updateReferenceDotplot(candidateId) {
     : `${item.identity_min.toFixed(1)}–${item.identity_max.toFixed(1)}%`;
   summary.innerHTML = [
     `<span><strong>Reference:</strong> ${item.reference_id}</span>`,
+    `<span><strong>Architecture:</strong> ${item.architecture_summary ? item.architecture_summary.primary_classification : "—"}</span>`,
     `<span><strong>Blocks:</strong> ${item.block_count}</span>`,
+    `<span><strong>Internal gaps:</strong> ${item.architecture_summary ? item.architecture_summary.substantial_internal_gap_count : 0}</span>`,
+    `<span><strong>Repeated-reference pairs:</strong> ${item.repeated_reference_pair_count || 0}</span>`,
+    `<span><strong>Repeated reference span:</strong> ${(item.duplicated_reference_bases || 0).toLocaleString()} bp</span>`,
     `<span><strong>Candidate covered:</strong> ${formatPercent(item.query_coverage)}</span>`,
     `<span><strong>Reference covered:</strong> ${formatPercent(item.reference_coverage)}</span>`,
     `<span><strong>Identity:</strong> ${identity}</span>`,

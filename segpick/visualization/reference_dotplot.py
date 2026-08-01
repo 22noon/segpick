@@ -14,54 +14,203 @@ def _display_coordinate(position: int, length: int, reverse: bool) -> int:
 
 
 def make_reference_dotplot(result: ReferenceDotplot) -> go.Figure:
-    fig = go.Figure()
+    """Draw every HSP, candidate architecture, and repeated-reference diagnostics."""
+
+    repeated_pairs = result.repeated_reference_pairs()
+    repeated_indices = set(result.repeated_reference_hsp_indices)
+    architecture_blocks = result.architecture_blocks()
+    has_repeated = bool(repeated_pairs)
+    rows = 3 if has_repeated else 2
+    row_heights = [0.68, 0.20, 0.12] if has_repeated else [0.76, 0.24]
+    subplot_titles = (
+        ("Candidate-to-reference HSPs", "Candidate architecture", "Individual HSP lanes")
+        if has_repeated
+        else ("Candidate-to-reference HSPs", "Candidate architecture")
+    )
+    fig = make_subplots(
+        rows=rows,
+        cols=1,
+        shared_xaxes=True,
+        row_heights=row_heights,
+        vertical_spacing=0.07,
+        subplot_titles=subplot_titles,
+    )
     reverse_query = result.display_reverse_complemented
-    for index, hsp in enumerate(result.hsps, start=1):
+
+    ordered_indices = [
+        *[index for index in range(len(result.hsps)) if index not in repeated_indices],
+        *[index for index in range(len(result.hsps)) if index in repeated_indices],
+    ]
+    for index in ordered_indices:
+        hsp = result.hsps[index]
+        repeated = index in repeated_indices
+        x_values = [
+            _display_coordinate(hsp.query_start, result.query_length, reverse_query),
+            _display_coordinate(hsp.query_end, result.query_length, reverse_query),
+        ]
+        customdata = [
+            [hsp.percent_identity, hsp.alignment_length, hsp.bitscore, hsp.evalue, hsp.strand, index + 1, repeated],
+            [hsp.percent_identity, hsp.alignment_length, hsp.bitscore, hsp.evalue, hsp.strand, index + 1, repeated],
+        ]
         fig.add_trace(
             go.Scattergl(
-                x=[
-                    _display_coordinate(hsp.query_start, result.query_length, reverse_query),
-                    _display_coordinate(hsp.query_end, result.query_length, reverse_query),
-                ],
+                x=x_values,
                 y=[hsp.subject_start, hsp.subject_end],
-                mode="lines",
-                name=f"HSP {index}",
-                showlegend=False,
-                line={"width": 4},
-                customdata=[
-                    [hsp.percent_identity, hsp.alignment_length, hsp.bitscore, hsp.evalue, hsp.strand],
-                    [hsp.percent_identity, hsp.alignment_length, hsp.bitscore, hsp.evalue, hsp.strand],
-                ],
+                mode="lines+markers" if repeated else "lines",
+                name="Repeated-reference HSP" if repeated else f"HSP {index + 1}",
+                legendgroup="repeated-reference" if repeated else "ordinary-hsp",
+                showlegend=repeated and index == min(repeated_indices),
+                line={
+                    "width": 7 if repeated else 3,
+                    "color": "#c2410c" if repeated else "#2563eb",
+                    "dash": "dash" if repeated else "solid",
+                },
+                marker={"size": 7, "symbol": "diamond"} if repeated else None,
+                customdata=customdata,
                 hovertemplate=(
+                    "HSP %{customdata[5]}<br>"
                     "Candidate: %{x:,} bp<br>Reference: %{y:,} bp<br>"
                     "Identity: %{customdata[0]:.2f}%<br>"
                     "Alignment: %{customdata[1]:,} bp<br>"
                     "Bitscore: %{customdata[2]:.1f}<br>"
                     "E-value: %{customdata[3]:.2g}<br>"
-                    "Strand: %{customdata[4]}<extra></extra>"
+                    "Strand: %{customdata[4]}<br>"
+                    "Repeated-reference mapping: %{customdata[6]}<extra></extra>"
                 ),
-            )
+            ),
+            row=1,
+            col=1,
         )
+
+    # Contig-centric architecture track. Every block is shown in query order and
+    # labelled through hover with its corresponding reference interval.
+    for block in architecture_blocks:
+        hsp_index = int(block["hsp_index"])
+        query_start, query_end = block["query_interval"]
+        display_start = _display_coordinate(query_start, result.query_length, reverse_query)
+        display_end = _display_coordinate(query_end, result.query_length, reverse_query)
+        repeated = bool(block["repeated_reference_mapping"])
+        reverse_strand = block["strand"] == "-"
+        colour = "#c2410c" if repeated else ("#7c3aed" if reverse_strand else "#2563eb")
+        reference_start, reference_end = block["reference_interval"]
+        custom = [[
+            int(block["order"]),
+            hsp_index + 1,
+            reference_start,
+            reference_end,
+            block["strand"],
+            repeated,
+            float(block["percent_identity"]),
+            int(block["gap_before"]),
+        ]] * 2
+        fig.add_trace(
+            go.Scattergl(
+                x=[display_start, display_end],
+                y=[1, 1],
+                mode="lines+markers",
+                name=(
+                    "Repeated block" if repeated
+                    else ("Reverse-orientation block" if reverse_strand else "Forward block")
+                ),
+                legendgroup=("architecture-repeated" if repeated else f"architecture-{block['strand']}"),
+                showlegend=(
+                    repeated and int(block["order"]) == min(
+                        int(item["order"]) for item in architecture_blocks if item["repeated_reference_mapping"]
+                    )
+                ),
+                line={"width": 16, "color": colour, "dash": "dash" if repeated else "solid"},
+                marker={"size": 6, "symbol": "diamond" if repeated else "circle"},
+                customdata=custom,
+                hovertemplate=(
+                    "Architecture block %{customdata[0]} (HSP %{customdata[1]})<br>"
+                    "Candidate: %{x:,} bp<br>"
+                    "Reference interval: %{customdata[2]:,}–%{customdata[3]:,} bp<br>"
+                    "Strand: %{customdata[4]}<br>"
+                    "Identity: %{customdata[6]:.2f}%<br>"
+                    "Unaligned bases before block: %{customdata[7]:,}<br>"
+                    "Repeated-reference mapping: %{customdata[5]}<extra></extra>"
+                ),
+            ),
+            row=2,
+            col=1,
+        )
+
+    if has_repeated:
+        for index, hsp in enumerate(result.hsps):
+            repeated = index in repeated_indices
+            x_values = [
+                _display_coordinate(hsp.query_start, result.query_length, reverse_query),
+                _display_coordinate(hsp.query_end, result.query_length, reverse_query),
+            ]
+            fig.add_trace(
+                go.Scattergl(
+                    x=x_values,
+                    y=[index + 1, index + 1],
+                    mode="lines+markers",
+                    name=f"HSP {index + 1} lane",
+                    showlegend=False,
+                    line={
+                        "width": 9 if repeated else 5,
+                        "color": "#c2410c" if repeated else "#94a3b8",
+                        "dash": "dash" if repeated else "solid",
+                    },
+                    marker={"size": 6},
+                    customdata=[[index + 1, repeated], [index + 1, repeated]],
+                    hovertemplate=(
+                        "HSP %{customdata[0]} candidate interval<br>"
+                        "Candidate: %{x:,} bp<br>"
+                        "Repeated-reference mapping: %{customdata[1]}<extra></extra>"
+                    ),
+                ),
+                row=3,
+                col=1,
+            )
+
+    for pair_number, pair in enumerate(repeated_pairs, start=1):
+        start, end = pair["reference_interval"]
+        fig.add_hrect(
+            y0=start,
+            y1=end,
+            fillcolor="#fb923c",
+            opacity=0.16,
+            line_width=1,
+            line_color="#c2410c",
+            annotation_text=f"Repeated reference interval {pair_number}: {start:,}–{end:,} bp",
+            annotation_position="top left",
+            row=1,
+            col=1,
+        )
+
+    fig.update_xaxes(range=[0, max(1, result.query_length)], constrain="domain", row=1, col=1)
+    fig.update_yaxes(title_text="Reference position (bp)", range=[0, max(1, result.reference_length)], row=1, col=1)
+    fig.update_xaxes(range=[0, max(1, result.query_length)], row=2, col=1)
+    fig.update_yaxes(title_text="Contig", tickmode="array", tickvals=[1], ticktext=[result.candidate_id], range=[0.55, 1.45], row=2, col=1)
+    if has_repeated:
+        fig.update_xaxes(title_text="Candidate position (bp)", range=[0, max(1, result.query_length)], row=3, col=1)
+        fig.update_yaxes(
+            title_text="HSP",
+            tickmode="array",
+            tickvals=list(range(1, len(result.hsps) + 1)),
+            ticktext=[str(index) for index in range(1, len(result.hsps) + 1)],
+            range=[0.25, len(result.hsps) + 0.75],
+            row=3,
+            col=1,
+        )
+    else:
+        fig.update_xaxes(title_text="Candidate position (bp)", row=2, col=1)
+
+    architecture = result.architecture_summary()
     fig.update_layout(
         title=(
             f"{result.candidate_id} vs {result.reference_id}"
             + (" — reverse-complemented for display" if reverse_query else "")
+            + f"<br><sup>{architecture['primary_classification']}</sup>"
         ),
-        xaxis={
-            "title": "Candidate position (bp)",
-            "range": [0, max(1, result.query_length)],
-            "constrain": "domain",
-        },
-        yaxis={
-            "title": "Reference position (bp)",
-            "range": [0, max(1, result.reference_length)],
-            "scaleanchor": "x",
-            "scaleratio": 1,
-        },
         template="plotly_white",
-        height=560,
-        margin={"l": 70, "r": 30, "t": 70, "b": 65},
+        height=820 if has_repeated else 680,
+        margin={"l": 90, "r": 35, "t": 100, "b": 65},
         hovermode="closest",
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "x": 0},
     )
     return fig
 

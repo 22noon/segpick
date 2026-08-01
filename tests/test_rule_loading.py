@@ -16,6 +16,9 @@ def test_builtin_rules_are_loaded_from_yaml():
     assert {rule.rule_id for rule in candidate_rules} == {
         "possible_assembly_interruption",
         "divergent_structurally_supported_protein",
+        "reference_supported_architecture",
+        "possible_repeated_sequence_architecture",
+        "possible_repeat_associated_assembly_artefact",
     }
     assert {rule.rule_id for rule in gene_rules} == {"possible_split_assembly"}
     assert all(rule.source == "builtin:default_rules.yml" for rule in (*candidate_rules, *gene_rules))
@@ -44,7 +47,7 @@ rules:
 
     candidate_rules, gene_rules = load_active_rules((rule_file,))
 
-    assert len(candidate_rules) == 3
+    assert len(candidate_rules) == 6
     custom = next(rule for rule in candidate_rules if rule.rule_id == "custom_complete_protein")
     assert custom.source == str(rule_file)
     assert custom.references == ("PMID:12345678",)

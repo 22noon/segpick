@@ -1,3 +1,4 @@
+from pathlib import Path
 import json
 
 from Bio.Seq import Seq
@@ -227,9 +228,18 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert 'comparison: new Set(["Evidence table"])' in html
     assert 'evidence: new Set(["Structural integrity", "Reference compatibility", "Read evidence", "ORF structural evidence"])' in html
     assert 'downloads: new Set(["Download selected sequences", "Selected candidate sequence"])' in html
-    assert 'expert: new Set(["Rule explorer"])' in html
+    assert 'expert: new Set(["Reasoning graph inspector", "Rule explorer"])' in html
+    assert 'id="reasoning-graph-inspector"' in html
     assert 'id="visualization-navigation"' in html
     assert 'id="evidence-navigation"' in html
+    assert 'id="reasoning-navigation"' in html
+    assert 'id="reasoning-path-panel"' in html
+    assert 'href="#cross-evidence-panel"' in html
+    assert 'href="#biological-scenarios-panel"' in html
+    assert 'href="#biological-hypotheses-panel"' in html
+    assert 'href="#biological-interpretation-panel"' in html
+    assert 'reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Interpretive findings"])' in html
+    assert 'initialiseSectionNavigation("reasoning-navigation", "reasoning")' in html
     assert 'href="#structural-integrity-panel"' in html
     assert 'href="#reference-compatibility-panel"' in html
     assert 'href="#read-evidence-panel"' in html
@@ -237,6 +247,13 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert '.explanatory-details summary' in html
     assert 'initialiseSectionNavigation("evidence-navigation", "evidence")' in html
     assert 'href="#protein-relatedness-panel"' in html
+    template_content = (Path(__file__).resolve().parents[1] / "segpick" / "reporting" / "templates" / "gene.html").read_text()
+    assert 'href="#closest-reference-panel" class="structural-alignment-link">Reference dot plot · repeated mappings highlighted</a>' in template_content
+    assert 'href="#reference-dotplot-panel">Reference dot plot</a>' not in template_content
+    assert '"%.2f"|format(view.recommendation.score)' in template_content
+    assert 'display_measurement(measurement.value)' in template_content
+    assert '#tab-reasoning > .reasoning-panel { margin-left:236px;' in template_content
+    assert '\n    .reasoning-panel { margin-left:236px;' not in template_content
     assert '<h2>Protein relatedness</h2>' in html
     assert '.view-visualization-link' in html
     assert 'if (tab === "plots") section.classList.add("plot-panel")' in html
@@ -271,7 +288,7 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert "Assembly-level review" in html
     assert "Local evidence convergence" in html
     assert "AA 39–45" in html
-    assert "Biological interpretation" in html
+    assert "Interpretive findings" in html
     assert "Possible assembly interruption" in html
     assert "Possible split assembly" in html
     assert "Required matches" in html
@@ -328,9 +345,9 @@ def test_dashboard_shows_empty_hypothesis_state(tmp_path) -> None:
 
     html = (tmp_path / "genes" / "VP2.html").read_text()
 
-    assert "Biological interpretation" in html
-    assert "No rule-based biological hypotheses were generated." in html
-    assert "No current hypothesis rule matched" in html
+    assert "Interpretive findings" in html
+    assert "No rule-based interpretive findings were generated." in html
+    assert "No current interpretive rule matched" in html
 
 
 def test_gene_template_contains_reference_dotplot_panel():
@@ -355,3 +372,14 @@ def test_gene_template_explains_structural_integrity_score():
     assert "How the score is calculated" in content
     assert "orientation consistency" in content.lower()
     assert "Nucleotide percentage identity is intentionally excluded" in content
+
+
+def test_graph_inspector_uses_evidence_synthesis_terminology(tmp_path):
+    from segpick.reasoning.graph import build_reasoning_graph
+
+    sample, recommendations = make_sample()
+    for candidate in sample.genes["VP2"].candidates:
+        candidate.analysis.reasoning_graph = build_reasoning_graph(candidate)
+    write_html_dashboard(sample, tmp_path, recommendations=recommendations)
+    html = (tmp_path / "genes" / "VP2.html").read_text()
+    assert "Evidence syntheses" in html

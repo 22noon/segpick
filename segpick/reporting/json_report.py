@@ -120,6 +120,11 @@ def write_gene_json_reports(
                         observation.to_dict()
                         for observation in c.analysis.observations
                     ],
+                    "reasoning_graph": (
+                        c.analysis.reasoning_graph.to_dict()
+                        if c.analysis.reasoning_graph is not None
+                        else None
+                    ),
                 }
             )
         for r in g.references:

@@ -21,6 +21,7 @@ class BiologicalHypothesis:
     rule_source: str = "python"
     rule_description: str = ""
     rule_references: tuple[str, ...] = ()
+    state: str = "provisional"
 
     def to_dict(self) -> dict[str, object]:
         data = asdict(self)

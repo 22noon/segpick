@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 
 from segpick.analysis import analyse_protein_continuity, build_evidence_assessments
 from segpick.models import BiologicalHypothesis, BiologicalScenario, CandidateContig, Gene, RuleEvaluation, ScenarioHypothesis
@@ -432,6 +433,246 @@ class CrossEvidenceFindingView:
     confidence_method_version: str
     limitations: tuple[str, ...]
 
+
+
+@dataclass(frozen=True, slots=True)
+class HypothesisInspectorView:
+    hypothesis_id: str
+    title: str
+    summary: str
+    definition_id: str
+    definition_description: str
+    definition_source: str
+    definition_references: tuple[str, ...]
+    definition_base_confidence: str
+    definition_supported_by: tuple[str, ...]
+    definition_contradicted_by: tuple[str, ...]
+    definition_minimum_support: int
+    evaluation_candidate_ids: tuple[str, ...]
+    evaluation_confidence: str
+    evaluation_state: str
+    evaluation_supporting_synthesis_ids: tuple[str, ...]
+    evaluation_conflicting_synthesis_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ProvenanceStepView:
+    node_id: str
+    node_type: str
+    title: str
+    relationship: str = ""
+    state: str = ""
+    missing: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class ProvenancePathView:
+    hypothesis_id: str
+    hypothesis_title: str
+    hypothesis_state: str
+    steps: tuple[ProvenanceStepView, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ReasoningGraphInspectorView:
+    available: bool
+    valid: bool
+    validation_message: str
+    measurement_count: int
+    observation_count: int
+    interpretation_count: int
+    scenario_count: int
+    hypothesis_count: int
+    builtin_sources: tuple[str, ...]
+    plugin_sources: tuple[str, ...]
+    provenance_paths: tuple[ProvenancePathView, ...]
+    hypotheses: tuple[HypothesisInspectorView, ...]
+    graph_json: str
+
+
+def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> ReasoningGraphInspectorView:
+    graph = candidate.analysis.reasoning_graph
+    if graph is None:
+        return ReasoningGraphInspectorView(
+            available=False, valid=False, validation_message="Reasoning graph unavailable.",
+            measurement_count=0, observation_count=0, interpretation_count=0, scenario_count=0, hypothesis_count=0,
+            builtin_sources=(), plugin_sources=(), provenance_paths=(), hypotheses=(), graph_json="{}",
+        )
+    try:
+        graph.validate()
+        valid = True
+        message = "Graph validated: all referenced provenance nodes are present."
+    except ValueError as exc:
+        valid = False
+        message = str(exc)
+    sources = {item.channel for item in graph.measurements} | {item.source for item in graph.observations}
+    plugin_sources = tuple(sorted(value for value in sources if value.startswith("plugin:")))
+    builtin_sources = tuple(sorted(value for value in sources if not value.startswith("plugin:")))
+    measurement_by_id = {item.id: item for item in graph.measurements}
+    observation_by_id = {item.id: item for item in graph.observations}
+    finding_by_id = {item.id: item for item in graph.interpretive_findings}
+    synthesis_by_id = {item.id: item for item in graph.evidence_syntheses}
+    edges_by_source: dict[str, tuple[object, ...]] = {}
+    for edge in graph.provenance_edges():
+        edges_by_source.setdefault(edge.source_id, ())
+        edges_by_source[edge.source_id] += (edge,)
+
+    def linked_edges(node_id: str) -> tuple[object, ...]:
+        return edges_by_source.get(node_id, ())
+
+    def missing_step(node_id: str, relationship: str) -> ProvenanceStepView:
+        return ProvenanceStepView(
+            node_id=node_id, node_type="missing", title="Missing graph node",
+            relationship=relationship, missing=True,
+        )
+
+    def evidence_paths(
+        evidence_id: str,
+        relationship: str,
+        visited: frozenset[str] = frozenset(),
+    ) -> tuple[tuple[ProvenanceStepView, ...], ...]:
+        if evidence_id in visited:
+            return ((ProvenanceStepView(
+                node_id=evidence_id, node_type="cycle", title="Cycle detected",
+                relationship=relationship, missing=True,
+            ),),)
+        visited = visited | {evidence_id}
+        if evidence_id in finding_by_id:
+            finding = finding_by_id[evidence_id]
+            head = ProvenanceStepView(
+                node_id=finding.id, node_type="interpretive finding", title=finding.title,
+                relationship=relationship, state=finding.state,
+            )
+            links = [
+                (edge.target_id, edge.relationship.replace("_", " "))
+                for edge in linked_edges(finding.id)
+            ]
+            if not links:
+                return ((head, missing_step(finding.id, "no evidence link")),)
+            return tuple(
+                (head, *tail)
+                for nested_id, nested_relation in links
+                for tail in evidence_paths(nested_id, nested_relation, visited)
+            )
+        if evidence_id in observation_by_id:
+            observation = observation_by_id[evidence_id]
+            head = ProvenanceStepView(
+                node_id=observation.id, node_type="observation",
+                title=observation.description, relationship=relationship,
+                state=observation.severity,
+            )
+            measurement_edges = linked_edges(observation.id)
+            if not measurement_edges:
+                return ((head,),)
+            paths = []
+            for edge in measurement_edges:
+                measurement_id = edge.target_id
+                measurement = measurement_by_id.get(measurement_id)
+                if measurement is None:
+                    paths.append((head, missing_step(measurement_id, "supported by")))
+                else:
+                    value = measurement.value
+                    if measurement.unit:
+                        value = f"{value} {measurement.unit}"
+                    paths.append((head, ProvenanceStepView(
+                        node_id=measurement.id, node_type="measurement",
+                        title=f"{measurement.name}: {value}", relationship=edge.relationship.replace("_", " "),
+                        state=measurement.channel,
+                    )))
+            return tuple(paths)
+        if evidence_id in measurement_by_id:
+            measurement = measurement_by_id[evidence_id]
+            value = measurement.value
+            if measurement.unit:
+                value = f"{value} {measurement.unit}"
+            return ((ProvenanceStepView(
+                node_id=measurement.id, node_type="measurement",
+                title=f"{measurement.name}: {value}", relationship=relationship,
+                state=measurement.channel,
+            ),),)
+        return ((missing_step(evidence_id, relationship),),)
+
+    paths: list[ProvenancePathView] = []
+    for hypothesis in graph.biological_hypotheses:
+        hypothesis_step = ProvenanceStepView(
+            node_id=hypothesis.id, node_type="biological hypothesis",
+            title=hypothesis.title, state=hypothesis.state,
+        )
+        hypothesis_links = [
+            (edge.target_id, edge.relationship.replace("_", " "))
+            for edge in linked_edges(hypothesis.id)
+        ]
+        if not hypothesis_links:
+            paths.append(ProvenancePathView(
+                hypothesis_id=hypothesis.id, hypothesis_title=hypothesis.title,
+                hypothesis_state=hypothesis.state,
+                steps=(hypothesis_step, missing_step(hypothesis.id, "no evidence link")),
+            ))
+            continue
+        for evidence_id, relation in hypothesis_links:
+            if evidence_id in synthesis_by_id:
+                synthesis = synthesis_by_id[evidence_id]
+                synthesis_step = ProvenanceStepView(
+                    node_id=synthesis.id, node_type="evidence synthesis",
+                    title=synthesis.title, relationship=relation, state=synthesis.confidence,
+                )
+                synthesis_links = [
+                    (edge.target_id, edge.relationship.replace("_", " "))
+                    for edge in linked_edges(synthesis.id)
+                ]
+                if not synthesis_links:
+                    paths.append(ProvenancePathView(
+                        hypothesis_id=hypothesis.id, hypothesis_title=hypothesis.title,
+                        hypothesis_state=hypothesis.state,
+                        steps=(hypothesis_step, synthesis_step, missing_step(synthesis.id, "no evidence link")),
+                    ))
+                else:
+                    for nested_id, nested_relation in synthesis_links:
+                        for tail in evidence_paths(nested_id, nested_relation):
+                            paths.append(ProvenancePathView(
+                                hypothesis_id=hypothesis.id, hypothesis_title=hypothesis.title,
+                                hypothesis_state=hypothesis.state,
+                                steps=(hypothesis_step, synthesis_step, *tail),
+                            ))
+            else:
+                for tail in evidence_paths(evidence_id, relation):
+                    paths.append(ProvenancePathView(
+                        hypothesis_id=hypothesis.id, hypothesis_title=hypothesis.title,
+                        hypothesis_state=hypothesis.state,
+                        steps=(hypothesis_step, *tail),
+                    ))
+    hypothesis_views = tuple(
+        HypothesisInspectorView(
+            hypothesis_id=item.id,
+            title=item.title,
+            summary=item.summary,
+            definition_id=item.definition_id or item.rule_id,
+            definition_description=item.rule_description,
+            definition_source=item.rule_source,
+            definition_references=item.rule_references,
+            definition_base_confidence=item.definition_base_confidence,
+            definition_supported_by=item.definition_supported_by,
+            definition_contradicted_by=item.definition_contradicted_by,
+            definition_minimum_support=item.definition_minimum_support,
+            evaluation_candidate_ids=item.evaluation_candidate_ids,
+            evaluation_confidence=item.confidence,
+            evaluation_state=item.state,
+            evaluation_supporting_synthesis_ids=item.evaluation_supporting_synthesis_ids,
+            evaluation_conflicting_synthesis_ids=item.evaluation_conflicting_synthesis_ids,
+        )
+        for item in graph.biological_hypotheses
+    )
+    return ReasoningGraphInspectorView(
+        available=True, valid=valid, validation_message=message,
+        measurement_count=len(graph.measurements), observation_count=len(graph.observations),
+        interpretation_count=len(graph.interpretive_findings), scenario_count=len(graph.evidence_syntheses),
+        hypothesis_count=len(graph.biological_hypotheses),
+        builtin_sources=builtin_sources, plugin_sources=plugin_sources,
+        provenance_paths=tuple(paths), hypotheses=hypothesis_views,
+        graph_json=json.dumps(graph.to_dict(), indent=2, sort_keys=True) if valid else "{}",
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class CandidateView:
     candidate_id: str
@@ -471,6 +712,7 @@ class CandidateView:
     scenarios: tuple[ScenarioView, ...]
     scenario_hypotheses: tuple[ScenarioHypothesisView, ...]
     cross_evidence_findings: tuple[CrossEvidenceFindingView, ...]
+    reasoning_graph: ReasoningGraphInspectorView
 
 
 @dataclass(frozen=True, slots=True)
@@ -792,6 +1034,7 @@ def build_gene_page_view(
                 )
                 for item in candidate.analysis.cross_evidence_findings
             ),
+            reasoning_graph=build_reasoning_graph_inspector_view(candidate),
         )
         for candidate in gene.candidates
     )

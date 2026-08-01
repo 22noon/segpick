@@ -30,7 +30,7 @@ class RuleCondition:
         if self.kind == "observation":
             return any(
                 item.observation_type == self.value
-                and (self.source is None or item.source.value == self.source)
+                and (self.source is None or item.source_name == self.source)
                 for item in observations
             )
         return any(
