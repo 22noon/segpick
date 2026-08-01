@@ -42,12 +42,21 @@ class EvidencePatternEvaluation:
     source: str = "builtin"
     references: tuple[str, ...] = ()
     evidence_provenance: tuple[EvidencePatternProvenance, ...] = ()
+    state: str = "matched"
+    missing_required: tuple[str, ...] = ()
+    missing_supporting: tuple[str, ...] = ()
+    unused_findings: tuple[str, ...] = ()
+
+    @property
+    def pattern_id(self) -> str:
+        return self.scenario_id
 
     def to_dict(self) -> dict[str, object]:
         data = asdict(self)
         for key in (
             "candidate_ids", "matched_required", "matched_supporting",
             "matched_conflicting", "suggested_actions", "references",
+            "missing_required", "missing_supporting", "unused_findings",
         ):
             data[key] = list(data[key])
         data["evidence_provenance"] = [item.to_dict() for item in self.evidence_provenance]

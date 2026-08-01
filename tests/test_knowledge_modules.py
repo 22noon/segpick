@@ -225,3 +225,51 @@ def test_reference_compatibility_vocabulary_is_loaded():
     )
     assert condition.display_name == "Internal candidate region lacks reference support"
     assert "closest reference" in condition.description
+
+
+def test_evidence_pattern_evaluation_records_missing_support_and_conflict_state():
+    from segpick.knowledge.schema import EvidencePatternDefinition
+    from segpick.reasoning.rules import RuleCondition
+
+    definition = EvidencePatternDefinition(
+        scenario_id="test_pattern",
+        title="Test pattern",
+        category="test",
+        scope="candidate",
+        severity="review",
+        base_confidence="moderate",
+        interpretation="Test interpretation.",
+        requires=(RuleCondition("observation", "required_signal"),),
+        supports=(RuleCondition("observation", "optional_signal"),),
+        conflicts=(RuleCondition("observation", "conflicting_signal"),),
+    )
+    observations = (
+        EvidenceObservation("required_signal", ObservationSource.STRUCTURAL_ALIGNMENT, "required"),
+        EvidenceObservation("conflicting_signal", ObservationSource.READ_COVERAGE, "conflict"),
+    )
+
+    evaluation = evaluate_scenarios((definition,), observations, (), candidate_ids=("c1",))[0]
+
+    assert evaluation.state == "contradicted"
+    assert evaluation.matched_required == ("observation:required_signal",)
+    assert evaluation.missing_supporting == ("observation:optional_signal",)
+    assert evaluation.matched_conflicting == ("observation:conflicting_signal",)
+    assert evaluation.confidence == "low"
+
+
+def test_evidence_pattern_engine_still_omits_patterns_with_missing_requirements():
+    from segpick.knowledge.schema import EvidencePatternDefinition
+    from segpick.reasoning.rules import RuleCondition
+
+    definition = EvidencePatternDefinition(
+        scenario_id="incomplete_pattern",
+        title="Incomplete pattern",
+        category="test",
+        scope="candidate",
+        severity="review",
+        base_confidence="moderate",
+        interpretation="Test interpretation.",
+        requires=(RuleCondition("observation", "required_signal"),),
+    )
+
+    assert evaluate_scenarios((definition,), (), (), candidate_ids=("c1",)) == ()

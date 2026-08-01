@@ -81,35 +81,55 @@ def evaluate_scenarios(modules, observations, findings, candidate_ids=()):
     out = []
     for module in modules:
         required_conditions = tuple(c for c in module.requires if c.matches(observations, findings))
-        if len(required_conditions) != len(module.requires):
+        missing_required = tuple(c for c in module.requires if c not in required_conditions)
+        if missing_required:
             continue
+
         supporting_conditions = tuple(c for c in module.supports if c.matches(observations, findings))
+        missing_supporting = tuple(c for c in module.supports if c not in supporting_conditions)
         conflicting_conditions = tuple(c for c in module.conflicts if c.matches(observations, findings))
+
         confidence_index = _ORDER.index(module.base_confidence)
         if supporting_conditions and not conflicting_conditions:
             confidence_index = min(2, confidence_index + 1)
         if conflicting_conditions:
             confidence_index = max(0, confidence_index - 1)
+
         matched = required_conditions + supporting_conditions + conflicting_conditions
         provenance = tuple(
             _condition_provenance(condition, observations, findings)
             for condition in matched
         )
+
+        referenced_finding_titles = {
+            condition.value
+            for condition in module.requires + module.supports + module.conflicts
+            if condition.kind == "finding"
+        }
+        unused_findings = tuple(dict.fromkeys(
+            item.title for item in findings
+            if item.title not in referenced_finding_titles
+        ))
+
         out.append(EvidencePatternEvaluation(
-            module.scenario_id,
-            module.title,
-            module.category,
-            module.scope,
-            _ORDER[confidence_index],
-            module.severity,
-            module.interpretation,
-            candidate_ids,
-            tuple(c.label for c in required_conditions),
-            tuple(c.label for c in supporting_conditions),
-            tuple(c.label for c in conflicting_conditions),
-            module.suggested_actions,
-            module.source,
-            module.references,
-            provenance,
+            scenario_id=module.scenario_id,
+            title=module.title,
+            category=module.category,
+            scope=module.scope,
+            confidence=_ORDER[confidence_index],
+            severity=module.severity,
+            interpretation=module.interpretation,
+            candidate_ids=candidate_ids,
+            matched_required=tuple(c.label for c in required_conditions),
+            matched_supporting=tuple(c.label for c in supporting_conditions),
+            matched_conflicting=tuple(c.label for c in conflicting_conditions),
+            suggested_actions=module.suggested_actions,
+            source=module.source,
+            references=module.references,
+            evidence_provenance=provenance,
+            state="contradicted" if conflicting_conditions else "matched",
+            missing_required=tuple(c.label for c in missing_required),
+            missing_supporting=tuple(c.label for c in missing_supporting),
+            unused_findings=unused_findings,
         ))
     return tuple(out)
