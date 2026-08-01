@@ -1,5 +1,5 @@
 version: 1
-scenarios:
+evidence_patterns:
   - id: coverage_supported_assembly_breakpoint
     title: Coverage-supported assembly breakpoint
     category: assembly

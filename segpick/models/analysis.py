@@ -7,8 +7,8 @@ from .boundary_coverage import BoundaryCoverageAssessment
 from .blastx_anchored_orf import BlastXAnchoredORF
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
-from .scenario import BiologicalScenario
-from .scenario_hypothesis import ScenarioHypothesis
+from .evidence_pattern import EvidencePatternEvaluation
+from .hypothesis_evaluation import HypothesisEvaluation
 from .blastx_consistency import BlastXConsistency
 from .convergence import EvidenceConvergence
 from .orf import ORFMetrics
@@ -49,8 +49,9 @@ class ContigAnalysis:
     convergences: tuple[EvidenceConvergence, ...] = ()
     findings: tuple[BiologicalFinding, ...] = ()
     hypotheses: tuple[BiologicalHypothesis, ...] = ()
-    scenarios: tuple[BiologicalScenario, ...] = ()
-    scenario_hypotheses: tuple[ScenarioHypothesis, ...] = ()
+    evidence_patterns: tuple[EvidencePatternEvaluation, ...] = ()
+    unresolved_evidence_patterns: tuple[EvidencePatternEvaluation, ...] = ()
+    biological_hypothesis_evaluations: tuple[HypothesisEvaluation, ...] = ()
     evidence_assessments: tuple[EvidenceAssessment, ...] = ()
     cross_evidence_findings: tuple[CrossEvidenceFinding, ...] = ()
     rule_evaluations: tuple[RuleEvaluation, ...] = ()
@@ -59,3 +60,4 @@ class ContigAnalysis:
     recommendation_reason: str | None = None
     plugin_measurements: tuple[MeasurementNode, ...] = ()
     reasoning_graph: ReasoningGraph | None = None
+

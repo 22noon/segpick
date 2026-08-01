@@ -1,15 +1,15 @@
 from segpick.knowledge import HypothesisDefinition, HypothesisModule, evaluate_hypotheses
 from segpick.models import (
-    BiologicalScenario,
+    EvidencePatternEvaluation,
     HypothesisEvaluation,
-    ScenarioHypothesis,
+    HypothesisEvaluation,
 )
 
 
-def _scenario(scenario_id: str, candidate_id: str) -> BiologicalScenario:
-    return BiologicalScenario(
-        scenario_id=scenario_id,
-        title=scenario_id.replace("_", " ").title(),
+def _pattern(pattern_id: str, candidate_id: str) -> EvidencePatternEvaluation:
+    return EvidencePatternEvaluation(
+        pattern_id=pattern_id,
+        title=pattern_id.replace("_", " ").title(),
         category="structure",
         scope="candidate",
         confidence="moderate",
@@ -49,14 +49,14 @@ def test_hypothesis_evaluation_is_canonical_result_class():
 
     result = evaluate_hypotheses(
         (definition,),
-        (_scenario("duplication_pattern", "contig_a"),),
+        (_pattern("duplication_pattern", "contig_a"),),
     )[0]
 
-    assert ScenarioHypothesis is HypothesisEvaluation
+    assert HypothesisEvaluation is HypothesisEvaluation
     assert isinstance(result, HypothesisEvaluation)
     assert result.hypothesis_id == definition.hypothesis_id
     assert result.candidate_ids == ("contig_a",)
-    assert result.supporting_scenarios == ("duplication_pattern",)
+    assert result.supporting_patterns == ("duplication_pattern",)
 
 
 def test_one_definition_produces_independent_candidate_evaluations():
@@ -73,11 +73,11 @@ def test_one_definition_produces_independent_candidate_evaluations():
 
     first = evaluate_hypotheses(
         (definition,),
-        (_scenario("fragmented_pattern", "contig_a"),),
+        (_pattern("fragmented_pattern", "contig_a"),),
     )[0]
     second = evaluate_hypotheses(
         (definition,),
-        (_scenario("fragmented_pattern", "contig_b"),),
+        (_pattern("fragmented_pattern", "contig_b"),),
     )[0]
 
     assert first.candidate_ids == ("contig_a",)
@@ -99,8 +99,8 @@ def test_hypothesis_evaluation_preserves_definition_snapshot():
         contradicted_by=("breakpoint_loss",),
         minimum_support=1,
     )
-    scenario = BiologicalScenario(
-        scenario_id="repeat_with_continuity",
+    pattern = EvidencePatternEvaluation(
+        pattern_id="repeat_with_continuity",
         title="Repeat with continuity",
         category="structure",
         scope="candidate",
@@ -109,7 +109,7 @@ def test_hypothesis_evaluation_preserves_definition_snapshot():
         interpretation="Repeated structure retains continuity.",
     )
 
-    result = evaluate_hypotheses((definition,), (scenario,), candidate_ids=("contig_a",))[0]
+    result = evaluate_hypotheses((definition,), (pattern,), candidate_ids=("contig_a",))[0]
 
     assert result.base_confidence == "moderate"
     assert result.definition_supported_by == ("repeat_with_continuity",)

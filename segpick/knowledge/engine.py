@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from segpick.models import BiologicalScenario, ScenarioEvidenceProvenance
-from .schema import KnowledgeModule
+from segpick.models import EvidencePatternEvaluation, EvidencePatternProvenance
+from .schema import EvidencePatternDefinition
 
 _ORDER = ("low", "moderate", "high")
 
@@ -49,7 +49,7 @@ def _condition_provenance(condition, observations, findings):
                     "length": item.length,
                 })
         source = condition.source or (matches[0].source_name if matches else None)
-        return ScenarioEvidenceProvenance(
+        return EvidencePatternProvenance(
             condition=condition.label,
             kind="observation",
             source=source,
@@ -66,7 +66,7 @@ def _condition_provenance(condition, observations, findings):
     )
     sources = tuple(dict.fromkeys(source for item in matches for source in item.sources))
     source = condition.source or (sources[0] if len(sources) == 1 else None)
-    return ScenarioEvidenceProvenance(
+    return EvidencePatternProvenance(
         condition=condition.label,
         kind="finding",
         source=source,
@@ -77,39 +77,64 @@ def _condition_provenance(condition, observations, findings):
     )
 
 
-def evaluate_scenarios(modules, observations, findings, candidate_ids=()):
+def evaluate_evidence_patterns(definitions, observations, findings, candidate_ids=(), include_incomplete=False):
     out = []
-    for module in modules:
-        required_conditions = tuple(c for c in module.requires if c.matches(observations, findings))
-        if len(required_conditions) != len(module.requires):
+    for definition in definitions:
+        required_conditions = tuple(c for c in definition.requires if c.matches(observations, findings))
+        missing_required = tuple(c for c in definition.requires if c not in required_conditions)
+        if missing_required and not include_incomplete:
             continue
-        supporting_conditions = tuple(c for c in module.supports if c.matches(observations, findings))
-        conflicting_conditions = tuple(c for c in module.conflicts if c.matches(observations, findings))
-        confidence_index = _ORDER.index(module.base_confidence)
+
+        supporting_conditions = tuple(c for c in definition.supports if c.matches(observations, findings))
+        missing_supporting = tuple(c for c in definition.supports if c not in supporting_conditions)
+        conflicting_conditions = tuple(c for c in definition.conflicts if c.matches(observations, findings))
+
+        confidence_index = _ORDER.index(definition.base_confidence)
         if supporting_conditions and not conflicting_conditions:
             confidence_index = min(2, confidence_index + 1)
         if conflicting_conditions:
             confidence_index = max(0, confidence_index - 1)
+
         matched = required_conditions + supporting_conditions + conflicting_conditions
         provenance = tuple(
             _condition_provenance(condition, observations, findings)
             for condition in matched
         )
-        out.append(BiologicalScenario(
-            module.scenario_id,
-            module.title,
-            module.category,
-            module.scope,
-            _ORDER[confidence_index],
-            module.severity,
-            module.interpretation,
-            candidate_ids,
-            tuple(c.label for c in required_conditions),
-            tuple(c.label for c in supporting_conditions),
-            tuple(c.label for c in conflicting_conditions),
-            module.suggested_actions,
-            module.source,
-            module.references,
-            provenance,
+
+        referenced_finding_titles = {
+            condition.value
+            for condition in definition.requires + definition.supports + definition.conflicts
+            if condition.kind == "finding"
+        }
+        unused_findings = tuple(dict.fromkeys(
+            item.title for item in findings
+            if item.title not in referenced_finding_titles
+        ))
+
+        out.append(EvidencePatternEvaluation(
+            pattern_id=definition.pattern_id,
+            title=definition.title,
+            category=definition.category,
+            scope=definition.scope,
+            confidence=_ORDER[confidence_index],
+            severity=definition.severity,
+            interpretation=definition.interpretation,
+            candidate_ids=candidate_ids,
+            matched_required=tuple(c.label for c in required_conditions),
+            matched_supporting=tuple(c.label for c in supporting_conditions),
+            matched_conflicting=tuple(c.label for c in conflicting_conditions),
+            suggested_actions=definition.suggested_actions,
+            source=definition.source,
+            references=definition.references,
+            evidence_provenance=provenance,
+            state=(
+                "not_evaluable" if len(missing_required) == len(definition.requires) and not supporting_conditions and not conflicting_conditions
+                else "partially_matched" if missing_required
+                else "contradicted" if conflicting_conditions
+                else "matched"
+            ),
+            missing_required=tuple(c.label for c in missing_required),
+            missing_supporting=tuple(c.label for c in missing_supporting),
+            unused_findings=unused_findings,
         ))
     return tuple(out)

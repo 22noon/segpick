@@ -235,10 +235,10 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert 'id="reasoning-navigation"' in html
     assert 'id="reasoning-path-panel"' in html
     assert 'href="#cross-evidence-panel"' in html
-    assert 'href="#biological-scenarios-panel"' in html
+    assert 'href="#evidence-patterns-panel"' in html
     assert 'href="#biological-hypotheses-panel"' in html
     assert 'href="#biological-interpretation-panel"' in html
-    assert 'reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Interpretive findings"])' in html
+    assert 'reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Evidence patterns", "Unresolved evidence patterns", "Interpretive findings"])' in html
     assert 'initialiseSectionNavigation("reasoning-navigation", "reasoning")' in html
     assert 'href="#structural-integrity-panel"' in html
     assert 'href="#reference-compatibility-panel"' in html
@@ -248,6 +248,13 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert 'initialiseSectionNavigation("evidence-navigation", "evidence")' in html
     assert 'href="#protein-relatedness-panel"' in html
     template_content = (Path(__file__).resolve().parents[1] / "segpick" / "reporting" / "templates" / "gene.html").read_text()
+    assert "Download LLM reasoning bundle" in template_content
+    assert "Download bundle schema" in template_content
+    assert "Download AI output schema" in template_content
+    assert "Download LLM review package ZIP" in template_content
+    assert "No candidate data is sent to an external model" in template_content
+    assert "data-llm-bundle-candidate" in template_content
+    assert "data-llm-package-candidate" in template_content
     assert 'href="#closest-reference-panel" class="structural-alignment-link">Reference dot plot · repeated mappings highlighted</a>' in template_content
     assert 'href="#reference-dotplot-panel">Reference dot plot</a>' not in template_content
     assert '"%.2f"|format(view.recommendation.score)' in template_content
@@ -382,4 +389,4 @@ def test_graph_inspector_uses_evidence_synthesis_terminology(tmp_path):
         candidate.analysis.reasoning_graph = build_reasoning_graph(candidate)
     write_html_dashboard(sample, tmp_path, recommendations=recommendations)
     html = (tmp_path / "genes" / "VP2.html").read_text()
-    assert "Evidence syntheses" in html
+    assert "Evidence patterns" in html

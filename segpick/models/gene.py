@@ -7,8 +7,8 @@ from .contig import CandidateContig
 from .contig_dotplot import ContigDotplot
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
-from .scenario import BiologicalScenario
-from .scenario_hypothesis import ScenarioHypothesis
+from .evidence_pattern import EvidencePatternEvaluation
+from .hypothesis_evaluation import HypothesisEvaluation
 from .reference import ReferenceSequence
 from .rule_evaluation import RuleEvaluation
 
@@ -26,10 +26,12 @@ class Gene:
     recommendation: CandidateContig | None = None
     findings: tuple[BiologicalFinding, ...] = ()
     hypotheses: tuple[BiologicalHypothesis, ...] = ()
-    scenarios: tuple[BiologicalScenario, ...] = ()
-    scenario_hypotheses: tuple[ScenarioHypothesis, ...] = ()
+    evidence_patterns: tuple[EvidencePatternEvaluation, ...] = ()
+    biological_hypothesis_evaluations: tuple[HypothesisEvaluation, ...] = ()
     rule_evaluations: tuple[RuleEvaluation, ...] = ()
     contig_dotplots: tuple[ContigDotplot, ...] = ()
+
+
 
     def add_candidate(self, contig: CandidateContig) -> None:
         self.candidates.append(contig)

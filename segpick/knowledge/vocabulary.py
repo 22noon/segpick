@@ -80,7 +80,7 @@ def describe_condition(label: str, vocabulary: dict[str, VocabularyEntry] | None
 
     if kind == "finding":
         display_name = identifier
-        description = "Biological finding supporting this scenario."
+        description = "Biological finding supporting this evidence pattern."
     else:
         entry = vocabulary.get(identifier)
         display_name = entry.display_name if entry else _humanise_identifier(identifier)

@@ -5,8 +5,8 @@ from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
-class ScenarioEvidenceProvenance:
-    """Trace one matched scenario condition back to observations or findings."""
+class EvidencePatternProvenance:
+    """Trace one matched pattern condition back to observations or findings."""
 
     condition: str
     kind: str
@@ -26,8 +26,8 @@ class ScenarioEvidenceProvenance:
 
 
 @dataclass(frozen=True, slots=True)
-class BiologicalScenario:
-    scenario_id: str
+class EvidencePatternEvaluation:
+    pattern_id: str
     title: str
     category: str
     scope: str
@@ -41,13 +41,18 @@ class BiologicalScenario:
     suggested_actions: tuple[str, ...] = ()
     source: str = "builtin"
     references: tuple[str, ...] = ()
-    evidence_provenance: tuple[ScenarioEvidenceProvenance, ...] = ()
+    evidence_provenance: tuple[EvidencePatternProvenance, ...] = ()
+    state: str = "matched"
+    missing_required: tuple[str, ...] = ()
+    missing_supporting: tuple[str, ...] = ()
+    unused_findings: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         data = asdict(self)
         for key in (
             "candidate_ids", "matched_required", "matched_supporting",
             "matched_conflicting", "suggested_actions", "references",
+            "missing_required", "missing_supporting", "unused_findings",
         ):
             data[key] = list(data[key])
         data["evidence_provenance"] = [item.to_dict() for item in self.evidence_provenance]

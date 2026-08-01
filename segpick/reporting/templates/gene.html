@@ -731,13 +731,13 @@
     .contig-dotplot-controls select { min-width:240px; padding:.45rem .6rem; border:1px solid #cbd5e1; border-radius:.45rem; background:white; }
 
 
-    .scenario-summary { display:grid; grid-template-columns:1fr auto; gap:.35rem 1rem; align-items:center; cursor:pointer; padding:.85rem 1rem; }
-    .scenario-summary::-webkit-details-marker, .provenance-summary::-webkit-details-marker { display:none; }
-    .scenario-summary::before, .provenance-summary::before { content:"▸"; margin-right:.45rem; color:#64748b; }
-    details[open] > .scenario-summary::before, details[open] > .provenance-summary::before { content:"▾"; }
-    .scenario-counts { font-size:.85rem; color:#64748b; grid-column:1 / -1; }
-    .scenario-body { padding:0 1rem 1rem; border-top:1px solid #e2e8f0; }
-    .scenario-evidence-list { display:grid; gap:.5rem; margin:.65rem 0 1rem; }
+    .evidence-pattern-summary { display:grid; grid-template-columns:1fr auto; gap:.35rem 1rem; align-items:center; cursor:pointer; padding:.85rem 1rem; }
+    .evidence-pattern-summary::-webkit-details-marker, .provenance-summary::-webkit-details-marker { display:none; }
+    .evidence-pattern-summary::before, .provenance-summary::before { content:"▸"; margin-right:.45rem; color:#64748b; }
+    details[open] > .evidence-pattern-summary::before, details[open] > .provenance-summary::before { content:"▾"; }
+    .evidence-pattern-counts { font-size:.85rem; color:#64748b; grid-column:1 / -1; }
+    .evidence-pattern-body { padding:0 1rem 1rem; border-top:1px solid #e2e8f0; }
+    .evidence-pattern-evidence-list { display:grid; gap:.5rem; margin:.65rem 0 1rem; }
     .provenance-item { border:1px solid #e2e8f0; border-radius:.55rem; background:#fff; }
     .provenance-summary { cursor:pointer; padding:.65rem .75rem; display:block; }
     .provenance-detail { padding:0 .9rem .85rem 2rem; color:#334155; }
@@ -927,7 +927,7 @@
   {% macro evidence_group(title, items) -%}
     {% if items %}
       <h4>{{ title }}</h4>
-      <div class="scenario-evidence-list">
+      <div class="evidence-pattern-evidence-list">
       {% for item in items %}
         <details class="provenance-item">
           <summary class="provenance-summary">
@@ -971,26 +971,29 @@
     {% endif %}
   {%- endmacro %}
 
-  {% macro scenario_card(scenario) -%}
-    <details class="hypothesis-item scenario-item">
-      <summary class="scenario-summary">
-        <span><strong>{{ scenario.title }}</strong></span>
-        <span class="hypothesis-badge confidence-{{ scenario.confidence }}">{{ scenario.confidence|upper }}</span>
-        <span class="scenario-counts">{{ scenario.matched_required|length + scenario.matched_supporting|length }} supporting observations{% if scenario.matched_conflicting %} · {{ scenario.matched_conflicting|length }} conflict{% if scenario.matched_conflicting|length != 1 %}s{% endif %}{% endif %} · Examine evidence</span>
+  {% macro evidence_pattern_card(pattern) -%}
+    <details class="hypothesis-item evidence-pattern-item">
+      <summary class="evidence-pattern-summary">
+        <span><strong>{{ pattern.title }}</strong></span>
+        <span class="hypothesis-badge confidence-{{ pattern.confidence }}">{{ pattern.confidence|upper }}</span>
+        <span class="hypothesis-scope muted">{{ pattern.state|replace("_", " ")|title }}</span>
+        <span class="evidence-pattern-counts">{{ pattern.matched_required|length + pattern.matched_supporting|length }} supporting observations{% if pattern.matched_conflicting %} · {{ pattern.matched_conflicting|length }} conflict{% if pattern.matched_conflicting|length != 1 %}s{% endif %}{% endif %} · Examine evidence</span>
       </summary>
-      <div class="scenario-body">
-        <p>{{ scenario.interpretation }}</p>
-        {{ evidence_group('Required evidence', scenario.matched_required) }}
-        {{ evidence_group('Supporting evidence', scenario.matched_supporting) }}
-        {{ evidence_group('Conflicting evidence', scenario.matched_conflicting) }}
-        {% if scenario.suggested_actions %}<h4>Suggested checks</h4><ul>{% for action in scenario.suggested_actions %}<li>{{ action }}</li>{% endfor %}</ul>{% endif %}
-        <p class="hypothesis-meta">{{ scenario.scenario_id }} · {{ scenario.source }}</p>
+      <div class="evidence-pattern-body">
+        <p>{{ pattern.interpretation }}</p>
+        {{ evidence_group('Required evidence', pattern.matched_required) }}
+        {{ evidence_group('Supporting evidence', pattern.matched_supporting) }}
+        {{ evidence_group('Conflicting evidence', pattern.matched_conflicting) }}
+        {{ evidence_group('Missing required evidence', pattern.missing_required) }}
+        {{ evidence_group('Missing supporting evidence', pattern.missing_supporting) }}
+        {% if pattern.suggested_actions %}<h4>Suggested checks</h4><ul>{% for action in pattern.suggested_actions %}<li>{{ action }}</li>{% endfor %}</ul>{% endif %}
+        <p class="hypothesis-meta">{{ pattern.pattern_id }} · {{ pattern.source }}</p>
       </div>
     </details>
   {%- endmacro %}
 
-  {% macro scenario_hypothesis_card(hypothesis) -%}
-    <details class="hypothesis-item scenario-hypothesis-item">
+  {% macro biological_hypothesis_evaluation_card(hypothesis) -%}
+    <details class="hypothesis-item biological-hypothesis-evaluation-item">
       <summary>
         <span class="hypothesis-title">{{ hypothesis.title }}</span>
         <span class="hypothesis-badge confidence-{{ hypothesis.confidence }}">{{ hypothesis.confidence|upper }}</span>
@@ -1000,12 +1003,12 @@
         <p>{{ hypothesis.explanation }}</p>
         <div class="hypothesis-trace">
           <div>
-            <h4>Supported by scenarios</h4>
-            {% if hypothesis.supporting_scenario_titles %}<ul>{% for title in hypothesis.supporting_scenario_titles %}<li>{{ title }}</li>{% endfor %}</ul>{% else %}<p class="muted">None recorded.</p>{% endif %}
+            <h4>Supported by evidence patterns</h4>
+            {% if hypothesis.supporting_pattern_titles %}<ul>{% for title in hypothesis.supporting_pattern_titles %}<li>{{ title }}</li>{% endfor %}</ul>{% else %}<p class="muted">None recorded.</p>{% endif %}
           </div>
           <div>
-            <h4>Conflicting scenarios</h4>
-            {% if hypothesis.conflicting_scenario_titles %}<ul>{% for title in hypothesis.conflicting_scenario_titles %}<li>{{ title }}</li>{% endfor %}</ul>{% else %}<p class="muted">None recognised.</p>{% endif %}
+            <h4>Conflicting evidence patterns</h4>
+            {% if hypothesis.conflicting_pattern_titles %}<ul>{% for title in hypothesis.conflicting_pattern_titles %}<li>{{ title }}</li>{% endfor %}</ul>{% else %}<p class="muted">None recognised.</p>{% endif %}
           </div>
           <div>
             <h4>Recommended checks</h4>
@@ -1021,7 +1024,8 @@
     <h2>Reasoning explorer</h2>
     <a href="#reasoning-path-panel">Reasoning path</a>
     <a href="#cross-evidence-panel">Cross-evidence findings</a>
-    <a href="#biological-scenarios-panel">Biological scenarios</a>
+    <a href="#evidence-patterns-panel">Evidence patterns</a>
+    <a href="#unresolved-evidence-patterns-panel">Unresolved evidence patterns</a>
     <a href="#biological-hypotheses-panel">Biological hypotheses</a>
     <a href="#biological-interpretation-panel">Rule-based interpretation</a>
   </nav>
@@ -1034,8 +1038,8 @@
         <div class="reasoning-path" aria-label="Reasoning path for {{ candidate.candidate_id }}">
           <div class="reasoning-step"><strong>Evidence assessments</strong><span>Structural, reference, read and ORF evidence</span><a href="#structural-integrity-panel">Inspect evidence →</a></div>
           <div class="reasoning-step"><strong>Cross-evidence findings</strong><span>{{ candidate.cross_evidence_findings|length }} finding{% if candidate.cross_evidence_findings|length != 1 %}s{% endif %}</span><a href="#cross-evidence-panel">Open findings →</a></div>
-          <div class="reasoning-step"><strong>Biological scenarios</strong><span>{{ candidate.scenarios|length }} scenario{% if candidate.scenarios|length != 1 %}s{% endif %}</span><a href="#biological-scenarios-panel">Open scenarios →</a></div>
-          <div class="reasoning-step"><strong>Biological hypotheses</strong><span>{% if candidate.scenario_hypotheses|length == 1 %}1 hypothesis{% else %}{{ candidate.scenario_hypotheses|length }} hypotheses{% endif %}</span><a href="#biological-hypotheses-panel">Open hypotheses →</a></div>
+          <div class="reasoning-step"><strong>Evidence patterns</strong><span>{{ candidate.evidence_patterns|length }} pattern{% if candidate.evidence_patterns|length != 1 %}s{% endif %}</span><a href="#evidence-patterns-panel">Open patterns →</a></div>
+          <div class="reasoning-step"><strong>Biological hypotheses</strong><span>{% if candidate.biological_hypothesis_evaluations|length == 1 %}1 hypothesis{% else %}{{ candidate.biological_hypothesis_evaluations|length }} hypotheses{% endif %}</span><a href="#biological-hypotheses-panel">Open hypotheses →</a></div>
           <div class="reasoning-step"><strong>Recommendation context</strong><span>Interpretation supporting expert review</span><a href="#biological-interpretation-panel">Open interpretation →</a></div>
         </div>
       </div>
@@ -1044,11 +1048,11 @@
 
   <section id="biological-hypotheses-panel" class="card hypothesis-card">
     <h2>Biological hypotheses</h2>
-    <p class="muted">Biological explanations aggregated from recognised scenarios. Hypotheses are descriptive and do not alter candidate ranking.</p>
-    {% if view.scenario_hypotheses %}{% for hypothesis in view.scenario_hypotheses %}{{ scenario_hypothesis_card(hypothesis) }}{% endfor %}{% endif %}
+    <p class="muted">Biological explanations aggregated from recognised evidence patterns. Hypotheses are descriptive and do not alter candidate ranking.</p>
+    {% if view.biological_hypothesis_evaluations %}{% for hypothesis in view.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis) }}{% endfor %}{% endif %}
     {% for candidate in view.candidates %}
       <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
-      {% if candidate.scenario_hypotheses %}{% for hypothesis in candidate.scenario_hypotheses %}{{ scenario_hypothesis_card(hypothesis) }}{% endfor %}{% else %}<p class="muted">No scenario-supported biological hypothesis was generated for this candidate.</p>{% endif %}
+      {% if candidate.biological_hypothesis_evaluations %}{% for hypothesis in candidate.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis) }}{% endfor %}{% else %}<p class="muted">No evidence-pattern-supported biological hypothesis was generated for this candidate.</p>{% endif %}
       </div>
     {% endfor %}
   </section>
@@ -1076,13 +1080,25 @@
     {% endfor %}
   </section>
 
-  <section id="biological-scenarios-panel" class="card hypothesis-card">
-    <h2>Biological scenarios</h2>
-    <p class="muted">Named biological situations inferred from observations and findings. Select a scenario, then an observation, to inspect its evidence provenance. Scenarios are descriptive and do not alter ranking.</p>
-    {% if view.scenarios %}{% for scenario in view.scenarios %}{{ scenario_card(scenario) }}{% endfor %}{% endif %}
+  <section id="evidence-patterns-panel" class="card hypothesis-card">
+    <h2>Evidence patterns</h2>
+    <p class="muted">Recognised combinations of interpretive findings that may support or contradict biological hypotheses. Select a pattern, then its supporting evidence, to inspect provenance. Evidence patterns are descriptive and do not alter ranking.</p>
+    {% if view.evidence_patterns %}{% for pattern in view.evidence_patterns %}{{ evidence_pattern_card(pattern) }}{% endfor %}{% endif %}
     {% for candidate in view.candidates %}
       <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
-      {% if candidate.scenarios %}{% for scenario in candidate.scenarios %}{{ scenario_card(scenario) }}{% endfor %}{% else %}<p class="muted">No biological scenario was recognised for this candidate.</p>{% endif %}
+      {% if candidate.evidence_patterns %}{% for pattern in candidate.evidence_patterns %}{{ evidence_pattern_card(pattern) }}{% endfor %}{% else %}<p class="muted">No evidence pattern was recognised for this candidate.</p>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section id="unresolved-evidence-patterns-panel" class="card hypothesis-card">
+    <h2>Unresolved evidence patterns</h2>
+    <p class="muted">Patterns that could not yet support biological hypotheses. Missing evidence indicates what additional observations or interpretive findings would advance the reasoning.</p>
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+      {% if candidate.unresolved_evidence_patterns %}
+        {% for pattern in candidate.unresolved_evidence_patterns %}{{ evidence_pattern_card(pattern) }}{% endfor %}
+      {% else %}<p class="muted">No unresolved evidence pattern was recorded for this candidate.</p>{% endif %}
       </div>
     {% endfor %}
   </section>
@@ -1150,7 +1166,7 @@
             <div class="mini"><strong>{{ candidate.reasoning_graph.measurement_count }}</strong><span>Measurements</span></div>
             <div class="mini"><strong>{{ candidate.reasoning_graph.observation_count }}</strong><span>Observations</span></div>
             <div class="mini"><strong>{{ candidate.reasoning_graph.interpretation_count }}</strong><span>Interpretive findings</span></div>
-            <div class="mini"><strong>{{ candidate.reasoning_graph.scenario_count }}</strong><span>Evidence syntheses</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.evidence_pattern_count }}</strong><span>Evidence patterns</span></div>
             <div class="mini"><strong>{{ candidate.reasoning_graph.hypothesis_count }}</strong><span>Hypotheses</span></div>
           </div>
           <h4>Biological hypothesis evaluations</h4>
@@ -1183,9 +1199,9 @@
                       <p><strong>State:</strong> {{ hypothesis.evaluation_state|replace('_', ' ')|title }}</p>
                       <p><strong>Confidence:</strong> {{ hypothesis.evaluation_confidence|upper }}</p>
                       <p><strong>Candidates:</strong> {% if hypothesis.evaluation_candidate_ids %}{{ hypothesis.evaluation_candidate_ids|join(', ') }}{% else %}<span class="muted">None recorded.</span>{% endif %}</p>
-                      <p><strong>Supporting evidence syntheses</strong></p>
+                      <p><strong>Supporting evidence patterns</strong></p>
                       {% if hypothesis.evaluation_supporting_synthesis_ids %}<ul>{% for item in hypothesis.evaluation_supporting_synthesis_ids %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">None matched.</p>{% endif %}
-                      <p><strong>Conflicting evidence syntheses</strong></p>
+                      <p><strong>Conflicting evidence patterns</strong></p>
                       {% if hypothesis.evaluation_conflicting_synthesis_ids %}<ul>{% for item in hypothesis.evaluation_conflicting_synthesis_ids %}<li>{{ item }}</li>{% endfor %}</ul>{% else %}<p class="muted">None matched.</p>{% endif %}
                     </div>
                   </div>
@@ -1223,8 +1239,19 @@
             <summary><strong>Graph JSON preview</strong></summary>
             <pre class="graph-json-preview">{{ candidate.reasoning_graph.graph_json }}</pre>
           </details>
-          <p><button type="button" data-graph-download data-candidate-id="{{ candidate.candidate_id }}">Download reasoning graph JSON</button></p>
+          <div class="graph-download-actions">
+            <button type="button" data-graph-download data-candidate-id="{{ candidate.candidate_id }}">Download reasoning graph JSON</button>
+            <button type="button" data-llm-bundle-download data-candidate-id="{{ candidate.candidate_id }}">Download LLM reasoning bundle</button>
+            <button type="button" data-llm-bundle-schema-download data-candidate-id="{{ candidate.candidate_id }}">Download bundle schema</button>
+            <button type="button" data-llm-output-schema-download data-candidate-id="{{ candidate.candidate_id }}">Download AI output schema</button>
+            <button type="button" data-llm-package-download data-candidate-id="{{ candidate.candidate_id }}">Download LLM review package ZIP</button>
+          </div>
+          <p class="muted">These files are generated locally in the static dashboard. No candidate data is sent to an external model.</p>
           <script type="application/json" id="reasoning-graph-json-{{ loop.index0 }}" data-graph-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.graph_json|safe }}</script>
+          <script type="application/json" data-llm-bundle-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.llm_bundle_json|safe }}</script>
+          <script type="application/json" data-llm-bundle-schema-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.llm_bundle_schema_json|safe }}</script>
+          <script type="application/json" data-llm-output-schema-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.llm_output_schema_json|safe }}</script>
+          <script type="application/octet-stream" data-llm-package-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.llm_review_package_base64 }}</script>
         {% else %}
           <p class="muted">No V3 reasoning graph was generated for this candidate.</p>
         {% endif %}
@@ -2137,13 +2164,33 @@ function handleProteinAction(button){
   if(action==="download-both"&&reference)triggerDownload(predicted+reference,`${safeFilename(candidateId)}.predicted_with_reference.faa`);
 }
 
+function downloadTextAsset(selector,candidateId,filename){
+  const node=[...document.querySelectorAll(selector)].find(x=>Object.values(x.dataset).includes(candidateId));
+  if(!node)return;
+  triggerDownload(node.textContent,filename);
+}
 function downloadReasoningGraph(button){
   const candidateId=button.dataset.candidateId;
   const node=[...document.querySelectorAll("script[data-graph-candidate]")].find(x=>x.dataset.graphCandidate===candidateId);
   if(!node)return;
-  triggerDownload(node.textContent,`${safeFilename(candidateId)}.reasoning_graph.json`,"application/json");
+  triggerDownload(node.textContent,`${safeFilename(candidateId)}.reasoning_graph.json`);
 }
-document.addEventListener("click",event=>{const button=event.target.closest("[data-graph-download]");if(button)downloadReasoningGraph(button);});
+function downloadBase64Zip(button){
+  const candidateId=button.dataset.candidateId;
+  const node=[...document.querySelectorAll("script[data-llm-package-candidate]")].find(x=>x.dataset.llmPackageCandidate===candidateId);
+  if(!node)return;
+  const bytes=Uint8Array.from(atob(node.textContent.trim()),c=>c.charCodeAt(0));
+  const blob=new Blob([bytes],{type:"application/zip"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download=`${safeFilename(candidateId)}.llm_review_package.zip`;a.click();URL.revokeObjectURL(url);
+}
+document.addEventListener("click",event=>{
+  const graph=event.target.closest("[data-graph-download]");if(graph)return downloadReasoningGraph(graph);
+  const bundle=event.target.closest("[data-llm-bundle-download]");if(bundle)return downloadTextAsset("script[data-llm-bundle-candidate]",bundle.dataset.candidateId,`${safeFilename(bundle.dataset.candidateId)}.llm_reasoning_bundle.json`);
+  const inputSchema=event.target.closest("[data-llm-bundle-schema-download]");if(inputSchema)return downloadTextAsset("script[data-llm-bundle-schema-candidate]",inputSchema.dataset.candidateId,"llm_reasoning_bundle.schema.json");
+  const outputSchema=event.target.closest("[data-llm-output-schema-download]");if(outputSchema)return downloadTextAsset("script[data-llm-output-schema-candidate]",outputSchema.dataset.candidateId,"llm_output.schema.json");
+  const packageButton=event.target.closest("[data-llm-package-download]");if(packageButton)return downloadBase64Zip(packageButton);
+});
 
 function traceSequence(trace){return trace.meta&&trace.meta.sequence_id?trace.meta.sequence_id:null;}
 function highlightPlot(divId,id){const div=document.getElementById(divId);if(!div||!div.data)return;const op=div.data.map(t=>!id||traceSequence(t)===id?1:0.16);const widths=div.data.map(t=>{const w=(t.line&&t.line.width)||4;return !id||traceSequence(t)===id?Math.max(w,6):Math.max(2,w*.55);});Plotly.restyle(div,{opacity:op,"line.width":widths});}
@@ -2153,7 +2200,7 @@ const DashboardTabs = {
   summary: new Set(["Recommended candidate"]),
   comparison: new Set(["Evidence table"]),
   evidence: new Set(["Structural integrity", "Reference compatibility", "Read evidence", "ORF structural evidence"]),
-  reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Interpretive findings"]),
+  reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Evidence patterns", "Unresolved evidence patterns", "Interpretive findings"]),
   plots: new Set(["Visualizations", "Candidate-to-candidate structural comparison", "Candidates aligned to shared nucleotide reference", "Candidate versus closest nucleotide reference", "Protein coordinate map", "Protein relatedness", "Read coverage"]),
   downloads: new Set(["Download selected sequences", "Selected candidate sequence"]),
   expert: new Set(["Reasoning graph inspector", "Rule explorer"])

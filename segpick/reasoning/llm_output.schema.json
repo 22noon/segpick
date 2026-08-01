@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://segpick.dev/schemas/llm-reasoning-output-1.0.json",
+  "title": "SegPick LLM Reasoning Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["graph_supported_summary", "alternative_hypotheses", "evidence_gaps", "warnings"],
+  "properties": {
+    "graph_supported_summary": {"type": "string"},
+    "alternative_hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "rationale", "supporting_node_ids", "conflicting_node_ids", "status"],
+        "properties": {
+          "title": {"type": "string"},
+          "rationale": {"type": "string"},
+          "supporting_node_ids": {"type": "array", "items": {"type": "string"}},
+          "conflicting_node_ids": {"type": "array", "items": {"type": "string"}},
+          "status": {"const": "speculative"}
+        }
+      }
+    },
+    "evidence_gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description", "related_node_ids", "recommended_analysis"],
+        "properties": {
+          "description": {"type": "string"},
+          "related_node_ids": {"type": "array", "items": {"type": "string"}},
+          "recommended_analysis": {"type": "string"}
+        }
+      }
+    },
+    "warnings": {"type": "array", "items": {"type": "string"}}
+  }
+}
