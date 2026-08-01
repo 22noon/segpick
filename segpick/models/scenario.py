@@ -5,7 +5,7 @@ from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
-class ScenarioEvidenceProvenance:
+class EvidencePatternProvenance:
     """Trace one matched scenario condition back to observations or findings."""
 
     condition: str
@@ -26,7 +26,7 @@ class ScenarioEvidenceProvenance:
 
 
 @dataclass(frozen=True, slots=True)
-class BiologicalScenario:
+class EvidencePatternEvaluation:
     scenario_id: str
     title: str
     category: str
@@ -41,7 +41,7 @@ class BiologicalScenario:
     suggested_actions: tuple[str, ...] = ()
     source: str = "builtin"
     references: tuple[str, ...] = ()
-    evidence_provenance: tuple[ScenarioEvidenceProvenance, ...] = ()
+    evidence_provenance: tuple[EvidencePatternProvenance, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         data = asdict(self)
@@ -52,3 +52,8 @@ class BiologicalScenario:
             data[key] = list(data[key])
         data["evidence_provenance"] = [item.to_dict() for item in self.evidence_provenance]
         return data
+
+
+# Temporary compatibility aliases during the analysis-layer migration.
+ScenarioEvidenceProvenance = EvidencePatternProvenance
+BiologicalScenario = EvidencePatternEvaluation

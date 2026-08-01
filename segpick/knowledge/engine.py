@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from segpick.models import BiologicalScenario, ScenarioEvidenceProvenance
+from segpick.models import EvidencePatternEvaluation, EvidencePatternProvenance
 from .schema import KnowledgeModule
 
 _ORDER = ("low", "moderate", "high")
@@ -49,7 +49,7 @@ def _condition_provenance(condition, observations, findings):
                     "length": item.length,
                 })
         source = condition.source or (matches[0].source_name if matches else None)
-        return ScenarioEvidenceProvenance(
+        return EvidencePatternProvenance(
             condition=condition.label,
             kind="observation",
             source=source,
@@ -66,7 +66,7 @@ def _condition_provenance(condition, observations, findings):
     )
     sources = tuple(dict.fromkeys(source for item in matches for source in item.sources))
     source = condition.source or (sources[0] if len(sources) == 1 else None)
-    return ScenarioEvidenceProvenance(
+    return EvidencePatternProvenance(
         condition=condition.label,
         kind="finding",
         source=source,
@@ -95,7 +95,7 @@ def evaluate_scenarios(modules, observations, findings, candidate_ids=()):
             _condition_provenance(condition, observations, findings)
             for condition in matched
         )
-        out.append(BiologicalScenario(
+        out.append(EvidencePatternEvaluation(
             module.scenario_id,
             module.title,
             module.category,
