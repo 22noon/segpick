@@ -12,7 +12,7 @@ def evaluate_hypotheses(
     scenarios: tuple[BiologicalScenario, ...],
     candidate_ids: tuple[str, ...] = (),
 ) -> tuple[HypothesisEvaluation, ...]:
-    scenario_by_id = {item.scenario_id: item for item in scenarios}
+    scenario_by_id = {item.pattern_id: item for item in scenarios}
     results: list[HypothesisEvaluation] = []
     for module in definitions:
         supporting = tuple(
@@ -44,10 +44,10 @@ def evaluate_hypotheses(
             definition_contradicted_by=module.contradicted_by,
             minimum_support=module.minimum_support,
             candidate_ids=candidate_ids or inferred_candidates,
-            supporting_scenarios=tuple(item.scenario_id for item in supporting),
-            supporting_scenario_titles=tuple(item.title for item in supporting),
-            conflicting_scenarios=tuple(item.scenario_id for item in conflicting),
-            conflicting_scenario_titles=tuple(item.title for item in conflicting),
+            supporting_patterns=tuple(item.pattern_id for item in supporting),
+            supporting_pattern_titles=tuple(item.title for item in supporting),
+            conflicting_patterns=tuple(item.pattern_id for item in conflicting),
+            conflicting_pattern_titles=tuple(item.title for item in conflicting),
             recommended_actions=module.recommended_actions,
             source=module.source,
             references=module.references,

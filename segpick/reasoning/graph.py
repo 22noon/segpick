@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from segpick.models import (
-    BiologicalFinding, BiologicalHypothesis, BiologicalScenario,
+    BiologicalFinding, BiologicalHypothesis, EvidencePatternEvaluation,
     EvidenceObservation, ScenarioHypothesis,
 )
 from segpick.models.reasoning_graph import (
@@ -12,7 +12,7 @@ from segpick.models.reasoning_graph import (
     MeasurementNode,
     ObservationNode,
     ReasoningGraph,
-    EvidenceSynthesisNode,
+    EvidencePatternNode,
     ReasoningEdge,
 )
 
@@ -146,14 +146,14 @@ def _rule_finding_nodes(
     return node_tuple, tuple(edges)
 
 
-def _scenario_nodes(
-    scenarios: tuple[BiologicalScenario, ...],
+def _evidence_pattern_nodes(
+    patterns: tuple[EvidencePatternEvaluation, ...],
     observations: tuple[ObservationNode, ...],
     interpretations: tuple[InterpretiveFindingNode, ...],
-) -> tuple[tuple[EvidenceSynthesisNode, ...], tuple[ReasoningEdge, ...]]:
+) -> tuple[tuple[EvidencePatternNode, ...], tuple[ReasoningEdge, ...]]:
     nodes = []
-    for index, scenario in enumerate(scenarios, 1):
-        support_labels = scenario.matched_required + scenario.matched_supporting
+    for index, pattern in enumerate(patterns, 1):
+        support_labels = pattern.matched_required + pattern.matched_supporting
         supporting = tuple(dict.fromkeys(
             node_id
             for label in support_labels
@@ -161,20 +161,20 @@ def _scenario_nodes(
         ))
         conflicting = tuple(dict.fromkeys(
             node_id
-            for label in scenario.matched_conflicting
+            for label in pattern.matched_conflicting
             for node_id in _condition_targets(label, observations, interpretations)
         ))
-        node = EvidenceSynthesisNode(
-            id=f"scenario:{_slug(scenario.scenario_id)}:{index}",
-            scenario_id=scenario.scenario_id,
-            title=scenario.title,
-            interpretation=scenario.interpretation,
-            confidence=scenario.confidence,
-            category=scenario.category,
-            scope=scenario.scope,
-            severity=scenario.severity,
-            source=scenario.source,
-            references=scenario.references,
+        node = EvidencePatternNode(
+            id=f"pattern:{_slug(pattern.pattern_id)}:{index}",
+            pattern_id=pattern.pattern_id,
+            title=pattern.title,
+            interpretation=pattern.interpretation,
+            confidence=pattern.confidence,
+            category=pattern.category,
+            scope=pattern.scope,
+            severity=pattern.severity,
+            source=pattern.source,
+            references=pattern.references,
         )
         nodes.append((node, supporting, conflicting))
     node_tuple = tuple(node for node, *_ in nodes)
@@ -185,22 +185,22 @@ def _scenario_nodes(
     return node_tuple, tuple(edges)
 
 
-def _scenario_hypothesis_nodes(
+def _biological_hypothesis_nodes(
     hypotheses: tuple[ScenarioHypothesis, ...],
-    scenarios: tuple[EvidenceSynthesisNode, ...],
+    patterns: tuple[EvidencePatternNode, ...],
 ) -> tuple[tuple[BiologicalHypothesisNode, ...], tuple[ReasoningEdge, ...]]:
-    scenario_by_rule_id = {node.scenario_id: node.id for node in scenarios}
+    pattern_by_id = {node.pattern_id: node.id for node in patterns}
     nodes = []
     for index, hypothesis in enumerate(hypotheses, 1):
         supporting = tuple(
-            scenario_by_rule_id[item]
-            for item in hypothesis.supporting_scenarios
-            if item in scenario_by_rule_id
+            pattern_by_id[item]
+            for item in hypothesis.supporting_patterns
+            if item in pattern_by_id
         )
         conflicting = tuple(
-            scenario_by_rule_id[item]
-            for item in hypothesis.conflicting_scenarios
-            if item in scenario_by_rule_id
+            pattern_by_id[item]
+            for item in hypothesis.conflicting_patterns
+            if item in pattern_by_id
         )
         node = BiologicalHypothesisNode(
             id=f"hypothesis:scenario:{_slug(hypothesis.hypothesis_id)}:{index}",
@@ -221,8 +221,8 @@ def _scenario_hypothesis_nodes(
             definition_contradicted_by=hypothesis.definition_contradicted_by,
             definition_minimum_support=hypothesis.minimum_support,
             evaluation_candidate_ids=hypothesis.candidate_ids,
-            evaluation_supporting_synthesis_ids=hypothesis.supporting_scenarios,
-            evaluation_conflicting_synthesis_ids=hypothesis.conflicting_scenarios,
+            evaluation_supporting_synthesis_ids=hypothesis.supporting_patterns,
+            evaluation_conflicting_synthesis_ids=hypothesis.conflicting_patterns,
         )
         nodes.append((node, supporting, conflicting))
     node_tuple = tuple(node for node, *_ in nodes)
@@ -245,23 +245,23 @@ def build_reasoning_graph(candidate) -> ReasoningGraph:
         candidate.analysis.hypotheses, observation_nodes, base_finding_nodes
     )
     interpretation_nodes = base_finding_nodes + rule_finding_nodes
-    scenario_nodes, scenario_edges = _scenario_nodes(
-        candidate.analysis.scenarios, observation_nodes, interpretation_nodes
+    pattern_nodes, pattern_edges = _evidence_pattern_nodes(
+        candidate.analysis.evidence_patterns, observation_nodes, interpretation_nodes
     )
-    scenario_hypothesis_nodes, hypothesis_edges = _scenario_hypothesis_nodes(
-        candidate.analysis.scenario_hypotheses, scenario_nodes
+    biological_hypothesis_nodes, hypothesis_edges = _biological_hypothesis_nodes(
+        candidate.analysis.biological_hypothesis_evaluations, pattern_nodes
     )
     graph = ReasoningGraph(
         measurements=measurements,
         observations=observation_nodes,
         interpretive_findings=interpretation_nodes,
-        evidence_syntheses=scenario_nodes,
-        biological_hypotheses=scenario_hypothesis_nodes,
+        evidence_patterns=pattern_nodes,
+        biological_hypotheses=biological_hypothesis_nodes,
         edges=(
             observation_edges
             + base_finding_edges
             + rule_finding_edges
-            + scenario_edges
+            + pattern_edges
             + hypothesis_edges
         ),
     )

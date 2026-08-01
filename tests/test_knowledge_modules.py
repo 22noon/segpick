@@ -8,8 +8,8 @@ from segpick.models import BiologicalFinding, EvidenceObservation, ObservationSo
 
 def test_builtin_knowledge_modules_load_by_scope():
     candidate, gene = load_active_scenarios()
-    assert any(item.scenario_id == "coverage_supported_assembly_breakpoint" for item in candidate)
-    assert any(item.scenario_id == "complementary_fragmented_gene" for item in gene)
+    assert any(item.pattern_id == "coverage_supported_assembly_breakpoint" for item in candidate)
+    assert any(item.pattern_id == "complementary_fragmented_gene" for item in gene)
 
 
 def test_scenario_evaluation_is_traceable_and_suggests_actions():
@@ -32,7 +32,7 @@ def test_scenario_evaluation_is_traceable_and_suggests_actions():
         ),
     )
     scenarios = evaluate_scenarios(candidate, observations, (), candidate_ids=("c1",))
-    scenario = next(item for item in scenarios if item.scenario_id == "coverage_supported_assembly_breakpoint")
+    scenario = next(item for item in scenarios if item.pattern_id == "coverage_supported_assembly_breakpoint")
     assert scenario.confidence == "high"
     assert scenario.candidate_ids == ("c1",)
     assert scenario.matched_required
@@ -59,7 +59,7 @@ scenarios:
 """
     )
     candidate, _ = load_active_scenarios((path,))
-    assert any(item.scenario_id == "custom_case" and item.source == str(path) for item in candidate)
+    assert any(item.pattern_id == "custom_case" and item.source == str(path) for item in candidate)
 
     args = build_parser().parse_args(["run", "--knowledge-file", str(path)])
     assert args.knowledge_files == [str(path)]
@@ -72,7 +72,7 @@ def test_scenario_view_uses_human_friendly_observation_text():
     from segpick.reporting.view_models import build_scenario_view
 
     scenario = BiologicalScenario(
-        scenario_id="incomplete_terminal_assembly",
+        pattern_id="incomplete_terminal_assembly",
         title="Possible incomplete terminal assembly",
         category="completeness",
         scope="candidate",
@@ -118,7 +118,7 @@ def test_scenario_provenance_records_measurements_regions_and_visualisations():
     )
     scenario = next(
         item for item in evaluate_scenarios(candidate, observations, (), candidate_ids=("c1",))
-        if item.scenario_id == "coverage_supported_assembly_breakpoint"
+        if item.pattern_id == "coverage_supported_assembly_breakpoint"
     )
     assert len(scenario.evidence_provenance) == 2
     structural = next(item for item in scenario.evidence_provenance if item.source == "structural_alignment")
@@ -177,7 +177,7 @@ def test_reference_compatibility_scenarios_distinguish_supported_and_unsupported
         ),
     )
     supported = evaluate_scenarios(candidate, supported_observations, (), candidate_ids=("c1",))
-    ids = {item.scenario_id for item in supported}
+    ids = {item.pattern_id for item in supported}
     assert "reference_unsupported_internal_sequence" in ids
     assert "coverage_supported_reference_insertion" in ids
     assert "possible_misassembled_internal_insertion" not in ids
@@ -191,9 +191,9 @@ def test_reference_compatibility_scenarios_distinguish_supported_and_unsupported
         ),
     )
     interrupted = evaluate_scenarios(candidate, interrupted_observations, (), candidate_ids=("c1",))
-    ids = {item.scenario_id for item in interrupted}
+    ids = {item.pattern_id for item in interrupted}
     assert "possible_misassembled_internal_insertion" in ids
-    generic = next(item for item in interrupted if item.scenario_id == "reference_unsupported_internal_sequence")
+    generic = next(item for item in interrupted if item.pattern_id == "reference_unsupported_internal_sequence")
     assert generic.confidence == "low"
 
 
@@ -206,7 +206,7 @@ def test_reference_compatibility_scenarios_cover_order_orientation_duplication_a
         EvidenceObservation("missing_expected_reference_region", ObservationSource.REFERENCE_COMPATIBILITY, "loss"),
     )
     ids = {
-        item.scenario_id
+        item.pattern_id
         for item in evaluate_scenarios(candidate, observations, (), candidate_ids=("c1",))
     }
     assert {
@@ -232,7 +232,7 @@ def test_evidence_pattern_evaluation_records_missing_support_and_conflict_state(
     from segpick.reasoning.rules import RuleCondition
 
     definition = EvidencePatternDefinition(
-        scenario_id="test_pattern",
+        pattern_id="test_pattern",
         title="Test pattern",
         category="test",
         scope="candidate",
@@ -262,7 +262,7 @@ def test_evidence_pattern_engine_still_omits_patterns_with_missing_requirements(
     from segpick.reasoning.rules import RuleCondition
 
     definition = EvidencePatternDefinition(
-        scenario_id="incomplete_pattern",
+        pattern_id="incomplete_pattern",
         title="Incomplete pattern",
         category="test",
         scope="candidate",

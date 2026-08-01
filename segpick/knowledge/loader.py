@@ -38,7 +38,7 @@ def load_knowledge_file(path: str | Path, *, source_label: str | None = None) ->
         if not requires: raise ValueError(f"{source}: scenario '{sid}' requires at least one condition")
         actions = item.get("suggested_actions", [])
         modules.append(KnowledgeModule(
-            scenario_id=sid, title=_text(item.get("title"), "title", source),
+            pattern_id=sid, title=_text(item.get("title"), "title", source),
             category=_text(item.get("category"), "category", source),
             scope=_text(item.get("scope"), "scope", source),
             severity=_text(item.get("severity"), "severity", source),
@@ -57,6 +57,6 @@ def load_active_scenarios(user_files: Iterable[str | Path] = ()) -> tuple[tuple[
     for path in user_files: all_items.extend(load_knowledge_file(path))
     seen=set()
     for item in all_items:
-        if item.scenario_id in seen: raise ValueError(f"Duplicate scenario id '{item.scenario_id}'")
-        seen.add(item.scenario_id)
+        if item.pattern_id in seen: raise ValueError(f"Duplicate scenario id '{item.pattern_id}'")
+        seen.add(item.pattern_id)
     return tuple(x for x in all_items if x.scope=="candidate"), tuple(x for x in all_items if x.scope=="gene")

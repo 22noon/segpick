@@ -33,7 +33,7 @@ class ScenarioEvidenceView:
 
 @dataclass(frozen=True, slots=True)
 class ScenarioView:
-    scenario_id: str
+    pattern_id: str
     title: str
     category: str
     scope: str
@@ -50,6 +50,10 @@ class ScenarioView:
     state: str
     missing_required: tuple[ScenarioEvidenceView, ...]
     missing_supporting: tuple[ScenarioEvidenceView, ...]
+
+    @property
+    def scenario_id(self) -> str:
+        return self.pattern_id
 
 
 def _scenario_evidence_view(label: str, provenance_by_condition: dict[str, object]) -> ScenarioEvidenceView:
@@ -72,7 +76,7 @@ def _scenario_evidence_view(label: str, provenance_by_condition: dict[str, objec
 def build_scenario_view(item: BiologicalScenario) -> ScenarioView:
     provenance = {entry.condition: entry for entry in item.evidence_provenance}
     return ScenarioView(
-        scenario_id=item.scenario_id,
+        pattern_id=item.pattern_id,
         title=item.title,
         category=item.category,
         scope=item.scope,
@@ -102,11 +106,19 @@ class ScenarioHypothesisView:
     severity: str
     explanation: str
     candidate_ids: tuple[str, ...]
-    supporting_scenario_titles: tuple[str, ...]
-    conflicting_scenario_titles: tuple[str, ...]
+    supporting_pattern_titles: tuple[str, ...]
+    conflicting_pattern_titles: tuple[str, ...]
     recommended_actions: tuple[str, ...]
     source: str
     references: tuple[str, ...]
+
+    @property
+    def supporting_scenario_titles(self):
+        return self.supporting_pattern_titles
+
+    @property
+    def conflicting_scenario_titles(self):
+        return self.conflicting_pattern_titles
 
 
 def build_scenario_hypothesis_view(item: ScenarioHypothesis) -> ScenarioHypothesisView:
@@ -114,8 +126,8 @@ def build_scenario_hypothesis_view(item: ScenarioHypothesis) -> ScenarioHypothes
         hypothesis_id=item.hypothesis_id, title=item.title, category=item.category,
         scope=item.scope, confidence=item.confidence, severity=item.severity,
         explanation=item.explanation, candidate_ids=item.candidate_ids,
-        supporting_scenario_titles=item.supporting_scenario_titles,
-        conflicting_scenario_titles=item.conflicting_scenario_titles,
+        supporting_pattern_titles=item.supporting_pattern_titles,
+        conflicting_pattern_titles=item.conflicting_pattern_titles,
         recommended_actions=item.recommended_actions, source=item.source,
         references=item.references,
     )
@@ -517,7 +529,7 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
     measurement_by_id = {item.id: item for item in graph.measurements}
     observation_by_id = {item.id: item for item in graph.observations}
     finding_by_id = {item.id: item for item in graph.interpretive_findings}
-    synthesis_by_id = {item.id: item for item in graph.evidence_syntheses}
+    synthesis_by_id = {item.id: item for item in graph.evidence_patterns}
     edges_by_source: dict[str, tuple[object, ...]] = {}
     for edge in graph.provenance_edges():
         edges_by_source.setdefault(edge.source_id, ())
@@ -671,7 +683,7 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
     return ReasoningGraphInspectorView(
         available=True, valid=valid, validation_message=message,
         measurement_count=len(graph.measurements), observation_count=len(graph.observations),
-        interpretation_count=len(graph.interpretive_findings), scenario_count=len(graph.evidence_syntheses),
+        interpretation_count=len(graph.interpretive_findings), scenario_count=len(graph.evidence_patterns),
         hypothesis_count=len(graph.biological_hypotheses),
         builtin_sources=builtin_sources, plugin_sources=plugin_sources,
         provenance_paths=tuple(paths), hypotheses=hypothesis_views,
@@ -1017,9 +1029,9 @@ def build_gene_page_view(
                 )
                 for item in candidate.analysis.boundary_coverage
             ),
-            scenarios=tuple(build_scenario_view(item) for item in candidate.analysis.scenarios),
+            scenarios=tuple(build_scenario_view(item) for item in candidate.analysis.evidence_patterns),
             unresolved_evidence_patterns=tuple(build_scenario_view(item) for item in candidate.analysis.unresolved_evidence_patterns),
-            scenario_hypotheses=tuple(build_scenario_hypothesis_view(item) for item in candidate.analysis.scenario_hypotheses),
+            scenario_hypotheses=tuple(build_scenario_hypothesis_view(item) for item in candidate.analysis.biological_hypothesis_evaluations),
             cross_evidence_findings=tuple(
                 CrossEvidenceFindingView(
                     finding_id=item.finding_id,
@@ -1105,8 +1117,8 @@ def build_gene_page_view(
         protein_coordinates=protein_coordinates,
         hypotheses=hypotheses,
         rule_evaluations=tuple(build_rule_evaluation_view(item) for item in gene.rule_evaluations),
-        scenarios=tuple(build_scenario_view(item) for item in gene.scenarios),
-        scenario_hypotheses=tuple(build_scenario_hypothesis_view(item) for item in gene.scenario_hypotheses),
+        scenarios=tuple(build_scenario_view(item) for item in gene.evidence_patterns),
+        scenario_hypotheses=tuple(build_scenario_hypothesis_view(item) for item in gene.biological_hypothesis_evaluations),
         protein_continuity=ProteinContinuityView(
             classification=continuity.classification,
             candidate_count=continuity.candidate_count,

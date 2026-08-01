@@ -9,7 +9,7 @@ from segpick.reasoning.rules import RuleCondition
 class EvidencePatternDefinition:
     """Reusable knowledge defining a recognisable pattern of findings."""
 
-    scenario_id: str
+    pattern_id: str
     title: str
     category: str
     scope: str
@@ -24,9 +24,9 @@ class EvidencePatternDefinition:
     source: str = "builtin"
 
     @property
-    def pattern_id(self) -> str:
-        """Canonical identifier for the evidence-pattern definition."""
-        return self.scenario_id
+    def scenario_id(self) -> str:
+        """Temporary compatibility accessor for pre-pattern consumers."""
+        return self.pattern_id
 
 
 # Temporary compatibility alias during the analysis-layer migration.

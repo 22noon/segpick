@@ -36,7 +36,7 @@ from .reasoning_graph import (
     MeasurementNode,
     ObservationNode,
     InterpretiveFindingNode,
-    EvidenceSynthesisNode,
+    EvidencePatternNode,
     BiologicalHypothesisNode,
     ReasoningEdge,
     ReasoningGraph,

@@ -53,9 +53,9 @@ class InterpretiveFindingNode:
 
 
 @dataclass(frozen=True, slots=True)
-class EvidenceSynthesisNode:
+class EvidencePatternNode:
     id: str
-    scenario_id: str
+    pattern_id: str
     title: str
     interpretation: str
     confidence: str
@@ -130,7 +130,7 @@ class ReasoningGraph:
     measurements: tuple[MeasurementNode, ...] = ()
     observations: tuple[ObservationNode, ...] = ()
     interpretive_findings: tuple[InterpretiveFindingNode, ...] = ()
-    evidence_syntheses: tuple[EvidenceSynthesisNode, ...] = ()
+    evidence_patterns: tuple[EvidencePatternNode, ...] = ()
     biological_hypotheses: tuple[BiologicalHypothesisNode, ...] = ()
     edges: tuple[ReasoningEdge, ...] = ()
 
@@ -145,7 +145,7 @@ class ReasoningGraph:
             "measurement": self.measurements,
             "observation": self.observations,
             "interpretive_finding": self.interpretive_findings,
-            "evidence_synthesis": self.evidence_syntheses,
+            "evidence_synthesis": self.evidence_patterns,
             "biological_hypothesis": self.biological_hypotheses,
         }
         node_types = {item.id: node_type for node_type, items in node_groups.items() for item in items}
@@ -192,7 +192,7 @@ class ReasoningGraph:
             "measurements": [item.to_dict() for item in self.measurements],
             "observations": [item.to_dict() for item in self.observations],
             "interpretive_findings": [item.to_dict() for item in self.interpretive_findings],
-            "evidence_syntheses": [item.to_dict() for item in self.evidence_syntheses],
+            "evidence_patterns": [item.to_dict() for item in self.evidence_patterns],
             "biological_hypotheses": [item.to_dict() for item in self.biological_hypotheses],
             "edges": [item.to_dict() for item in self.provenance_edges()],
         }

@@ -8,7 +8,7 @@ from segpick.models import (
 
 def _scenario(scenario_id: str, candidate_id: str) -> BiologicalScenario:
     return BiologicalScenario(
-        scenario_id=scenario_id,
+        pattern_id=scenario_id,
         title=scenario_id.replace("_", " ").title(),
         category="structure",
         scope="candidate",
@@ -56,7 +56,7 @@ def test_hypothesis_evaluation_is_canonical_result_class():
     assert isinstance(result, HypothesisEvaluation)
     assert result.hypothesis_id == definition.hypothesis_id
     assert result.candidate_ids == ("contig_a",)
-    assert result.supporting_scenarios == ("duplication_pattern",)
+    assert result.supporting_patterns == ("duplication_pattern",)
 
 
 def test_one_definition_produces_independent_candidate_evaluations():
@@ -100,7 +100,7 @@ def test_hypothesis_evaluation_preserves_definition_snapshot():
         minimum_support=1,
     )
     scenario = BiologicalScenario(
-        scenario_id="repeat_with_continuity",
+        pattern_id="repeat_with_continuity",
         title="Repeat with continuity",
         category="structure",
         scope="candidate",

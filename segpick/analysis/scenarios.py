@@ -12,14 +12,14 @@ def attach_biological_scenarios(sample: Sample, candidate_modules: tuple[Knowled
                 candidate_ids=(candidate.id,),
                 include_incomplete=True,
             )
-            candidate.analysis.scenarios = tuple(
+            candidate.analysis.evidence_patterns = tuple(
                 item for item in all_patterns if item.state in {"matched", "contradicted"}
             )
             candidate.analysis.unresolved_evidence_patterns = tuple(
                 item for item in all_patterns if item.state in {"partially_matched", "not_evaluable"}
             )
         observations = tuple(o for c in gene.candidates for o in c.analysis.observations)
-        gene.scenarios = evaluate_scenarios(
+        gene.evidence_patterns = evaluate_scenarios(
             gene_modules,
             observations,
             gene.findings,

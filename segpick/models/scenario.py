@@ -6,7 +6,7 @@ from typing import Any
 
 @dataclass(frozen=True, slots=True)
 class EvidencePatternProvenance:
-    """Trace one matched scenario condition back to observations or findings."""
+    """Trace one matched pattern condition back to observations or findings."""
 
     condition: str
     kind: str
@@ -27,7 +27,7 @@ class EvidencePatternProvenance:
 
 @dataclass(frozen=True, slots=True)
 class EvidencePatternEvaluation:
-    scenario_id: str
+    pattern_id: str
     title: str
     category: str
     scope: str
@@ -48,8 +48,9 @@ class EvidencePatternEvaluation:
     unused_findings: tuple[str, ...] = ()
 
     @property
-    def pattern_id(self) -> str:
-        return self.scenario_id
+    def scenario_id(self) -> str:
+        """Temporary compatibility accessor for pre-pattern consumers."""
+        return self.pattern_id
 
     def to_dict(self) -> dict[str, object]:
         data = asdict(self)

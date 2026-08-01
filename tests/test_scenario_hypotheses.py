@@ -4,7 +4,7 @@ from segpick.models import BiologicalScenario
 
 def scenario(scenario_id: str, title: str, candidate_id: str = "c1") -> BiologicalScenario:
     return BiologicalScenario(
-        scenario_id=scenario_id,
+        pattern_id=scenario_id,
         title=title,
         category="assembly",
         scope="candidate",
@@ -25,8 +25,8 @@ def test_builtin_hypotheses_aggregate_scenarios():
         (scenario("coverage_supported_assembly_breakpoint", "Coverage-supported assembly breakpoint"),),
     )
     hypothesis = next(item for item in result if item.hypothesis_id == "assembly_breakpoint")
-    assert hypothesis.supporting_scenarios == ("coverage_supported_assembly_breakpoint",)
-    assert hypothesis.supporting_scenario_titles == ("Coverage-supported assembly breakpoint",)
+    assert hypothesis.supporting_patterns == ("coverage_supported_assembly_breakpoint",)
+    assert hypothesis.supporting_pattern_titles == ("Coverage-supported assembly breakpoint",)
     assert hypothesis.candidate_ids == ("c1",)
     assert hypothesis.recommended_actions
 
@@ -42,7 +42,7 @@ def test_conflicting_scenario_reduces_hypothesis_confidence():
     )
     hypothesis = next(item for item in result if item.hypothesis_id == "incomplete_segment")
     assert hypothesis.confidence == "low"
-    assert hypothesis.conflicting_scenarios == ("divergent_but_coherent_segment",)
+    assert hypothesis.conflicting_patterns == ("divergent_but_coherent_segment",)
 
 
 def test_dashboard_renders_collapsed_scenario_hypothesis(tmp_path):
@@ -52,11 +52,11 @@ def test_dashboard_renders_collapsed_scenario_hypothesis(tmp_path):
     sample, recommendations = make_sample()
     candidate_modules, _ = load_active_hypotheses()
     candidate = sample.genes["VP2"].candidates[0]
-    candidate.analysis.scenarios = (
+    candidate.analysis.evidence_patterns = (
         scenario("coverage_supported_assembly_breakpoint", "Coverage-supported assembly breakpoint", candidate.id),
     )
-    candidate.analysis.scenario_hypotheses = evaluate_hypotheses(
-        candidate_modules, candidate.analysis.scenarios, candidate_ids=(candidate.id,)
+    candidate.analysis.biological_hypothesis_evaluations = evaluate_hypotheses(
+        candidate_modules, candidate.analysis.evidence_patterns, candidate_ids=(candidate.id,)
     )
     write_html_dashboard(sample, tmp_path, recommendations)
     html = (tmp_path / "genes" / "VP2.html").read_text()

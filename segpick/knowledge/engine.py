@@ -112,7 +112,7 @@ def evaluate_scenarios(modules, observations, findings, candidate_ids=(), includ
         ))
 
         out.append(EvidencePatternEvaluation(
-            scenario_id=module.scenario_id,
+            pattern_id=module.pattern_id,
             title=module.title,
             category=module.category,
             scope=module.scope,
