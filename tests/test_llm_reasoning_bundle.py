@@ -1,4 +1,6 @@
+from io import BytesIO
 import json
+import zipfile
 
 import jsonschema
 
@@ -13,6 +15,7 @@ from segpick.models import (
 )
 from segpick.reasoning import (
     build_llm_reasoning_bundle,
+    build_llm_review_package,
     load_llm_bundle_schema,
     load_llm_output_schema,
     write_llm_reasoning_bundle,
@@ -119,3 +122,23 @@ def test_llm_output_schema_requires_speculative_hypotheses():
         "warnings": [],
     }
     jsonschema.validate(output, load_llm_output_schema())
+
+
+def test_llm_review_package_contains_bundle_schemas_and_instructions():
+    payload = build_llm_review_package(
+        _graph(),
+        candidate_id="contig_a",
+        gene="VP2",
+        segment="2",
+    )
+    with zipfile.ZipFile(BytesIO(payload)) as archive:
+        assert set(archive.namelist()) == {
+            "reasoning_bundle.json",
+            "llm_reasoning_bundle.schema.json",
+            "llm_output.schema.json",
+            "README.md",
+        }
+        bundle = json.loads(archive.read("reasoning_bundle.json"))
+        jsonschema.validate(bundle, json.loads(archive.read("llm_reasoning_bundle.schema.json")))
+        instructions = archive.read("README.md").decode("utf-8")
+        assert "Label all new biological conclusions as speculative" in instructions

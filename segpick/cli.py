@@ -24,9 +24,7 @@ from segpick.analysis.reference_dotplot import attach_reference_dotplots
 from segpick.analysis.contig_dotplot import attach_contig_dotplots
 from segpick.analysis.structural_integrity import attach_structural_integrity
 from segpick.analysis.reference_compatibility import attach_reference_compatibility
-from segpick.analysis.hypotheses import (
-    attach_biological_hypotheses as attach_rule_based_findings,
-)
+from segpick.analysis.hypotheses import attach_biological_hypotheses as attach_rule_based_findings
 from segpick.analysis.evidence_patterns import attach_evidence_patterns
 from segpick.analysis.biological_hypotheses import attach_biological_hypotheses
 from segpick.analysis.cross_evidence import attach_cross_evidence

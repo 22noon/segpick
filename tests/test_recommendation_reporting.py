@@ -248,6 +248,13 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert 'initialiseSectionNavigation("evidence-navigation", "evidence")' in html
     assert 'href="#protein-relatedness-panel"' in html
     template_content = (Path(__file__).resolve().parents[1] / "segpick" / "reporting" / "templates" / "gene.html").read_text()
+    assert "Download LLM reasoning bundle" in template_content
+    assert "Download bundle schema" in template_content
+    assert "Download AI output schema" in template_content
+    assert "Download LLM review package ZIP" in template_content
+    assert "No candidate data is sent to an external model" in template_content
+    assert "data-llm-bundle-candidate" in template_content
+    assert "data-llm-package-candidate" in template_content
     assert 'href="#closest-reference-panel" class="structural-alignment-link">Reference dot plot · repeated mappings highlighted</a>' in template_content
     assert 'href="#reference-dotplot-panel">Reference dot plot</a>' not in template_content
     assert '"%.2f"|format(view.recommendation.score)' in template_content

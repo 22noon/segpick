@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from io import BytesIO
 import json
 from pathlib import Path
+import zipfile
 from typing import Any
 
 from segpick.models.reasoning_graph import ReasoningGraph
@@ -149,3 +151,46 @@ def load_llm_bundle_schema() -> dict[str, Any]:
 def load_llm_output_schema() -> dict[str, Any]:
     schema_path = Path(__file__).with_name("llm_output.schema.json")
     return json.loads(schema_path.read_text(encoding="utf-8"))
+
+
+def build_llm_review_package(
+    graph: ReasoningGraph,
+    *,
+    candidate_id: str,
+    gene: str | None = None,
+    segment: str | None = None,
+    open_questions: tuple[str, ...] = (),
+    measurement_only_components_omitted: int = 0,
+) -> bytes:
+    """Build a self-contained ZIP package for manual LLM review."""
+
+    bundle = build_llm_reasoning_bundle(
+        graph,
+        candidate_id=candidate_id,
+        gene=gene,
+        segment=segment,
+        open_questions=open_questions,
+        measurement_only_components_omitted=measurement_only_components_omitted,
+    )
+    instructions = (
+        "# SegPick LLM Review Package\n\n"
+        "Review `reasoning_bundle.json` as a candidate-specific SegPick reasoning record.\n\n"
+        "- Treat graph nodes and edges as authoritative SegPick results.\n"
+        "- Distinguish missing evidence from contradictory evidence.\n"
+        "- Label all new biological conclusions as speculative.\n"
+        "- Cite supporting and conflicting graph node IDs.\n"
+        "- Use `llm_output.schema.json` when structured output is supported.\n"
+    )
+    archive = BytesIO()
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("reasoning_bundle.json", json.dumps(bundle, indent=2, sort_keys=True))
+        zf.writestr(
+            "llm_reasoning_bundle.schema.json",
+            json.dumps(load_llm_bundle_schema(), indent=2, sort_keys=True),
+        )
+        zf.writestr(
+            "llm_output.schema.json",
+            json.dumps(load_llm_output_schema(), indent=2, sort_keys=True),
+        )
+        zf.writestr("README.md", instructions)
+    return archive.getvalue()

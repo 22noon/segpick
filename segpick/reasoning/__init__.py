@@ -29,6 +29,7 @@ __all__.append("build_reasoning_graph")
 from .llm_bundle import (
     LLM_BUNDLE_VERSION,
     build_llm_reasoning_bundle,
+    build_llm_review_package,
     load_llm_bundle_schema,
     load_llm_output_schema,
     write_llm_reasoning_bundle,
@@ -37,6 +38,7 @@ from .llm_bundle import (
 __all__.extend([
     "LLM_BUNDLE_VERSION",
     "build_llm_reasoning_bundle",
+    "build_llm_review_package",
     "load_llm_bundle_schema",
     "load_llm_output_schema",
     "write_llm_reasoning_bundle",

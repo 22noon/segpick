@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import base64
 import json
 
 from segpick.analysis import analyse_protein_continuity, build_evidence_assessments
 from segpick.models import BiologicalHypothesis, EvidencePatternEvaluation, CandidateContig, Gene, RuleEvaluation, HypothesisEvaluation
 from segpick.scoring import GeneRecommendation
 from segpick.knowledge.vocabulary import ConditionDisplay, describe_condition
+from segpick.reasoning import build_llm_reasoning_bundle, build_llm_review_package, load_llm_bundle_schema, load_llm_output_schema
 
 
 
@@ -494,6 +496,10 @@ class ReasoningGraphInspectorView:
     provenance_paths: tuple[ProvenancePathView, ...]
     hypotheses: tuple[HypothesisInspectorView, ...]
     graph_json: str
+    llm_bundle_json: str
+    llm_bundle_schema_json: str
+    llm_output_schema_json: str
+    llm_review_package_base64: str
 
 
 def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> ReasoningGraphInspectorView:
@@ -503,6 +509,8 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
             available=False, valid=False, validation_message="Reasoning graph unavailable.",
             measurement_count=0, observation_count=0, interpretation_count=0, evidence_pattern_count=0, hypothesis_count=0,
             builtin_sources=(), plugin_sources=(), provenance_paths=(), hypotheses=(), graph_json="{}",
+            llm_bundle_json="{}", llm_bundle_schema_json="{}", llm_output_schema_json="{}",
+            llm_review_package_base64="",
         )
     try:
         graph.validate()
@@ -668,6 +676,22 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
         )
         for item in graph.biological_hypotheses
     )
+    graph_json = json.dumps(graph.to_dict(), indent=2, sort_keys=True) if valid else "{}"
+    if valid:
+        llm_bundle = build_llm_reasoning_bundle(graph, candidate_id=candidate.id)
+        llm_bundle_schema = load_llm_bundle_schema()
+        llm_output_schema = load_llm_output_schema()
+        llm_bundle_json = json.dumps(llm_bundle, indent=2, sort_keys=True)
+        llm_bundle_schema_json = json.dumps(llm_bundle_schema, indent=2, sort_keys=True)
+        llm_output_schema_json = json.dumps(llm_output_schema, indent=2, sort_keys=True)
+        llm_review_package_base64 = base64.b64encode(
+            build_llm_review_package(graph, candidate_id=candidate.id)
+        ).decode("ascii")
+    else:
+        llm_bundle_json = "{}"
+        llm_bundle_schema_json = "{}"
+        llm_output_schema_json = "{}"
+        llm_review_package_base64 = ""
     return ReasoningGraphInspectorView(
         available=True, valid=valid, validation_message=message,
         measurement_count=len(graph.measurements), observation_count=len(graph.observations),
@@ -675,7 +699,11 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
         hypothesis_count=len(graph.biological_hypotheses),
         builtin_sources=builtin_sources, plugin_sources=plugin_sources,
         provenance_paths=tuple(paths), hypotheses=hypothesis_views,
-        graph_json=json.dumps(graph.to_dict(), indent=2, sort_keys=True) if valid else "{}",
+        graph_json=graph_json,
+        llm_bundle_json=llm_bundle_json,
+        llm_bundle_schema_json=llm_bundle_schema_json,
+        llm_output_schema_json=llm_output_schema_json,
+        llm_review_package_base64=llm_review_package_base64,
     )
 
 
