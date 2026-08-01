@@ -1169,6 +1169,29 @@
             <div class="mini"><strong>{{ candidate.reasoning_graph.evidence_pattern_count }}</strong><span>Evidence patterns</span></div>
             <div class="mini"><strong>{{ candidate.reasoning_graph.hypothesis_count }}</strong><span>Hypotheses</span></div>
           </div>
+          <h4>Reasoning component summary</h4>
+          <div class="mini-grid reasoning-component-summary">
+            <div class="mini"><strong>{{ candidate.reasoning_graph.hypothesis_component_count }}</strong><span>Hypothesis graphs</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.pattern_component_count }}</strong><span>Pattern-level unresolved</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.finding_component_count }}</strong><span>Finding-level unresolved</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.observation_component_count }}</strong><span>Observation-only</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.measurement_only_component_count }}</strong><span>Measurement-only</span></div>
+          </div>
+          {% if candidate.reasoning_graph.components %}
+          <details>
+            <summary><strong>Reasoning completeness by component</strong></summary>
+            <ul class="reasoning-component-list">
+              {% for component in candidate.reasoning_graph.components %}
+              <li>
+                <strong>{{ component.classification|replace('_', ' ')|title }}</strong>
+                — reached {{ component.highest_level|replace('_', ' ')|title }}
+                {% if component.next_level %}; next possible level: {{ component.next_level|replace('_', ' ')|title }}{% else %}; complete to hypothesis level{% endif %}
+                <span class="muted">({{ component.node_count }} nodes, {{ component.edge_count }} edges)</span>
+              </li>
+              {% endfor %}
+            </ul>
+          </details>
+          {% endif %}
           <h4>Biological hypothesis evaluations</h4>
           {% if candidate.reasoning_graph.biological_hypotheses %}
             {% for hypothesis in candidate.reasoning_graph.biological_hypotheses %}

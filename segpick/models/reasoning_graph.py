@@ -126,6 +126,20 @@ class ReasoningEdge:
 
 
 @dataclass(frozen=True, slots=True)
+class ReasoningComponent:
+    component_id: str
+    node_ids: tuple[str, ...]
+    highest_level: str
+    classification: str
+    next_level: str | None
+    node_count: int
+    edge_count: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
 class ReasoningGraph:
     measurements: tuple[MeasurementNode, ...] = ()
     observations: tuple[ObservationNode, ...] = ()
@@ -139,6 +153,67 @@ class ReasoningGraph:
     def provenance_edges(self) -> tuple[ReasoningEdge, ...]:
         """Return the graph's explicit immutable provenance edges."""
         return self.edges
+
+    def reasoning_components(self) -> tuple[ReasoningComponent, ...]:
+        """Return undirected connected components classified by highest reasoning layer."""
+        groups = (
+            ("measurement", self.measurements),
+            ("observation", self.observations),
+            ("interpretive_finding", self.interpretive_findings),
+            ("evidence_pattern", self.evidence_patterns),
+            ("biological_hypothesis", self.biological_hypotheses),
+        )
+        level_order = tuple(name for name, _ in groups)
+        rank = {name: index for index, name in enumerate(level_order)}
+        node_type = {item.id: name for name, items in groups for item in items}
+        adjacency = {node_id: set() for node_id in node_type}
+        for edge in self.edges:
+            if edge.source_id in adjacency and edge.target_id in adjacency:
+                adjacency[edge.source_id].add(edge.target_id)
+                adjacency[edge.target_id].add(edge.source_id)
+        seen: set[str] = set()
+        components: list[ReasoningComponent] = []
+        for start in sorted(adjacency):
+            if start in seen:
+                continue
+            stack = [start]
+            members: set[str] = set()
+            while stack:
+                current = stack.pop()
+                if current in members:
+                    continue
+                members.add(current)
+                seen.add(current)
+                stack.extend(adjacency[current] - members)
+            highest = max((node_type[item] for item in members), key=rank.__getitem__)
+            next_level = level_order[rank[highest] + 1] if rank[highest] + 1 < len(level_order) else None
+            classification = {
+                "biological_hypothesis": "hypothesis_provenance",
+                "evidence_pattern": "unresolved_evidence_pattern",
+                "interpretive_finding": "unresolved_interpretive_finding",
+                "observation": "observation_only",
+                "measurement": "measurement_only",
+            }[highest]
+            edge_count = sum(1 for edge in self.edges if edge.source_id in members and edge.target_id in members)
+            components.append(ReasoningComponent(
+                component_id=f"component:{len(components)+1}",
+                node_ids=tuple(sorted(members)), highest_level=highest,
+                classification=classification, next_level=next_level,
+                node_count=len(members), edge_count=edge_count,
+            ))
+        return tuple(components)
+
+    def component_summary(self) -> dict[str, Any]:
+        components = self.reasoning_components()
+        counts: dict[str, int] = {}
+        for component in components:
+            counts[component.classification] = counts.get(component.classification, 0) + 1
+        return {
+            "component_count": len(components),
+            "classification_counts": counts,
+            "measurement_only_components": counts.get("measurement_only", 0),
+            "components": [component.to_dict() for component in components],
+        }
 
     def validate(self) -> None:
         node_groups = {
@@ -241,6 +316,7 @@ class ReasoningGraph:
         return {
             "schema_version": "1.0",
             "format": "segpick-normalized-reasoning-graph",
+            "component_summary": self.component_summary(),
             "nodes": nodes,
             "edges": [
                 {
