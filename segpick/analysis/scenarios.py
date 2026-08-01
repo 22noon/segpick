@@ -5,11 +5,18 @@ from segpick.models import Sample
 def attach_biological_scenarios(sample: Sample, candidate_modules: tuple[KnowledgeModule, ...], gene_modules: tuple[KnowledgeModule, ...]) -> None:
     for gene in sample.genes.values():
         for candidate in gene.candidates:
-            candidate.analysis.scenarios = evaluate_scenarios(
+            all_patterns = evaluate_scenarios(
                 candidate_modules,
                 candidate.analysis.observations,
                 candidate.analysis.findings,
                 candidate_ids=(candidate.id,),
+                include_incomplete=True,
+            )
+            candidate.analysis.scenarios = tuple(
+                item for item in all_patterns if item.state in {"matched", "contradicted"}
+            )
+            candidate.analysis.unresolved_evidence_patterns = tuple(
+                item for item in all_patterns if item.state in {"partially_matched", "not_evaluable"}
             )
         observations = tuple(o for c in gene.candidates for o in c.analysis.observations)
         gene.scenarios = evaluate_scenarios(

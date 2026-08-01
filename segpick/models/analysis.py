@@ -50,6 +50,7 @@ class ContigAnalysis:
     findings: tuple[BiologicalFinding, ...] = ()
     hypotheses: tuple[BiologicalHypothesis, ...] = ()
     scenarios: tuple[BiologicalScenario, ...] = ()
+    unresolved_evidence_patterns: tuple[BiologicalScenario, ...] = ()
     scenario_hypotheses: tuple[ScenarioHypothesis, ...] = ()
     evidence_assessments: tuple[EvidenceAssessment, ...] = ()
     cross_evidence_findings: tuple[CrossEvidenceFinding, ...] = ()

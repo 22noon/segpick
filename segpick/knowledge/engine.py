@@ -77,12 +77,12 @@ def _condition_provenance(condition, observations, findings):
     )
 
 
-def evaluate_scenarios(modules, observations, findings, candidate_ids=()):
+def evaluate_scenarios(modules, observations, findings, candidate_ids=(), include_incomplete=False):
     out = []
     for module in modules:
         required_conditions = tuple(c for c in module.requires if c.matches(observations, findings))
         missing_required = tuple(c for c in module.requires if c not in required_conditions)
-        if missing_required:
+        if missing_required and not include_incomplete:
             continue
 
         supporting_conditions = tuple(c for c in module.supports if c.matches(observations, findings))
@@ -127,7 +127,12 @@ def evaluate_scenarios(modules, observations, findings, candidate_ids=()):
             source=module.source,
             references=module.references,
             evidence_provenance=provenance,
-            state="contradicted" if conflicting_conditions else "matched",
+            state=(
+                "not_evaluable" if len(missing_required) == len(module.requires) and not supporting_conditions and not conflicting_conditions
+                else "partially_matched" if missing_required
+                else "contradicted" if conflicting_conditions
+                else "matched"
+            ),
             missing_required=tuple(c.label for c in missing_required),
             missing_supporting=tuple(c.label for c in missing_supporting),
             unused_findings=unused_findings,

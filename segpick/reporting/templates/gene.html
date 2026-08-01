@@ -976,6 +976,7 @@
       <summary class="scenario-summary">
         <span><strong>{{ scenario.title }}</strong></span>
         <span class="hypothesis-badge confidence-{{ scenario.confidence }}">{{ scenario.confidence|upper }}</span>
+        <span class="hypothesis-scope muted">{{ scenario.state|replace("_", " ")|title }}</span>
         <span class="scenario-counts">{{ scenario.matched_required|length + scenario.matched_supporting|length }} supporting observations{% if scenario.matched_conflicting %} · {{ scenario.matched_conflicting|length }} conflict{% if scenario.matched_conflicting|length != 1 %}s{% endif %}{% endif %} · Examine evidence</span>
       </summary>
       <div class="scenario-body">
@@ -983,6 +984,8 @@
         {{ evidence_group('Required evidence', scenario.matched_required) }}
         {{ evidence_group('Supporting evidence', scenario.matched_supporting) }}
         {{ evidence_group('Conflicting evidence', scenario.matched_conflicting) }}
+        {{ evidence_group('Missing required evidence', scenario.missing_required) }}
+        {{ evidence_group('Missing supporting evidence', scenario.missing_supporting) }}
         {% if scenario.suggested_actions %}<h4>Suggested checks</h4><ul>{% for action in scenario.suggested_actions %}<li>{{ action }}</li>{% endfor %}</ul>{% endif %}
         <p class="hypothesis-meta">{{ scenario.scenario_id }} · {{ scenario.source }}</p>
       </div>
@@ -1022,6 +1025,7 @@
     <a href="#reasoning-path-panel">Reasoning path</a>
     <a href="#cross-evidence-panel">Cross-evidence findings</a>
     <a href="#biological-scenarios-panel">Biological scenarios</a>
+    <a href="#unresolved-evidence-patterns-panel">Unresolved evidence patterns</a>
     <a href="#biological-hypotheses-panel">Biological hypotheses</a>
     <a href="#biological-interpretation-panel">Rule-based interpretation</a>
   </nav>
@@ -1083,6 +1087,18 @@
     {% for candidate in view.candidates %}
       <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
       {% if candidate.scenarios %}{% for scenario in candidate.scenarios %}{{ scenario_card(scenario) }}{% endfor %}{% else %}<p class="muted">No biological scenario was recognised for this candidate.</p>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+
+  <section id="unresolved-evidence-patterns-panel" class="card hypothesis-card">
+    <h2>Unresolved evidence patterns</h2>
+    <p class="muted">Patterns that could not yet support biological hypotheses. Missing evidence indicates what additional observations or interpretive findings would advance the reasoning.</p>
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+      {% if candidate.unresolved_evidence_patterns %}
+        {% for pattern in candidate.unresolved_evidence_patterns %}{{ scenario_card(pattern) }}{% endfor %}
+      {% else %}<p class="muted">No unresolved evidence pattern was recorded for this candidate.</p>{% endif %}
       </div>
     {% endfor %}
   </section>
@@ -2153,7 +2169,7 @@ const DashboardTabs = {
   summary: new Set(["Recommended candidate"]),
   comparison: new Set(["Evidence table"]),
   evidence: new Set(["Structural integrity", "Reference compatibility", "Read evidence", "ORF structural evidence"]),
-  reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Interpretive findings"]),
+  reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Biological scenarios", "Unresolved evidence patterns", "Interpretive findings"]),
   plots: new Set(["Visualizations", "Candidate-to-candidate structural comparison", "Candidates aligned to shared nucleotide reference", "Candidate versus closest nucleotide reference", "Protein coordinate map", "Protein relatedness", "Read coverage"]),
   downloads: new Set(["Download selected sequences", "Selected candidate sequence"]),
   expert: new Set(["Reasoning graph inspector", "Rule explorer"])

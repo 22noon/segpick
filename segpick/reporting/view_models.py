@@ -47,6 +47,9 @@ class ScenarioView:
     suggested_actions: tuple[str, ...]
     source: str
     references: tuple[str, ...]
+    state: str
+    missing_required: tuple[ScenarioEvidenceView, ...]
+    missing_supporting: tuple[ScenarioEvidenceView, ...]
 
 
 def _scenario_evidence_view(label: str, provenance_by_condition: dict[str, object]) -> ScenarioEvidenceView:
@@ -83,6 +86,9 @@ def build_scenario_view(item: BiologicalScenario) -> ScenarioView:
         suggested_actions=item.suggested_actions,
         source=item.source,
         references=item.references,
+        state=item.state,
+        missing_required=tuple(_scenario_evidence_view(value, provenance) for value in item.missing_required),
+        missing_supporting=tuple(_scenario_evidence_view(value, provenance) for value in item.missing_supporting),
     )
 
 
@@ -710,6 +716,7 @@ class CandidateView:
     hypotheses: tuple[HypothesisView, ...]
     boundary_coverage: tuple[BoundaryCoverageView, ...]
     scenarios: tuple[ScenarioView, ...]
+    unresolved_evidence_patterns: tuple[ScenarioView, ...]
     scenario_hypotheses: tuple[ScenarioHypothesisView, ...]
     cross_evidence_findings: tuple[CrossEvidenceFindingView, ...]
     reasoning_graph: ReasoningGraphInspectorView
@@ -1011,6 +1018,7 @@ def build_gene_page_view(
                 for item in candidate.analysis.boundary_coverage
             ),
             scenarios=tuple(build_scenario_view(item) for item in candidate.analysis.scenarios),
+            unresolved_evidence_patterns=tuple(build_scenario_view(item) for item in candidate.analysis.unresolved_evidence_patterns),
             scenario_hypotheses=tuple(build_scenario_hypothesis_view(item) for item in candidate.analysis.scenario_hypotheses),
             cross_evidence_findings=tuple(
                 CrossEvidenceFindingView(
