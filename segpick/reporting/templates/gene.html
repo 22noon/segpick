@@ -1169,6 +1169,29 @@
             <div class="mini"><strong>{{ candidate.reasoning_graph.evidence_pattern_count }}</strong><span>Evidence patterns</span></div>
             <div class="mini"><strong>{{ candidate.reasoning_graph.hypothesis_count }}</strong><span>Hypotheses</span></div>
           </div>
+          <h4>Reasoning component summary</h4>
+          <div class="mini-grid reasoning-component-summary">
+            <div class="mini"><strong>{{ candidate.reasoning_graph.hypothesis_component_count }}</strong><span>Hypothesis graphs</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.pattern_component_count }}</strong><span>Pattern-level unresolved</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.finding_component_count }}</strong><span>Finding-level unresolved</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.observation_component_count }}</strong><span>Observation-only</span></div>
+            <div class="mini"><strong>{{ candidate.reasoning_graph.measurement_only_component_count }}</strong><span>Measurement-only</span></div>
+          </div>
+          {% if candidate.reasoning_graph.components %}
+          <details>
+            <summary><strong>Reasoning completeness by component</strong></summary>
+            <ul class="reasoning-component-list">
+              {% for component in candidate.reasoning_graph.components %}
+              <li>
+                <strong>{{ component.classification|replace('_', ' ')|title }}</strong>
+                — reached {{ component.highest_level|replace('_', ' ')|title }}
+                {% if component.next_level %}; next possible level: {{ component.next_level|replace('_', ' ')|title }}{% else %}; complete to hypothesis level{% endif %}
+                <span class="muted">({{ component.node_count }} nodes, {{ component.edge_count }} edges)</span>
+              </li>
+              {% endfor %}
+            </ul>
+          </details>
+          {% endif %}
           <h4>Biological hypothesis evaluations</h4>
           {% if candidate.reasoning_graph.biological_hypotheses %}
             {% for hypothesis in candidate.reasoning_graph.biological_hypotheses %}
@@ -1241,6 +1264,7 @@
           </details>
           <div class="graph-download-actions">
             <button type="button" data-graph-download data-candidate-id="{{ candidate.candidate_id }}">Download reasoning graph JSON</button>
+            <button type="button" data-normalized-graph-download data-candidate-id="{{ candidate.candidate_id }}">Download normalized graph JSON</button>
             <button type="button" data-llm-bundle-download data-candidate-id="{{ candidate.candidate_id }}">Download LLM reasoning bundle</button>
             <button type="button" data-llm-bundle-schema-download data-candidate-id="{{ candidate.candidate_id }}">Download bundle schema</button>
             <button type="button" data-llm-output-schema-download data-candidate-id="{{ candidate.candidate_id }}">Download AI output schema</button>
@@ -1248,6 +1272,7 @@
           </div>
           <p class="muted">These files are generated locally in the static dashboard. No candidate data is sent to an external model.</p>
           <script type="application/json" id="reasoning-graph-json-{{ loop.index0 }}" data-graph-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.graph_json|safe }}</script>
+          <script type="application/json" data-normalized-graph-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.normalized_graph_json|safe }}</script>
           <script type="application/json" data-llm-bundle-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.llm_bundle_json|safe }}</script>
           <script type="application/json" data-llm-bundle-schema-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.llm_bundle_schema_json|safe }}</script>
           <script type="application/json" data-llm-output-schema-candidate="{{ candidate.candidate_id }}">{{ candidate.reasoning_graph.llm_output_schema_json|safe }}</script>
@@ -2186,6 +2211,7 @@ function downloadBase64Zip(button){
 }
 document.addEventListener("click",event=>{
   const graph=event.target.closest("[data-graph-download]");if(graph)return downloadReasoningGraph(graph);
+  const normalized=event.target.closest("[data-normalized-graph-download]");if(normalized)return downloadTextAsset("script[data-normalized-graph-candidate]",normalized.dataset.candidateId,`${safeFilename(normalized.dataset.candidateId)}.normalized_reasoning_graph.json`);
   const bundle=event.target.closest("[data-llm-bundle-download]");if(bundle)return downloadTextAsset("script[data-llm-bundle-candidate]",bundle.dataset.candidateId,`${safeFilename(bundle.dataset.candidateId)}.llm_reasoning_bundle.json`);
   const inputSchema=event.target.closest("[data-llm-bundle-schema-download]");if(inputSchema)return downloadTextAsset("script[data-llm-bundle-schema-candidate]",inputSchema.dataset.candidateId,"llm_reasoning_bundle.schema.json");
   const outputSchema=event.target.closest("[data-llm-output-schema-download]");if(outputSchema)return downloadTextAsset("script[data-llm-output-schema-candidate]",outputSchema.dataset.candidateId,"llm_output.schema.json");

@@ -126,6 +126,20 @@ class ReasoningEdge:
 
 
 @dataclass(frozen=True, slots=True)
+class ReasoningComponent:
+    component_id: str
+    node_ids: tuple[str, ...]
+    highest_level: str
+    classification: str
+    next_level: str | None
+    node_count: int
+    edge_count: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
 class ReasoningGraph:
     measurements: tuple[MeasurementNode, ...] = ()
     observations: tuple[ObservationNode, ...] = ()
@@ -139,6 +153,67 @@ class ReasoningGraph:
     def provenance_edges(self) -> tuple[ReasoningEdge, ...]:
         """Return the graph's explicit immutable provenance edges."""
         return self.edges
+
+    def reasoning_components(self) -> tuple[ReasoningComponent, ...]:
+        """Return undirected connected components classified by highest reasoning layer."""
+        groups = (
+            ("measurement", self.measurements),
+            ("observation", self.observations),
+            ("interpretive_finding", self.interpretive_findings),
+            ("evidence_pattern", self.evidence_patterns),
+            ("biological_hypothesis", self.biological_hypotheses),
+        )
+        level_order = tuple(name for name, _ in groups)
+        rank = {name: index for index, name in enumerate(level_order)}
+        node_type = {item.id: name for name, items in groups for item in items}
+        adjacency = {node_id: set() for node_id in node_type}
+        for edge in self.edges:
+            if edge.source_id in adjacency and edge.target_id in adjacency:
+                adjacency[edge.source_id].add(edge.target_id)
+                adjacency[edge.target_id].add(edge.source_id)
+        seen: set[str] = set()
+        components: list[ReasoningComponent] = []
+        for start in sorted(adjacency):
+            if start in seen:
+                continue
+            stack = [start]
+            members: set[str] = set()
+            while stack:
+                current = stack.pop()
+                if current in members:
+                    continue
+                members.add(current)
+                seen.add(current)
+                stack.extend(adjacency[current] - members)
+            highest = max((node_type[item] for item in members), key=rank.__getitem__)
+            next_level = level_order[rank[highest] + 1] if rank[highest] + 1 < len(level_order) else None
+            classification = {
+                "biological_hypothesis": "hypothesis_provenance",
+                "evidence_pattern": "unresolved_evidence_pattern",
+                "interpretive_finding": "unresolved_interpretive_finding",
+                "observation": "observation_only",
+                "measurement": "measurement_only",
+            }[highest]
+            edge_count = sum(1 for edge in self.edges if edge.source_id in members and edge.target_id in members)
+            components.append(ReasoningComponent(
+                component_id=f"component:{len(components)+1}",
+                node_ids=tuple(sorted(members)), highest_level=highest,
+                classification=classification, next_level=next_level,
+                node_count=len(members), edge_count=edge_count,
+            ))
+        return tuple(components)
+
+    def component_summary(self) -> dict[str, Any]:
+        components = self.reasoning_components()
+        counts: dict[str, int] = {}
+        for component in components:
+            counts[component.classification] = counts.get(component.classification, 0) + 1
+        return {
+            "component_count": len(components),
+            "classification_counts": counts,
+            "measurement_only_components": counts.get("measurement_only", 0),
+            "components": [component.to_dict() for component in components],
+        }
 
     def validate(self) -> None:
         node_groups = {
@@ -195,6 +270,63 @@ class ReasoningGraph:
             "evidence_patterns": [item.to_dict() for item in self.evidence_patterns],
             "biological_hypotheses": [item.to_dict() for item in self.biological_hypotheses],
             "edges": [item.to_dict() for item in self.provenance_edges()],
+        }
+
+
+    def to_normalized_dict(self) -> dict[str, Any]:
+        """Serialize a generic node/edge graph for external graph tools.
+
+        Unlike :meth:`to_dict`, this representation places all scientific
+        entities in one ``nodes`` collection and keeps relationships in one
+        ``edges`` collection. Collection names from the domain-oriented schema
+        therefore do not appear as pseudo-edges in generic JSON visualizers.
+        """
+        self.validate()
+        node_groups = (
+            ("measurement", self.measurements),
+            ("observation", self.observations),
+            ("interpretive_finding", self.interpretive_findings),
+            ("evidence_pattern", self.evidence_patterns),
+            ("biological_hypothesis", self.biological_hypotheses),
+        )
+        nodes: list[dict[str, Any]] = []
+        for node_type, items in node_groups:
+            for item in items:
+                data = item.to_dict()
+                node_id = str(data.pop("id"))
+                if node_type == "measurement":
+                    title = str(data.get("name", node_id))
+                elif node_type == "observation":
+                    title = str(data.get("description", node_id))
+                else:
+                    title = str(data.get("title", node_id))
+                summary = str(
+                    data.get("summary")
+                    or data.get("interpretation")
+                    or data.get("description")
+                    or title
+                )
+                nodes.append({
+                    "id": node_id,
+                    "type": node_type,
+                    "label": title,
+                    "summary": summary,
+                    "data": data,
+                })
+        return {
+            "schema_version": "1.0",
+            "format": "segpick-normalized-reasoning-graph",
+            "component_summary": self.component_summary(),
+            "nodes": nodes,
+            "edges": [
+                {
+                    "source": edge.source_id,
+                    "target": edge.target_id,
+                    "relationship": edge.relationship,
+                    "label": edge.relationship.replace("_", " "),
+                }
+                for edge in self.provenance_edges()
+            ],
         }
 
     def to_dict(self) -> dict[str, Any]:

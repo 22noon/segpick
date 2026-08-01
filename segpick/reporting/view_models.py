@@ -482,6 +482,16 @@ class ProvenancePathView:
 
 
 @dataclass(frozen=True, slots=True)
+class ReasoningComponentView:
+    component_id: str
+    classification: str
+    highest_level: str
+    next_level: str | None
+    node_count: int
+    edge_count: int
+
+
+@dataclass(frozen=True, slots=True)
 class ReasoningGraphInspectorView:
     available: bool
     valid: bool
@@ -491,11 +501,19 @@ class ReasoningGraphInspectorView:
     interpretation_count: int
     evidence_pattern_count: int
     hypothesis_count: int
+    component_count: int
+    hypothesis_component_count: int
+    pattern_component_count: int
+    finding_component_count: int
+    observation_component_count: int
+    measurement_only_component_count: int
+    components: tuple[ReasoningComponentView, ...]
     builtin_sources: tuple[str, ...]
     plugin_sources: tuple[str, ...]
     provenance_paths: tuple[ProvenancePathView, ...]
     hypotheses: tuple[HypothesisInspectorView, ...]
     graph_json: str
+    normalized_graph_json: str
     llm_bundle_json: str
     llm_bundle_schema_json: str
     llm_output_schema_json: str
@@ -508,7 +526,9 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
         return ReasoningGraphInspectorView(
             available=False, valid=False, validation_message="Reasoning graph unavailable.",
             measurement_count=0, observation_count=0, interpretation_count=0, evidence_pattern_count=0, hypothesis_count=0,
-            builtin_sources=(), plugin_sources=(), provenance_paths=(), hypotheses=(), graph_json="{}",
+            component_count=0, hypothesis_component_count=0, pattern_component_count=0, finding_component_count=0,
+            observation_component_count=0, measurement_only_component_count=0, components=(),
+            builtin_sources=(), plugin_sources=(), provenance_paths=(), hypotheses=(), graph_json="{}", normalized_graph_json="{}",
             llm_bundle_json="{}", llm_bundle_schema_json="{}", llm_output_schema_json="{}",
             llm_review_package_base64="",
         )
@@ -655,6 +675,16 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
                         hypothesis_state=hypothesis.state,
                         steps=(hypothesis_step, *tail),
                     ))
+    component_models = graph.reasoning_components() if valid else ()
+    component_views = tuple(ReasoningComponentView(
+        component_id=item.component_id, classification=item.classification,
+        highest_level=item.highest_level, next_level=item.next_level,
+        node_count=item.node_count, edge_count=item.edge_count,
+    ) for item in component_models)
+    component_counts: dict[str, int] = {}
+    for item in component_models:
+        component_counts[item.classification] = component_counts.get(item.classification, 0) + 1
+
     hypothesis_views = tuple(
         HypothesisInspectorView(
             hypothesis_id=item.id,
@@ -677,6 +707,7 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
         for item in graph.biological_hypotheses
     )
     graph_json = json.dumps(graph.to_dict(), indent=2, sort_keys=True) if valid else "{}"
+    normalized_graph_json = json.dumps(graph.to_normalized_dict(), indent=2, sort_keys=True) if valid else "{}"
     if valid:
         llm_bundle = build_llm_reasoning_bundle(graph, candidate_id=candidate.id)
         llm_bundle_schema = load_llm_bundle_schema()
@@ -697,9 +728,16 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
         measurement_count=len(graph.measurements), observation_count=len(graph.observations),
         interpretation_count=len(graph.interpretive_findings), evidence_pattern_count=len(graph.evidence_patterns),
         hypothesis_count=len(graph.biological_hypotheses),
+        component_count=len(component_models),
+        hypothesis_component_count=component_counts.get("hypothesis_provenance", 0),
+        pattern_component_count=component_counts.get("unresolved_evidence_pattern", 0),
+        finding_component_count=component_counts.get("unresolved_interpretive_finding", 0),
+        observation_component_count=component_counts.get("observation_only", 0),
+        measurement_only_component_count=component_counts.get("measurement_only", 0),
+        components=component_views,
         builtin_sources=builtin_sources, plugin_sources=plugin_sources,
         provenance_paths=tuple(paths), hypotheses=hypothesis_views,
-        graph_json=graph_json,
+        graph_json=graph_json, normalized_graph_json=normalized_graph_json,
         llm_bundle_json=llm_bundle_json,
         llm_bundle_schema_json=llm_bundle_schema_json,
         llm_output_schema_json=llm_output_schema_json,
