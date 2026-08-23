@@ -25,6 +25,7 @@ class EvidencePatternEvidenceView:
     source: str | None
     source_display_name: str | None
     kind: str
+    graph_node_id: str | None = None
     observed_descriptions: tuple[str, ...] = ()
     measurements: tuple[dict[str, object], ...] = ()
     regions: tuple[dict[str, object], ...] = ()
@@ -56,9 +57,30 @@ class EvidencePatternView:
     missing_supporting: tuple[EvidencePatternEvidenceView, ...]
 
 
-def _evidence_pattern_evidence_view(label: str, provenance_by_condition: dict[str, object]) -> EvidencePatternEvidenceView:
+def _evidence_pattern_evidence_view(
+    label: str,
+    provenance_by_condition: dict[str, object],
+    observations: tuple[object, ...] = (),
+    findings: tuple[object, ...] = (),
+) -> EvidencePatternEvidenceView:
     display = describe_condition(label)
     provenance = provenance_by_condition.get(label)
+
+    # Look up the graph node ID using the same logic as _condition_targets
+    graph_node_id = None
+    kind, _, remainder = label.partition(":")
+    value, _, source = remainder.partition("@")
+    if kind == "observation":
+        for node in observations:
+            if node.observation_type == value and (not source or node.source == source):
+                graph_node_id = node.id
+                break
+    else:
+        for node in findings:
+            if node.title == value:
+                graph_node_id = node.id
+                break
+
     return EvidencePatternEvidenceView(
         identifier=display.identifier,
         display_name=display.display_name,
@@ -66,6 +88,7 @@ def _evidence_pattern_evidence_view(label: str, provenance_by_condition: dict[st
         source=display.source,
         source_display_name=display.source_display_name,
         kind=display.kind,
+        graph_node_id=graph_node_id,
         observed_descriptions=tuple(getattr(provenance, "descriptions", ())),
         measurements=tuple(getattr(provenance, "measurements", ())),
         regions=tuple(getattr(provenance, "regions", ())),
@@ -73,8 +96,10 @@ def _evidence_pattern_evidence_view(label: str, provenance_by_condition: dict[st
     )
 
 
-def build_evidence_pattern_view(item: EvidencePatternEvaluation) -> EvidencePatternView:
+def build_evidence_pattern_view(item: EvidencePatternEvaluation, graph: object = None) -> EvidencePatternView:
     provenance = {entry.condition: entry for entry in item.evidence_provenance}
+    observations = tuple(graph.observations) if graph else ()
+    findings = tuple(graph.interpretive_findings) if graph else ()
     return EvidencePatternView(
         pattern_id=item.pattern_id,
         title=item.title,
@@ -84,15 +109,15 @@ def build_evidence_pattern_view(item: EvidencePatternEvaluation) -> EvidencePatt
         severity=item.severity,
         interpretation=item.interpretation,
         candidate_ids=item.candidate_ids,
-        matched_required=tuple(_evidence_pattern_evidence_view(value, provenance) for value in item.matched_required),
-        matched_supporting=tuple(_evidence_pattern_evidence_view(value, provenance) for value in item.matched_supporting),
-        matched_conflicting=tuple(_evidence_pattern_evidence_view(value, provenance) for value in item.matched_conflicting),
+        matched_required=tuple(_evidence_pattern_evidence_view(value, {entry.condition: entry for entry in item.evidence_provenance}, graph.observations if graph else (), graph.interpretive_findings if graph else ()) for value in item.matched_required),
+        matched_supporting=tuple(_evidence_pattern_evidence_view(value, {entry.condition: entry for entry in item.evidence_provenance}, graph.observations if graph else (), graph.interpretive_findings if graph else ()) for value in item.matched_supporting),
+        matched_conflicting=tuple(_evidence_pattern_evidence_view(value, {entry.condition: entry for entry in item.evidence_provenance}, graph.observations if graph else (), graph.interpretive_findings if graph else ()) for value in item.matched_conflicting),
         suggested_actions=item.suggested_actions,
         source=item.source,
         references=item.references,
         state=item.state,
-        missing_required=tuple(_evidence_pattern_evidence_view(value, provenance) for value in item.missing_required),
-        missing_supporting=tuple(_evidence_pattern_evidence_view(value, provenance) for value in item.missing_supporting),
+        missing_required=tuple(_evidence_pattern_evidence_view(value, {entry.condition: entry for entry in item.evidence_provenance}, graph.observations if graph else (), graph.interpretive_findings if graph else ()) for value in item.missing_required),
+        missing_supporting=tuple(_evidence_pattern_evidence_view(value, {entry.condition: entry for entry in item.evidence_provenance}, graph.observations if graph else (), graph.interpretive_findings if graph else ()) for value in item.missing_supporting),
     )
 
 
@@ -1462,8 +1487,8 @@ def build_gene_page_view(
                 )
                 for item in candidate.analysis.boundary_coverage
             ),
-            evidence_patterns=tuple(build_evidence_pattern_view(item) for item in candidate.analysis.evidence_patterns),
-            unresolved_evidence_patterns=tuple(build_evidence_pattern_view(item) for item in candidate.analysis.unresolved_evidence_patterns),
+            evidence_patterns=tuple(build_evidence_pattern_view(item, candidate.analysis.reasoning_graph) for item in candidate.analysis.evidence_patterns),
+            unresolved_evidence_patterns=tuple(build_evidence_pattern_view(item, candidate.analysis.reasoning_graph) for item in candidate.analysis.unresolved_evidence_patterns),
             biological_hypothesis_evaluations=tuple(build_biological_hypothesis_evaluation_view(item) for item in candidate.analysis.biological_hypothesis_evaluations),
             cross_evidence_findings=tuple(
                 CrossEvidenceFindingView(

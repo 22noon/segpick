@@ -1283,7 +1283,10 @@
 
   {% macro hypothesis_action_buttons(hypothesis_id, hypothesis_title) -%}
     <div class="hypothesis-actions">
-      <button type="button" class="secondary" data-action="compare" data-hypothesis-id="{{ hypothesis_id }}" data-hypothesis-title="{{ hypothesis_title }}">Compare</button>
+      <label class="hypothesis-compare-checkbox">
+        <input type="checkbox" class="compare-checkbox" data-hypothesis-id="{{ hypothesis_id }}" data-hypothesis-title="{{ hypothesis_title }}">
+        <span>Compare</span>
+      </label>
       <button type="button" class="secondary" data-action="explain" data-hypothesis-id="{{ hypothesis_id }}">Explain</button>
     </div>
   {%- endmacro %}
@@ -2491,35 +2494,39 @@ document.addEventListener("click",event=>{
   const outputSchema=event.target.closest("[data-llm-output-schema-download]");if(outputSchema)return downloadTextAsset("script[data-llm-output-schema-candidate]",outputSchema.dataset.candidateId,"llm_output.schema.json");
   const packageButton=event.target.closest("[data-llm-package-download]");if(packageButton)return downloadBase64Zip(packageButton);
 
-  // Compare action
-  const compareBtn=event.target.closest("[data-action='compare']");
-  if(compareBtn){
+  // Compare action (checkbox-based selection)
+  const compareCheckbox=event.target.closest(".compare-checkbox");
+  if(compareCheckbox){
     const candidateId=DashboardState.selectedCandidate;
     if(!candidateId){alert("Select a candidate first");return;}
-    const hypothesisId=compareBtn.dataset.hypothesisId;
-    const hypothesisTitle=compareBtn.dataset.hypothesisTitle;
-    // Toggle selection
-    const allCompareBtns=[...document.querySelectorAll("[data-action='compare']")];
-    const wasSelected=compareBtn.classList.toggle("selected");
-    if(wasSelected){
-      // Deselected - clear selection
-      allCompareBtns.forEach(b=>b.classList.remove("selected"));
-      // Remove comparison modal if exists
-      const existing=document.querySelector(".comparison-modal");
-      if(existing)existing.remove();
+    const hypothesisId=compareCheckbox.dataset.hypothesisId;
+    const hypothesisTitle=compareCheckbox.dataset.hypothesisTitle;
+    const allCheckboxes=[...document.querySelectorAll(".compare-checkbox")];
+    const selectedCheckboxes=[...document.querySelectorAll(".compare-checkbox:checked")];
+    
+    // Enforce max 2 selections
+    if(compareCheckbox.checked && selectedCheckboxes.length > 2){
+      compareCheckbox.checked = false;
+      alert("Only two hypotheses can be compared at once.");
       return;
     }
-    // Deselect other compare buttons
-    allCompareBtns.forEach(b=>{if(b!==compareBtn)b.classList.remove("selected");});
-    const selectedBtns=[...document.querySelectorAll("[data-action='compare'].selected")];
-    if(selectedBtns.length===2){
-      // Two hypotheses selected - show comparison
-      const h1=selectedBtns[0];
-      const h2=selectedBtns[1];
+    
+    // Update button text for selected items
+    allCheckboxes.forEach(cb => {
+      const label = cb.nextElementSibling;
+      if(label) label.textContent = cb.checked ? "Selected" : "Compare";
+    });
+    
+    // Show/hide compare action button
+    const compareActionBtn = document.querySelector('.compare-selected-action');
+    if(compareActionBtn) {
+      compareActionBtn.style.display = selectedCheckboxes.length === 2 ? 'inline-block' : 'none';
+    }
+    
+    if(selectedCheckboxes.length === 2){
+      const h1 = selectedCheckboxes[0];
+      const h2 = selectedCheckboxes[1];
       showComparisonModal(candidateId, h1.dataset.hypothesisId, h2.dataset.hypothesisId);
-    } else if(selectedBtns.length===1){
-      // One selected - show prompt
-      selectedBtns[0].textContent="Select another";
     }
   }
 
