@@ -1327,7 +1327,7 @@
     <h2>Biological hypotheses</h2>
     <p class="muted">Biological explanations aggregated from recognised evidence patterns. Hypotheses are descriptive and do not alter candidate ranking.</p>
     <div class="compare-selected-action" style="display:none; margin-bottom:0.75rem;">
-      <button type="button" class="secondary" onclick="triggerCompareSelected()">Compare selected</button>
+      <button type="button" class="secondary" data-action="compare-selected">Compare selected</button>
     </div>
     {% if view.biological_hypothesis_evaluations %}{% for hypothesis in view.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis) }}{% endfor %}{% endif %}
     {% for candidate in view.candidates %}
