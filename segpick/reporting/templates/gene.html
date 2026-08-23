@@ -1048,7 +1048,7 @@
     {%- if value is number -%}{{ "%.2f"|format(value) }}{%- else -%}{{ value }}{%- endif -%}
   {%- endmacro %}
 
-  {% macro evidence_group(title, items) -%}
+  {% macro evidence_group(title, items, candidate=none) -%}
     {% if items %}
       <h4>{{ title }}</h4>
       <div class="evidence-pattern-evidence-list">
@@ -1088,6 +1088,9 @@
               </p>
             {% endif %}
             {% if not item.has_details %}<p class="muted">No additional measurement provenance was recorded for this condition.</p>{% endif %}
+            {% if candidate and item.identifier in candidate.impact_views %}
+              {{ evidence_action_buttons(item.identifier, item.display_name, item.kind) }}
+            {% endif %}
           </div>
         </details>
       {% endfor %}
@@ -1105,11 +1108,11 @@
       </summary>
       <div class="evidence-pattern-body">
         <p>{{ pattern.interpretation }}</p>
-        {{ evidence_group('Required evidence', pattern.matched_required) }}
-        {{ evidence_group('Supporting evidence', pattern.matched_supporting) }}
-        {{ evidence_group('Conflicting evidence', pattern.matched_conflicting) }}
-        {{ evidence_group('Missing required evidence', pattern.missing_required) }}
-        {{ evidence_group('Missing supporting evidence', pattern.missing_supporting) }}
+        {{ evidence_group('Required evidence', pattern.matched_required, candidate) }}
+        {{ evidence_group('Supporting evidence', pattern.matched_supporting, candidate) }}
+        {{ evidence_group('Conflicting evidence', pattern.matched_conflicting, candidate) }}
+        {{ evidence_group('Missing required evidence', pattern.missing_required, candidate) }}
+        {{ evidence_group('Missing supporting evidence', pattern.missing_supporting, candidate) }}
         {% if pattern.suggested_actions %}<h4>Suggested checks</h4><ul>{% for action in pattern.suggested_actions %}<li>{{ action }}</li>{% endfor %}</ul>{% endif %}
         <p class="hypothesis-meta">{{ pattern.pattern_id }} · {{ pattern.source }}</p>
       </div>
@@ -1139,6 +1142,8 @@
             {% if hypothesis.recommended_actions %}<ul>{% for action in hypothesis.recommended_actions %}<li>{{ action }}</li>{% endfor %}</ul>{% else %}<p class="muted">No additional action specified.</p>{% endif %}
           </div>
         </div>
+        {{ hypothesis_action_buttons(hypothesis.hypothesis_id, hypothesis.title) }}
+        {{ evidence_gaps_section(next_evidence) }}
         <p class="hypothesis-meta">{{ hypothesis.hypothesis_id }} · {{ hypothesis.source }}</p>
       </div>
     </details>
@@ -1318,7 +1323,7 @@
   <section id="biological-hypotheses-panel" class="card hypothesis-card">
     <h2>Biological hypotheses</h2>
     <p class="muted">Biological explanations aggregated from recognised evidence patterns. Hypotheses are descriptive and do not alter candidate ranking.</p>
-    {% if view.biological_hypothesis_evaluations %}{% for hypothesis in view.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis, next_evidence=candidate.next_evidence_views.get(hypothesis.hypothesis_id)) }}{% endfor %}{% endif %}
+    {% if view.biological_hypothesis_evaluations %}{% for hypothesis in view.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis) }}{% endfor %}{% endif %}
     {% for candidate in view.candidates %}
       <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
       {% if candidate.biological_hypothesis_evaluations %}{% for hypothesis in candidate.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis, next_evidence=candidate.next_evidence_views.get(hypothesis.hypothesis_id)) }}{% endfor %}{% else %}<p class="muted">No evidence-pattern-supported biological hypothesis was generated for this candidate.</p>{% endif %}
