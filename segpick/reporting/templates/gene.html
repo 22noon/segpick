@@ -1297,6 +1297,70 @@
     </div>
   {%- endmacro %}
 
+  {% macro comparison_modals(candidate) -%}
+    {% if candidate.comparison_views %}
+      {% for key, comparison in candidate.comparison_views.items() %}
+        <details id="comparison-{{ comparison.hypothesis_a_id }}-{{ comparison.hypothesis_b_id }}" class="hypothesis-item comparison-modal" style="display:none;">
+          <summary class="comparison-header">
+            <span class="hypothesis-title">Comparison: {{ comparison.hypothesis_a_title }} vs {{ comparison.hypothesis_b_title }}</span>
+            <span class="hypothesis-badge confidence-high">Compare</span>
+            <button type="button" class="secondary" onclick="this.closest('details').remove()">Close</button>
+          </summary>
+          <div class="hypothesis-detail comparison-body">
+            <div class="hypothesis-trace">
+              <div>
+                <h4>Common evidence</h4>
+                {% if comparison.common_evidence %}
+                  <ul>
+                    {% for item in comparison.common_evidence %}
+                      <li class="evidence-common">
+                        <strong>{{ item.display_name }}</strong>
+                        {% if item.source_display_name %}<span class="muted"> · {{ item.source_display_name }}</span>{% endif %}
+                        {% if item.relationship %}<span class="graph-relation">{{ item.relationship }}</span>{% endif %}
+                        <span class="muted">{{ item.description }}</span>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}<p class="muted">No common evidence.</p>{% endif %}
+              </div>
+              <div>
+                <h4>Unique to {{ comparison.hypothesis_a_title }}</h4>
+                {% if comparison.unique_to_a %}
+                  <ul>
+                    {% for item in comparison.unique_to_a %}
+                      <li class="evidence-unique-a">
+                        <strong>{{ item.display_name }}</strong>
+                        {% if item.source_display_name %}<span class="muted"> · {{ item.source_display_name }}</span>{% endif %}
+                        {% if item.relationship %}<span class="graph-relation">{{ item.relationship }}</span>{% endif %}
+                        <span class="muted">{{ item.description }}</span>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}<p class="muted">None.</p>{% endif %}
+              </div>
+              <div>
+                <h4>Unique to {{ comparison.hypothesis_b_title }}</h4>
+                {% if comparison.unique_to_b %}
+                  <ul>
+                    {% for item in comparison.unique_to_b %}
+                      <li class="evidence-unique-b">
+                        <strong>{{ item.display_name }}</strong>
+                        {% if item.source_display_name %}<span class="muted"> · {{ item.source_display_name }}</span>{% endif %}
+                        {% if item.relationship %}<span class="graph-relation">{{ item.relationship }}</span>{% endif %}
+                        <span class="muted">{{ item.description }}</span>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}<p class="muted">None.</p>{% endif %}
+              </div>
+            </div>
+            <p class="hypothesis-meta">Compare: {{ comparison.hypothesis_a_id }} ↔ {{ comparison.hypothesis_b_id }}</p>
+          </div>
+        </details>
+      {% endfor %}
+    {% endif %}
+  {%- endmacro %}
+
   <nav id="reasoning-navigation" class="reasoning-nav" aria-label="Reasoning sections">
     <h2>Reasoning explorer</h2>
     <a href="#reasoning-path-panel">Reasoning path</a>

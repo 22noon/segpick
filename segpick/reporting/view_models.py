@@ -1408,6 +1408,27 @@ def build_impact_views(candidate: CandidateContig) -> dict[str, ImpactView]:
     return views
 
 
+def build_comparison_views(candidate: CandidateContig) -> dict[tuple[str, str], ComparisonView]:
+    """Build ComparisonView for all pairs of biological hypotheses for a candidate."""
+    graph = candidate.analysis.reasoning_graph
+    if graph is None:
+        return {}
+
+    explorer = ReasoningExplorer(graph)
+    hypotheses = list(graph.biological_hypotheses)
+    if len(hypotheses) < 2:
+        return {}
+
+    views = {}
+    for h1, h2 in combinations(hypotheses, 2):
+        comparison = build_comparison_view(explorer, h1.id, h2.id)
+        # Use sorted tuple of hypothesis IDs as key to ensure consistent ordering
+        key = tuple(sorted([h1.id, h2.id]))
+        views[key] = comparison
+
+    return views
+
+
 def build_gene_page_view(
     gene: Gene,
     recommendation: GeneRecommendation | None,
@@ -1520,6 +1541,7 @@ def build_gene_page_view(
             reasoning_graph=build_reasoning_graph_inspector_view(candidate),
             next_evidence_views=build_next_evidence_views(candidate),
             impact_views=build_impact_views(candidate),
+            comparison_views=build_comparison_views(candidate),
         )
         for candidate in gene.candidates
     )
