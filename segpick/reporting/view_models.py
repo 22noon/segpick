@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import base64
 import json
 
@@ -8,6 +8,7 @@ from segpick.analysis import analyse_protein_continuity, build_evidence_assessme
 from segpick.models import BiologicalHypothesis, EvidencePatternEvaluation, CandidateContig, Gene, RuleEvaluation, HypothesisEvaluation
 from segpick.scoring import GeneRecommendation
 from segpick.knowledge.vocabulary import ConditionDisplay, describe_condition
+from itertools import combinations
 from segpick.reasoning import build_llm_reasoning_bundle, build_llm_review_package, load_llm_bundle_schema, load_llm_output_schema
 from segpick.explorer import ReasoningExplorer
 
@@ -519,6 +520,7 @@ class ComparisonEvidenceView:
     source_display_name: str | None
     kind: str
     relationship: str = ""
+    graph_node_id: str | None = None
     in_a: bool = True
     in_b: bool = True
 
@@ -934,6 +936,7 @@ def build_comparison_view(
             source_display_name=(node.source if hasattr(node, 'source') else node.channel if hasattr(node, 'channel') else "").replace("_", " ").title(),
             kind="biological_hypothesis" if hasattr(node, 'hypothesis_type') else "evidence_pattern" if hasattr(node, 'pattern_id') else "interpretive_finding" if hasattr(node, 'source') and node.source == "finding" else "observation" if hasattr(node, 'observation_type') else "measurement",
             relationship=rel.replace("_", " "),
+            graph_node_id=node.id,
             in_a=True,
             in_b=True,
         ))
@@ -966,6 +969,7 @@ def build_comparison_view(
             source_display_name=(node.source if hasattr(node, 'source') else node.channel if hasattr(node, 'channel') else "").replace("_", " ").title(),
             kind="biological_hypothesis" if hasattr(node, 'hypothesis_type') else "evidence_pattern" if hasattr(node, 'pattern_id') else "interpretive_finding" if hasattr(node, 'source') and node.source == "finding" else "observation" if hasattr(node, 'observation_type') else "measurement",
             relationship=rel.replace("_", " "),
+            graph_node_id=node.id,
             in_a=False,
             in_b=True,
         ))
@@ -1137,6 +1141,7 @@ class CandidateView:
     reasoning_graph: ReasoningGraphInspectorView
     next_evidence_views: dict[str, NextEvidenceView]
     impact_views: dict[str, ImpactView]
+    comparison_views: dict[tuple[str, str], ComparisonView] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
