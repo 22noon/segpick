@@ -1088,7 +1088,7 @@
               </p>
             {% endif %}
             {% if not item.has_details %}<p class="muted">No additional measurement provenance was recorded for this condition.</p>{% endif %}
-            {% if candidate and item.identifier in candidate.impact_views %}
+            {% if candidate and item.graph_node_id and item.graph_node_id in candidate.impact_views %}
               {{ evidence_action_buttons(item.identifier, item.display_name, item.kind) }}
             {% endif %}
           </div>
@@ -1326,13 +1326,23 @@
   <section id="biological-hypotheses-panel" class="card hypothesis-card">
     <h2>Biological hypotheses</h2>
     <p class="muted">Biological explanations aggregated from recognised evidence patterns. Hypotheses are descriptive and do not alter candidate ranking.</p>
+    <div class="compare-selected-action" style="display:none; margin-bottom:0.75rem;">
+      <button type="button" class="secondary" onclick="triggerCompareSelected()">Compare selected</button>
+    </div>
     {% if view.biological_hypothesis_evaluations %}{% for hypothesis in view.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis) }}{% endfor %}{% endif %}
     {% for candidate in view.candidates %}
       <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
-      {% if candidate.biological_hypothesis_evaluations %}{% for hypothesis in candidate.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis, next_evidence=candidate.next_evidence_views.get(hypothesis.hypothesis_id)) }}{% endfor %}{% else %}<p class="muted">No evidence-pattern-supported biological hypothesis was generated for this candidate.</p>{% endif %}
+      {% if candidate.biological_hypothesis_evaluations %}
+        <div class="hypothesis-comparison-selector">
+          <label class="hypothesis-compare-all">
+            <input type="checkbox" class="compare-all-checkbox" data-candidate-id="{{ candidate.candidate_id }}">
+            <span>Select all</span>
+          </label>
+        </div>
+        {% for hypothesis in candidate.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis, next_evidence=candidate.next_evidence_views.get(hypothesis.hypothesis_id)) }}{% endfor %}{% else %}<p class="muted">No evidence-pattern-supported biological hypothesis was generated for this candidate.</p>{% endif %}
       </div>
     {% endfor %}
-  </section>
+  </section
 
   <section id="cross-evidence-panel" class="card hypothesis-card">
     <h2>Cross-evidence findings</h2>
