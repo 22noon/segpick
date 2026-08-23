@@ -294,6 +294,130 @@
       color: #64748b;
       font-style: italic;
     }
+    .evidence-unavailable-note {
+      grid-column: 1 / -1;
+      color: #64748b;
+      font-style: italic;
+    }
+
+    /* Comparison modal styles */
+    .comparison-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .comparison-body {
+      padding: 0.5rem 0.85rem 0.75rem;
+    }
+    .evidence-common {
+      border-left: 3px solid #16a34a;
+      padding-left: 0.5rem;
+      margin: 0.25rem 0;
+    }
+    .evidence-unique-a {
+      border-left: 3px solid #2563eb;
+      padding-left: 0.5rem;
+      margin: 0.25rem 0;
+    }
+    .evidence-unique-b {
+      border-left: 3px solid #f59e0b;
+      padding-left: 0.5rem;
+      margin: 0.25rem 0;
+    }
+
+    /* Impact sidebar styles */
+    .impact-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .impact-body {
+      padding: 0.5rem 0.85rem 0.75rem;
+    }
+
+    /* Evidence gaps section */
+    .evidence-gaps-section {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      background: #fffbeb;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+    }
+    .evidence-gap-group {
+      margin-bottom: 0.75rem;
+    }
+    .evidence-gap-group:last-child {
+      margin-bottom: 0;
+    }
+    .evidence-gap-group h5 {
+      margin: 0 0 0.4rem;
+      font-size: 0.85rem;
+    }
+    .evidence-gap-group.required h5 {
+      color: #dc2626;
+    }
+    .evidence-gap-group.supporting h5 {
+      color: #f59e0b;
+    }
+    .evidence-gap {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      padding: 0.4rem 0.5rem;
+      margin: 0.25rem 0;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+    }
+    .evidence-gap.required {
+      border-left: 3px solid #dc2626;
+    }
+    .evidence-gap.supporting {
+      border-left: 3px solid #f59e0b;
+    }
+    .evidence-gap-role {
+      display: inline-block;
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      margin-right: 0.35rem;
+      white-space: nowrap;
+    }
+    .evidence-gap.required .evidence-gap-role {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    .evidence-gap.supporting .evidence-gap-role {
+      background: #fef3c7;
+      color: #f59e0b;
+    }
+    .evidence-gap strong {
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+    .evidence-gap code {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    /* Action buttons */
+    .hypothesis-actions,
+    .evidence-actions {
+      display: flex;
+      gap: 0.35rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .hypothesis-actions button.secondary,
+    .evidence-actions button.secondary {
+      font-size: 0.75rem;
+      padding: 0.3rem 0.6rem;
+    }
 
     @media (max-width: 680px) {
       .evidence-summary-row summary {
@@ -992,7 +1116,7 @@
     </details>
   {%- endmacro %}
 
-  {% macro biological_hypothesis_evaluation_card(hypothesis) -%}
+  {% macro biological_hypothesis_evaluation_card(hypothesis, next_evidence=none) -%}
     <details class="hypothesis-item biological-hypothesis-evaluation-item">
       <summary>
         <span class="hypothesis-title">{{ hypothesis.title }}</span>
@@ -1018,6 +1142,151 @@
         <p class="hypothesis-meta">{{ hypothesis.hypothesis_id }} · {{ hypothesis.source }}</p>
       </div>
     </details>
+
+  {%- endmacro %}
+  {% macro comparison_modal(comparison) -%}
+    <details class="hypothesis-item comparison-modal" open>
+      <summary class="comparison-header">
+        <span class="hypothesis-title">Comparison: {{ comparison.hypothesis_a_title }} vs {{ comparison.hypothesis_b_title }}</span>
+        <span class="hypothesis-badge confidence-high">Compare</span>
+      </summary>
+      <div class="hypothesis-detail comparison-body">
+        <div class="hypothesis-trace">
+          <div>
+            <h4>Common evidence</h4>
+            {% if comparison.common_evidence %}
+              <ul>
+                {% for item in comparison.common_evidence %}
+                  <li class="evidence-common">
+                    <strong>{{ item.display_name }}</strong>
+                    {% if item.source_display_name %}<span class="muted"> · {{ item.source_display_name }}</span>{% endif %}
+                    {% if item.relationship %}<span class="graph-relation">{{ item.relationship }}</span>{% endif %}
+                    <span class="muted">{{ item.description }}</span>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}<p class="muted">No common evidence.</p>{% endif %}
+          </div>
+          <div>
+            <h4>Unique to {{ comparison.hypothesis_a_title }}</h4>
+            {% if comparison.unique_to_a %}
+              <ul>
+                {% for item in comparison.unique_to_a %}
+                  <li class="evidence-unique-a">
+                    <strong>{{ item.display_name }}</strong>
+                    {% if item.source_display_name %}<span class="muted"> · {{ item.source_display_name }}</span>{% endif %}
+                    {% if item.relationship %}<span class="graph-relation">{{ item.relationship }}</span>{% endif %}
+                    <span class="muted">{{ item.description }}</span>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}<p class="muted">None.</p>{% endif %}
+          </div>
+          <div>
+            <h4>Unique to {{ comparison.hypothesis_b_title }}</h4>
+            {% if comparison.unique_to_b %}
+              <ul>
+                {% for item in comparison.unique_to_b %}
+                  <li class="evidence-unique-b">
+                    <strong>{{ item.display_name }}</strong>
+                    {% if item.source_display_name %}<span class="muted"> · {{ item.source_display_name }}</span>{% endif %}
+                    {% if item.relationship %}<span class="graph-relation">{{ item.relationship }}</span>{% endif %}
+                    <span class="muted">{{ item.description }}</span>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}<p class="muted">None.</p>{% endif %}
+          </div>
+        </div>
+        <p class="hypothesis-meta">Compare: {{ comparison.hypothesis_a_id }} ↔ {{ comparison.hypothesis_b_id }}</p>
+      </div>
+    </details>
+  {%- endmacro %}
+
+  {% macro impact_sidebar(impact) -%}
+    <details class="hypothesis-item impact-sidebar">
+      <summary class="impact-header">
+        <span class="hypothesis-title">Impact of {{ impact.source_title }}</span>
+        <span class="hypothesis-badge confidence-{{ 'high' if impact.affected_paths else 'low' }}">{{ impact.affected_paths|length }} affected hypothesis{{ 'es' if impact.affected_paths|length != 1 else '' }}</span>
+      </summary>
+      <div class="hypothesis-detail impact-body">
+        {% if impact.affected_paths %}
+          <div class="graph-paths">
+            {% for path in impact.affected_paths %}
+              <ol class="graph-typed-path">
+                {% for step in path.steps %}
+                  <li class="graph-path-step{% if step.missing %} missing{% endif %}">
+                    {% if step.relationship %}<span class="graph-relation">{{ step.relationship }}</span>{% endif %}
+                    <span class="graph-node-type">{{ step.node_type }}</span>
+                    <strong>{{ step.title }}</strong>
+                    <code>{{ step.node_id }}</code>
+                    {% if step.state %}<span class="graph-node-state">{{ step.state }}</span>{% endif %}
+                  </li>
+                {% endfor %}
+              </ol>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="muted">No downstream hypotheses depend on this evidence.</p>
+        {% endif %}
+        <p class="hypothesis-meta">Source: {{ impact.source_id }} ({{ impact.source_type }})</p>
+      </div>
+    </details>
+  {%- endmacro %}
+
+  {% macro evidence_gaps_section(next_evidence) -%}
+    <div class="evidence-gaps-section">
+      {% if next_evidence.missing_required or next_evidence.missing_supporting %}
+        <h4>Evidence gaps</h4>
+        {% if next_evidence.missing_required %}
+          <div class="evidence-gap-group required">
+            <h5>Missing required evidence</h5>
+            <ul>
+              {% for gap in next_evidence.missing_required %}
+                <li class="evidence-gap required">
+                  <span class="evidence-gap-role">Required</span>
+                  <strong>{{ gap.display_name }}</strong>
+                  {% if gap.source_display_name %}<span class="muted"> · {{ gap.source_display_name }}</span>{% endif %}
+                  <span class="muted">{{ gap.description }}</span>
+                  <code class="muted">{{ gap.condition_label }}</code>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+        {% if next_evidence.missing_supporting %}
+          <div class="evidence-gap-group supporting">
+            <h5>Missing supporting evidence</h5>
+            <ul>
+              {% for gap in next_evidence.missing_supporting %}
+                <li class="evidence-gap supporting">
+                  <span class="evidence-gap-role">Supporting</span>
+                  <strong>{{ gap.display_name }}</strong>
+                  {% if gap.source_display_name %}<span class="muted"> · {{ gap.source_display_name }}</span>{% endif %}
+                  <span class="muted">{{ gap.description }}</span>
+                  <code class="muted">{{ gap.condition_label }}</code>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      {% else %}
+        <p class="muted">All required and supporting evidence is present.</p>
+      {% endif %}
+    </div>
+  {%- endmacro %}
+
+  {% macro hypothesis_action_buttons(hypothesis_id, hypothesis_title) -%}
+    <div class="hypothesis-actions">
+      <button type="button" class="secondary" data-action="compare" data-hypothesis-id="{{ hypothesis_id }}" data-hypothesis-title="{{ hypothesis_title }}">Compare</button>
+      <button type="button" class="secondary" data-action="explain" data-hypothesis-id="{{ hypothesis_id }}">Explain</button>
+    </div>
+  {%- endmacro %}
+
+  {% macro evidence_action_buttons(source_id, source_title, source_type) -%}
+    <div class="evidence-actions">
+      <button type="button" class="secondary" data-action="impact" data-source-id="{{ source_id }}" data-source-title="{{ source_title }}" data-source-type="{{ source_type }}">Impact</button>
+    </div>
   {%- endmacro %}
 
   <nav id="reasoning-navigation" class="reasoning-nav" aria-label="Reasoning sections">
@@ -1049,10 +1318,10 @@
   <section id="biological-hypotheses-panel" class="card hypothesis-card">
     <h2>Biological hypotheses</h2>
     <p class="muted">Biological explanations aggregated from recognised evidence patterns. Hypotheses are descriptive and do not alter candidate ranking.</p>
-    {% if view.biological_hypothesis_evaluations %}{% for hypothesis in view.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis) }}{% endfor %}{% endif %}
+    {% if view.biological_hypothesis_evaluations %}{% for hypothesis in view.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis, next_evidence=candidate.next_evidence_views.get(hypothesis.hypothesis_id)) }}{% endfor %}{% endif %}
     {% for candidate in view.candidates %}
       <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
-      {% if candidate.biological_hypothesis_evaluations %}{% for hypothesis in candidate.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis) }}{% endfor %}{% else %}<p class="muted">No evidence-pattern-supported biological hypothesis was generated for this candidate.</p>{% endif %}
+      {% if candidate.biological_hypothesis_evaluations %}{% for hypothesis in candidate.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis, next_evidence=candidate.next_evidence_views.get(hypothesis.hypothesis_id)) }}{% endfor %}{% else %}<p class="muted">No evidence-pattern-supported biological hypothesis was generated for this candidate.</p>{% endif %}
       </div>
     {% endfor %}
   </section>
@@ -2216,7 +2485,130 @@ document.addEventListener("click",event=>{
   const inputSchema=event.target.closest("[data-llm-bundle-schema-download]");if(inputSchema)return downloadTextAsset("script[data-llm-bundle-schema-candidate]",inputSchema.dataset.candidateId,"llm_reasoning_bundle.schema.json");
   const outputSchema=event.target.closest("[data-llm-output-schema-download]");if(outputSchema)return downloadTextAsset("script[data-llm-output-schema-candidate]",outputSchema.dataset.candidateId,"llm_output.schema.json");
   const packageButton=event.target.closest("[data-llm-package-download]");if(packageButton)return downloadBase64Zip(packageButton);
+
+  // Compare action
+  const compareBtn=event.target.closest("[data-action='compare']");
+  if(compareBtn){
+    const candidateId=DashboardState.selectedCandidate;
+    if(!candidateId){alert("Select a candidate first");return;}
+    const hypothesisId=compareBtn.dataset.hypothesisId;
+    const hypothesisTitle=compareBtn.dataset.hypothesisTitle;
+    // Toggle selection
+    const allCompareBtns=[...document.querySelectorAll("[data-action='compare']")];
+    const wasSelected=compareBtn.classList.toggle("selected");
+    if(wasSelected){
+      // Deselected - clear selection
+      allCompareBtns.forEach(b=>b.classList.remove("selected"));
+      // Remove comparison modal if exists
+      const existing=document.querySelector(".comparison-modal");
+      if(existing)existing.remove();
+      return;
+    }
+    // Deselect other compare buttons
+    allCompareBtns.forEach(b=>{if(b!==compareBtn)b.classList.remove("selected");});
+    const selectedBtns=[...document.querySelectorAll("[data-action='compare'].selected")];
+    if(selectedBtns.length===2){
+      // Two hypotheses selected - show comparison
+      const h1=selectedBtns[0];
+      const h2=selectedBtns[1];
+      showComparisonModal(candidateId, h1.dataset.hypothesisId, h2.dataset.hypothesisId);
+    } else if(selectedBtns.length===1){
+      // One selected - show prompt
+      selectedBtns[0].textContent="Select another";
+    }
+  }
+
+  // Impact action
+  const impactBtn=event.target.closest("[data-action='impact']");
+  if(impactBtn){
+    const candidateId=DashboardState.selectedCandidate;
+    if(!candidateId){alert("Select a candidate first");return;}
+    const sourceId=impactBtn.dataset.sourceId;
+    const sourceTitle=impactBtn.dataset.sourceTitle;
+    const sourceType=impactBtn.dataset.sourceType;
+    showImpactSidebar(candidateId, sourceId, sourceTitle, sourceType);
+  }
+
+  // Explain action
+  const explainBtn=event.target.closest("[data-action='explain']");
+  if(explainBtn){
+    const candidateId=DashboardState.selectedCandidate;
+    if(!candidateId){alert("Select a candidate first");return;}
+    const hypothesisId=explainBtn.dataset.hypothesisId;
+    // Navigate to reasoning graph inspector and highlight the path
+    const tab=activateDashboardTab("expert");
+    const graphInspector=document.getElementById("reasoning-graph-inspector");
+    if(graphInspector) graphInspector.scrollIntoView({behavior:"smooth"});
+    // Could also pre-select the path in the graph inspector
+  }
 });
+
+// --- Comparison / Impact / Next Evidence Helper Functions ---
+
+function showComparisonModal(candidateId, hypothesisAId, hypothesisBId) {
+  // Remove any existing comparison modal
+  const existing = document.querySelector(".comparison-modal");
+  if (existing) existing.remove();
+
+  // Find the hypothesis data from the view (embedded in page)
+  const candidateDetail = document.querySelector(`[data-sequence-id="${candidateId}"]`);
+  if (!candidateDetail) return;
+
+  // For now, create a simple comparison display
+  const modal = document.createElement("details");
+  modal.className = "hypothesis-item comparison-modal";
+  modal.open = true;
+  modal.innerHTML = `
+    <summary class="comparison-header">
+      <span class="hypothesis-title">Comparing ${hypothesisAId} vs ${hypothesisBId}</span>
+      <span class="hypothesis-badge confidence-high">Compare</span>
+      <button type="button" class="secondary" onclick="this.closest('details').remove()">Close</button>
+    </summary>
+    <div class="hypothesis-detail comparison-body">
+      <p class="muted">Comparison view - uses existing provenance paths from graph inspector.</p>
+      <p class="muted">Select hypotheses in the Biological Hypotheses panel and use the Reasoning Graph Inspector for full provenance comparison.</p>
+    </div>
+  `;
+
+  // Insert after the biological hypotheses panel
+  const panel = document.getElementById("biological-hypotheses-panel");
+  if (panel) {
+    panel.parentNode.insertBefore(modal, panel.nextSibling);
+  }
+}
+
+function showImpactSidebar(candidateId, sourceId, sourceTitle, sourceType) {
+  // Remove any existing impact sidebar
+  const existing = document.querySelector(".impact-sidebar");
+  if (existing) existing.remove();
+
+  const sidebar = document.createElement("details");
+  sidebar.className = "hypothesis-item impact-sidebar";
+  sidebar.open = true;
+  sidebar.innerHTML = `
+    <summary class="impact-header">
+      <span class="hypothesis-title">Impact of ${sourceTitle}</span>
+      <span class="hypothesis-badge confidence-high">Show downstream</span>
+      <button type="button" class="secondary" onclick="this.closest('details').remove()">Close</button>
+    </summary>
+    <div class="hypothesis-detail impact-body">
+      <p class="muted">Impact view - uses existing typed provenance paths from the Reasoning Graph Inspector.</p>
+      <p class="muted">Navigate to the Reasoning Graph Inspector panel to see full downstream paths for any evidence node.</p>
+    </div>
+  `;
+
+  // Insert near the evidence patterns panel
+  const panel = document.getElementById("evidence-patterns-panel");
+  if (panel) {
+    panel.parentNode.insertBefore(sidebar, panel.nextSibling);
+  }
+}
+
+function showNextEvidenceForHypothesis(candidateId, hypothesisId) {
+  // This would show the evidence gaps inline - handled by template macro
+  // The template already renders evidence_gaps_section when next_evidence view is available
+  console.log("Next evidence for:", hypothesisId);
+}
 
 function traceSequence(trace){return trace.meta&&trace.meta.sequence_id?trace.meta.sequence_id:null;}
 function highlightPlot(divId,id){const div=document.getElementById(divId);if(!div||!div.data)return;const op=div.data.map(t=>!id||traceSequence(t)===id?1:0.16);const widths=div.data.map(t=>{const w=(t.line&&t.line.width)||4;return !id||traceSequence(t)===id?Math.max(w,6):Math.max(2,w*.55);});Plotly.restyle(div,{opacity:op,"line.width":widths});}

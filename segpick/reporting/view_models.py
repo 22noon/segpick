@@ -9,6 +9,8 @@ from segpick.models import BiologicalHypothesis, EvidencePatternEvaluation, Cand
 from segpick.scoring import GeneRecommendation
 from segpick.knowledge.vocabulary import ConditionDisplay, describe_condition
 from segpick.reasoning import build_llm_reasoning_bundle, build_llm_review_package, load_llm_bundle_schema, load_llm_output_schema
+from segpick.explorer import ReasoningExplorer
+
 
 
 
@@ -481,6 +483,85 @@ class ProvenancePathView:
     steps: tuple[ProvenanceStepView, ...]
 
 
+
+@dataclass(frozen=True, slots=True)
+class ComparisonEvidenceView:
+    """A single piece of evidence in a comparison view."""
+    identifier: str
+    display_name: str
+    description: str
+    source: str | None
+    source_display_name: str | None
+    kind: str
+    relationship: str = ""
+    in_a: bool = True
+    in_b: bool = True
+
+    @property
+    def is_common(self) -> bool:
+        return self.in_a and self.in_b
+
+    @property
+    def is_unique_to_a(self) -> bool:
+        return self.in_a and not self.in_b
+
+    @property
+    def is_unique_to_b(self) -> bool:
+        return self.in_b and not self.in_a
+
+
+@dataclass(frozen=True, slots=True)
+class ComparisonView:
+    """Structural comparison of two biological hypotheses."""
+    hypothesis_a_id: str
+    hypothesis_a_title: str
+    hypothesis_b_id: str
+    hypothesis_b_title: str
+    common_evidence: tuple[ComparisonEvidenceView, ...]
+    unique_to_a: tuple[ComparisonEvidenceView, ...]
+    unique_to_b: tuple[ComparisonEvidenceView, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ImpactPathView:
+    """A path from an evidence node to an affected hypothesis."""
+    hypothesis_id: str
+    hypothesis_title: str
+    hypothesis_state: str
+    steps: tuple[ProvenanceStepView, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ImpactView:
+    """Downstream consequences of an evidence node."""
+    source_id: str
+    source_title: str
+    source_type: str
+    affected_paths: tuple[ImpactPathView, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class NextEvidenceGapView:
+    """One missing piece of evidence for a hypothesis."""
+    rule_id: str
+    condition_label: str
+    condition_kind: str  # "observation" | "finding"
+    condition_value: str
+    condition_source: str | None
+    role: str  # "required" | "supporting"
+    display_name: str
+    description: str
+    source_display_name: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class NextEvidenceView:
+    """Evidence gaps for a biological hypothesis."""
+    hypothesis_id: str
+    hypothesis_title: str
+    missing_required: tuple[NextEvidenceGapView, ...]
+    missing_supporting: tuple[NextEvidenceGapView, ...]
+
 @dataclass(frozen=True, slots=True)
 class ReasoningComponentView:
     component_id: str
@@ -745,6 +826,249 @@ def build_reasoning_graph_inspector_view(candidate: CandidateContig) -> Reasonin
     )
 
 
+
+
+# --- Comparison / Impact / Next Evidence build functions ---
+
+def _node_to_comparison_evidence(
+    node,
+    edges: tuple[object, ...],
+    in_a: bool,
+    in_b: bool,
+) -> ComparisonEvidenceView:
+    """Convert a graph node to a ComparisonEvidenceView."""
+    # Determine display name and kind from node type
+    if hasattr(node, 'pattern_id'):  # EvidencePatternNode
+        kind = "evidence_pattern"
+        display_name = node.title
+        description = node.interpretation
+        source = node.source
+    elif hasattr(node, 'observation_type'):  # ObservationNode
+        kind = "observation"
+        display_name = node.observation_type.replace("_", " ").title()
+        description = node.description
+        source = node.source
+    elif hasattr(node, 'title'):  # InterpretiveFindingNode or BiologicalHypothesisNode
+        if hasattr(node, 'hypothesis_type'):  # BiologicalHypothesisNode
+            kind = "biological_hypothesis"
+        else:
+            kind = "interpretive_finding"
+        display_name = node.title
+        description = node.summary
+        source = getattr(node, 'source', getattr(node, 'rule_source', ''))
+    else:
+        kind = "measurement"
+        display_name = node.name
+        description = f"Measurement: {node.value}"
+        source = node.channel
+
+    return ComparisonEvidenceView(
+        identifier=node.id,
+        display_name=display_name,
+        description=description,
+        source=source,
+        source_display_name=source.replace("_", " ").title() if source else None,
+        kind=kind,
+        in_a=in_a,
+        in_b=in_b,
+    )
+
+
+def build_comparison_view(
+    explorer,
+    hypothesis_a_id: str,
+    hypothesis_b_id: str,
+) -> ComparisonView:
+    """Build a comparison view from two hypothesis nodes."""
+    prov_a = explorer.explain(hypothesis_a_id)
+    prov_b = explorer.explain(hypothesis_b_id)
+
+    # Get node IDs
+    nodes_a = {n.id: n for n in prov_a.nodes}
+    nodes_b = {n.id: n for n in prov_b.nodes}
+    edges_a = {(e.source_id, e.target_id, e.relationship): e for e in prov_a.edges}
+    edges_b = {(e.source_id, e.target_id, e.relationship): e for e in prov_b.edges}
+
+    common_node_ids = set(nodes_a.keys()) & set(nodes_b.keys())
+    unique_a_node_ids = set(nodes_a.keys()) - set(nodes_b.keys())
+    unique_b_node_ids = set(nodes_b.keys()) - set(nodes_a.keys())
+
+    # Build comparison evidence views
+    common_evidence = []
+    for nid in sorted(common_node_ids):
+        node = nodes_a[nid]
+        # Find edges for this node in both provenances
+        rel_a = next((e.relationship for e in prov_a.edges if e.source_id == nid or e.target_id == nid), "")
+        rel_b = next((e.relationship for e in prov_b.edges if e.source_id == nid or e.target_id == nid), "")
+        rel = rel_a or rel_b
+        common_evidence.append(ComparisonEvidenceView(
+            identifier=node.id,
+            display_name=node.title if hasattr(node, 'title') else node.observation_type if hasattr(node, 'observation_type') else node.name,
+            description=node.summary if hasattr(node, 'summary') else node.description if hasattr(node, 'description') else node.interpretation if hasattr(node, 'interpretation') else "",
+            source=node.source if hasattr(node, 'source') else node.channel if hasattr(node, 'channel') else "",
+            source_display_name=(node.source if hasattr(node, 'source') else node.channel if hasattr(node, 'channel') else "").replace("_", " ").title(),
+            kind="biological_hypothesis" if hasattr(node, 'hypothesis_type') else "evidence_pattern" if hasattr(node, 'pattern_id') else "interpretive_finding" if hasattr(node, 'source') and node.source == "finding" else "observation" if hasattr(node, 'observation_type') else "measurement",
+            relationship=rel.replace("_", " "),
+            in_a=True,
+            in_b=True,
+        ))
+
+    unique_to_a = []
+    for nid in sorted(unique_a_node_ids):
+        node = nodes_a[nid]
+        rel = next((e.relationship for e in prov_a.edges if e.source_id == nid or e.target_id == nid), "")
+        unique_to_a.append(ComparisonEvidenceView(
+            identifier=node.id,
+            display_name=node.title if hasattr(node, 'title') else node.observation_type if hasattr(node, 'observation_type') else node.name,
+            description=node.summary if hasattr(node, 'summary') else node.description if hasattr(node, 'description') else node.interpretation if hasattr(node, 'interpretation') else "",
+            source=node.source if hasattr(node, 'source') else node.channel if hasattr(node, 'channel') else "",
+            source_display_name=(node.source if hasattr(node, 'source') else node.channel if hasattr(node, 'channel') else "").replace("_", " ").title(),
+            kind="biological_hypothesis" if hasattr(node, 'hypothesis_type') else "evidence_pattern" if hasattr(node, 'pattern_id') else "interpretive_finding" if hasattr(node, 'source') and node.source == "finding" else "observation" if hasattr(node, 'observation_type') else "measurement",
+            relationship=rel.replace("_", " "),
+            in_a=True,
+            in_b=False,
+        ))
+
+    unique_to_b = []
+    for nid in sorted(unique_b_node_ids):
+        node = nodes_b[nid]
+        rel = next((e.relationship for e in prov_b.edges if e.source_id == nid or e.target_id == nid), "")
+        unique_to_b.append(ComparisonEvidenceView(
+            identifier=node.id,
+            display_name=node.title if hasattr(node, 'title') else node.observation_type if hasattr(node, 'observation_type') else node.name,
+            description=node.summary if hasattr(node, 'summary') else node.description if hasattr(node, 'description') else node.interpretation if hasattr(node, 'interpretation') else "",
+            source=node.source if hasattr(node, 'source') else node.channel if hasattr(node, 'channel') else "",
+            source_display_name=(node.source if hasattr(node, 'source') else node.channel if hasattr(node, 'channel') else "").replace("_", " ").title(),
+            kind="biological_hypothesis" if hasattr(node, 'hypothesis_type') else "evidence_pattern" if hasattr(node, 'pattern_id') else "interpretive_finding" if hasattr(node, 'source') and node.source == "finding" else "observation" if hasattr(node, 'observation_type') else "measurement",
+            relationship=rel.replace("_", " "),
+            in_a=False,
+            in_b=True,
+        ))
+
+    return ComparisonView(
+        hypothesis_a_id=prov_a.claim.id,
+        hypothesis_a_title=prov_a.claim.title,
+        hypothesis_b_id=prov_b.claim.id,
+        hypothesis_b_title=prov_b.claim.title,
+        common_evidence=tuple(common_evidence),
+        unique_to_a=tuple(unique_to_a),
+        unique_to_b=tuple(unique_to_b),
+    )
+
+
+def build_impact_view(
+    explorer,
+    node_id: str,
+) -> ImpactView:
+    """Build an impact view from an evidence node."""
+    result = explorer.impact(node_id)
+    source = result.source
+
+    source_title = source.title if hasattr(source, 'title') else source.observation_type if hasattr(source, 'observation_type') else source.name
+    source_type = "biological_hypothesis" if hasattr(source, 'hypothesis_type') else "evidence_pattern" if hasattr(source, 'pattern_id') else "interpretive_finding" if hasattr(source, 'source') and source.source == "finding" else "observation" if hasattr(source, 'observation_type') else "measurement"
+
+    affected_paths = []
+    for path in result.paths:
+        steps = []
+        for i, (node, edge) in enumerate(zip(path.nodes, path.edges)):
+            # Create ProvenanceStepView for each step
+            if i == 0:
+                # First step - the source node
+                step_node = node
+            else:
+                step_node = node
+
+            step_title = step_node.title if hasattr(step_node, 'title') else step_node.observation_type if hasattr(step_node, 'observation_type') else step_node.name
+            step_type = "biological_hypothesis" if hasattr(step_node, 'hypothesis_type') else "evidence_pattern" if hasattr(step_node, 'pattern_id') else "interpretive_finding" if hasattr(step_node, 'source') and step_node.source == "finding" else "observation" if hasattr(step_node, 'observation_type') else "measurement"
+            step_state = getattr(step_node, 'state', getattr(step_node, 'confidence', getattr(step_node, 'severity', '')))
+
+            steps.append(ProvenanceStepView(
+                node_id=step_node.id,
+                node_type=step_type,
+                title=step_title,
+                relationship=edge.relationship.replace("_", " ") if i > 0 else "",
+                state=step_state,
+            ))
+
+        # Add final claim step
+        claim = path.claim
+        claim_title = claim.title
+        claim_state = claim.state if hasattr(claim, 'state') else claim.confidence if hasattr(claim, 'confidence') else ''
+        steps.append(ProvenanceStepView(
+            node_id=claim.id,
+            node_type="biological_hypothesis",
+            title=claim_title,
+            relationship=path.edges[-1].relationship.replace("_", " ") if path.edges else "",
+            state=claim_state,
+        ))
+
+        affected_paths.append(ImpactPathView(
+            hypothesis_id=claim.id,
+            hypothesis_title=claim_title,
+            hypothesis_state=claim_state,
+            steps=tuple(steps),
+        ))
+
+    return ImpactView(
+        source_id=source.id,
+        source_title=source_title,
+        source_type=source_type,
+        affected_paths=tuple(affected_paths),
+    )
+
+
+def build_next_evidence_view(
+    explorer,
+    hypothesis_id: str,
+) -> NextEvidenceView:
+    """Build a next evidence view from a hypothesis node."""
+    result = explorer.next_evidence(hypothesis_id)
+    hypothesis = result.hypothesis
+
+    missing_required = []
+    for gap in result.missing_required:
+        cond = gap.condition
+        # Use vocabulary to get display name
+        from segpick.knowledge.vocabulary import describe_condition
+        display = describe_condition(cond.label)
+        missing_required.append(NextEvidenceGapView(
+            rule_id=gap.rule_id,
+            condition_label=cond.label,
+            condition_kind=cond.kind,
+            condition_value=cond.value,
+            condition_source=cond.source,
+            role=gap.role,
+            display_name=display.display_name,
+            description=display.description,
+            source_display_name=display.source_display_name,
+        ))
+
+    missing_supporting = []
+    for gap in result.missing_supporting:
+        cond = gap.condition
+        from segpick.knowledge.vocabulary import describe_condition
+        display = describe_condition(cond.label)
+        missing_supporting.append(NextEvidenceGapView(
+            rule_id=gap.rule_id,
+            condition_label=cond.label,
+            condition_kind=cond.kind,
+            condition_value=cond.value,
+            condition_source=cond.source,
+            role=gap.role,
+            display_name=display.display_name,
+            description=display.description,
+            source_display_name=display.source_display_name,
+        ))
+
+    return NextEvidenceView(
+        hypothesis_id=hypothesis.id,
+        hypothesis_title=hypothesis.title,
+        missing_required=tuple(missing_required),
+        missing_supporting=tuple(missing_supporting),
+    )
+
+
+
 @dataclass(frozen=True, slots=True)
 class CandidateView:
     candidate_id: str
@@ -786,6 +1110,8 @@ class CandidateView:
     biological_hypothesis_evaluations: tuple[HypothesisEvaluationView, ...]
     cross_evidence_findings: tuple[CrossEvidenceFindingView, ...]
     reasoning_graph: ReasoningGraphInspectorView
+    next_evidence_views: dict[str, NextEvidenceView]
+    impact_views: dict[str, ImpactView]
 
 
 @dataclass(frozen=True, slots=True)
@@ -999,6 +1325,59 @@ def build_recommendation_view(
     )
 
 
+def build_next_evidence_views(candidate: CandidateContig) -> dict[str, NextEvidenceView]:
+    """Build NextEvidenceView for each biological hypothesis evaluation."""
+    graph = candidate.analysis.reasoning_graph
+    if graph is None:
+        return {}
+
+    explorer = ReasoningExplorer(graph)
+    views = {}
+
+    for hyp_eval in candidate.analysis.biological_hypothesis_evaluations:
+        graph_hypothesis = next(
+            (h for h in graph.biological_hypotheses if h.rule_id == hyp_eval.hypothesis_id),
+            None
+        )
+        if graph_hypothesis:
+            try:
+                views[hyp_eval.hypothesis_id] = build_next_evidence_view(explorer, graph_hypothesis.id)
+            except KeyError:
+                pass
+
+    return views
+
+
+def build_impact_views(candidate: CandidateContig) -> dict[str, ImpactView]:
+    """Build ImpactView for key evidence nodes in the reasoning graph."""
+    graph = candidate.analysis.reasoning_graph
+    if graph is None:
+        return {}
+
+    explorer = ReasoningExplorer(graph)
+    views = {}
+
+    for node in graph.observations:
+        try:
+            views[node.id] = build_impact_view(explorer, node.id)
+        except KeyError:
+            pass
+
+    for node in graph.interpretive_findings:
+        try:
+            views[node.id] = build_impact_view(explorer, node.id)
+        except KeyError:
+            pass
+
+    for node in graph.evidence_patterns:
+        try:
+            views[node.id] = build_impact_view(explorer, node.id)
+        except KeyError:
+            pass
+
+    return views
+
+
 def build_gene_page_view(
     gene: Gene,
     recommendation: GeneRecommendation | None,
@@ -1109,6 +1488,8 @@ def build_gene_page_view(
                 for item in candidate.analysis.cross_evidence_findings
             ),
             reasoning_graph=build_reasoning_graph_inspector_view(candidate),
+            next_evidence_views=build_next_evidence_views(candidate),
+            impact_views=build_impact_views(candidate),
         )
         for candidate in gene.candidates
     )
