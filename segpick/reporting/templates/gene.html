@@ -1406,6 +1406,9 @@
         {% for hypothesis in candidate.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis, next_evidence=candidate.next_evidence_views.get(hypothesis.hypothesis_id)) }}{% endfor %}{% else %}<p class="muted">No evidence-pattern-supported biological hypothesis was generated for this candidate.</p>{% endif %}
       </div>
     {% endfor %}
+    {% for candidate in view.candidates %}
+      {{ comparison_modals(candidate) }}
+    {% endfor %}
   </section
 
   <section id="cross-evidence-panel" class="card hypothesis-card">
@@ -2636,12 +2639,21 @@ function showComparisonModal(candidateId, hypothesisAId, hypothesisBId) {
   const existing = document.querySelector(".comparison-modal");
   if (existing) existing.remove();
 
-  // Find the hypothesis data from the view (embedded in page)
-  const candidateDetail = document.querySelector(`[data-sequence-id="${candidateId}"]`);
-  if (!candidateDetail) return;
+  // Find the pre-rendered comparison modal
+  const key = [hypothesisAId, hypothesisBId].sort();
+  const modalId = "comparison-" + key[0] + "-" + key[1];
+  const existingModal = document.getElementById(modalId);
+  if (existingModal) {
+    // Show the existing modal
+    const existing = document.querySelector(".comparison-modal");
+    if (existing) existing.remove();
+    document.body.appendChild(existingModal);
+    return;
+  }
 
-  // For now, create a simple comparison display
+  // Fallback if not pre-rendered
   const modal = document.createElement("details");
+  modal.id = "comparison-" + hypothesisAId + "-" + hypothesisBId;
   modal.className = "hypothesis-item comparison-modal";
   modal.open = true;
   modal.innerHTML = `
@@ -2651,8 +2663,7 @@ function showComparisonModal(candidateId, hypothesisAId, hypothesisBId) {
       <button type="button" class="secondary" onclick="this.closest('details').remove()">Close</button>
     </summary>
     <div class="hypothesis-detail comparison-body">
-      <p class="muted">Comparison view - uses existing provenance paths from graph inspector.</p>
-      <p class="muted">Select hypotheses in the Biological Hypotheses panel and use the Reasoning Graph Inspector for full provenance comparison.</p>
+      <p class="muted">Comparison data not pre-rendered.</p>
     </div>
   `;
 
