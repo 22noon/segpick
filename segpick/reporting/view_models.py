@@ -905,6 +905,8 @@ def build_comparison_view(
     explorer,
     hypothesis_a_id: str,
     hypothesis_b_id: str,
+    hypothesis_a_rule_id: str,
+    hypothesis_b_rule_id: str,
 ) -> ComparisonView:
     """Build a comparison view from two hypothesis nodes."""
     prov_a = explorer.explain(hypothesis_a_id)
@@ -975,9 +977,9 @@ def build_comparison_view(
         ))
 
     return ComparisonView(
-        hypothesis_a_id=prov_a.claim.id,
+        hypothesis_a_id=hypothesis_a_rule_id,
         hypothesis_a_title=prov_a.claim.title,
-        hypothesis_b_id=prov_b.claim.id,
+        hypothesis_b_id=hypothesis_b_rule_id,
         hypothesis_b_title=prov_b.claim.title,
         common_evidence=tuple(common_evidence),
         unique_to_a=tuple(unique_to_a),
@@ -1421,9 +1423,9 @@ def build_comparison_views(candidate: CandidateContig) -> dict[tuple[str, str], 
 
     views = {}
     for h1, h2 in combinations(hypotheses, 2):
-        comparison = build_comparison_view(explorer, h1.id, h2.id)
-        # Use sorted tuple of hypothesis IDs as key to ensure consistent ordering
-        key = tuple(sorted([h1.id, h2.id]))
+        comparison = build_comparison_view(explorer, h1.id, h2.id, h1.rule_id, h2.rule_id)
+        # Use sorted tuple of rule_ids as key to ensure consistent ordering and match checkbox IDs
+        key = tuple(sorted([h1.rule_id, h2.rule_id]))
         views[key] = comparison
 
     return views

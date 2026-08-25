@@ -1300,7 +1300,10 @@
   {% macro comparison_modals(candidate) -%}
     {% if candidate.comparison_views %}
       {% for key, comparison in candidate.comparison_views.items() %}
-        <details id="comparison-{{ comparison.hypothesis_a_id }}-{{ comparison.hypothesis_b_id }}" class="hypothesis-item comparison-modal" style="display:none;">
+        {% set h1_id = comparison.hypothesis_a_id %}
+{% set h2_id = comparison.hypothesis_b_id %}
+{% set sorted_ids = [h1_id, h2_id] | sort %}
+<details id="comparison-{{ sorted_ids[0] }}-{{ sorted_ids[1] }}" class="hypothesis-item comparison-modal" style="display:none;">
           <summary class="comparison-header">
             <span class="hypothesis-title">Comparison: {{ comparison.hypothesis_a_title }} vs {{ comparison.hypothesis_b_title }}</span>
             <span class="hypothesis-badge confidence-high">Compare</span>
