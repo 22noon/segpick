@@ -1098,7 +1098,7 @@
     {% endif %}
   {%- endmacro %}
 
-  {% macro evidence_pattern_card(pattern) -%}
+  {% macro evidence_pattern_card(pattern, candidate=none) -%}
     <details class="hypothesis-item evidence-pattern-item">
       <summary class="evidence-pattern-summary">
         <span><strong>{{ pattern.title }}</strong></span>
@@ -1364,6 +1364,16 @@
     {% endif %}
   {%- endmacro %}
 
+  {% macro impact_sidebars(candidate) -%}
+    {% if candidate.impact_views %}
+      {% for key, impact in candidate.impact_views.items() %}
+        <details id="impact-{{ key }}" class="hypothesis-item impact-sidebar" style="display:none;">
+          {{ impact_sidebar(impact) }}
+        </details>
+      {% endfor %}
+    {% endif %}
+  {%- endmacro %}
+
   <nav id="reasoning-navigation" class="reasoning-nav" aria-label="Reasoning sections">
     <h2>Reasoning explorer</h2>
     <a href="#reasoning-path-panel">Reasoning path</a>
@@ -1412,6 +1422,9 @@
     {% for candidate in view.candidates %}
       {{ comparison_modals(candidate) }}
     {% endfor %}
+    {% for candidate in view.candidates %}
+      {{ impact_sidebars(candidate) }}
+    {% endfor %}
   </section
 
   <section id="cross-evidence-panel" class="card hypothesis-card">
@@ -1443,7 +1456,7 @@
     {% if view.evidence_patterns %}{% for pattern in view.evidence_patterns %}{{ evidence_pattern_card(pattern) }}{% endfor %}{% endif %}
     {% for candidate in view.candidates %}
       <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
-      {% if candidate.evidence_patterns %}{% for pattern in candidate.evidence_patterns %}{{ evidence_pattern_card(pattern) }}{% endfor %}{% else %}<p class="muted">No evidence pattern was recognised for this candidate.</p>{% endif %}
+      {% if candidate.evidence_patterns %}{% for pattern in candidate.evidence_patterns %}{{ evidence_pattern_card(pattern, candidate) }}{% endfor %}{% else %}<p class="muted">No evidence pattern was recognised for this candidate.</p>{% endif %}
       </div>
     {% endfor %}
   </section>
@@ -1454,7 +1467,7 @@
     {% for candidate in view.candidates %}
       <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
       {% if candidate.unresolved_evidence_patterns %}
-        {% for pattern in candidate.unresolved_evidence_patterns %}{{ evidence_pattern_card(pattern) }}{% endfor %}
+        {% for pattern in candidate.unresolved_evidence_patterns %}{{ evidence_pattern_card(pattern, candidate) }}{% endfor %}
       {% else %}<p class="muted">No unresolved evidence pattern was recorded for this candidate.</p>{% endif %}
       </div>
     {% endfor %}
@@ -2689,6 +2702,20 @@ function showImpactSidebar(candidateId, sourceId, sourceTitle, sourceType) {
   const existing = document.querySelector(".impact-sidebar");
   if (existing) existing.remove();
 
+  // Find the pre-rendered impact sidebar
+  const sidebarId = "impact-" + sourceId;
+  const existingSidebar = document.getElementById(sidebarId);
+  if (existingSidebar) {
+    // Show the existing sidebar
+    const existing = document.querySelector(".impact-sidebar");
+    if (existing) existing.remove();
+    document.body.appendChild(existingSidebar);
+    existingSidebar.style.display = "";
+    existingSidebar.open = true;
+    return;
+  }
+
+  // Fallback if not pre-rendered
   const sidebar = document.createElement("details");
   sidebar.className = "hypothesis-item impact-sidebar";
   sidebar.open = true;
