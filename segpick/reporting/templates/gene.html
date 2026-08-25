@@ -2651,6 +2651,9 @@ function showComparisonModal(candidateId, hypothesisAId, hypothesisBId) {
     const existing = document.querySelector(".comparison-modal");
     if (existing) existing.remove();
     document.body.appendChild(existingModal);
+    // Make the pre-rendered modal visible and open (matching fallback behavior)
+    existingModal.style.display = "";
+    existingModal.open = true;
     return;
   }
 
