@@ -1,6 +1,6 @@
+import pytest
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-import pytest
 
 from segpick.models import (
     CandidateContig,
@@ -9,9 +9,9 @@ from segpick.models import (
     Gene,
     StructuralIntegrity,
 )
+from segpick.read_support import attach_read_support
 from segpick.reporting.view_models import build_gene_page_view
 from segpick.scoring import ScoringWeights, rank_gene
-from segpick.read_support import attach_read_support
 
 
 def make_candidate(

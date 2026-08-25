@@ -1,8 +1,6 @@
-from segpick.knowledge import EvidencePatternDefinition, EvidencePatternDefinition
+from segpick.knowledge import EvidencePatternDefinition
 from segpick.models import (
     EvidencePatternEvaluation,
-    EvidencePatternEvaluation,
-    EvidencePatternProvenance,
     EvidencePatternProvenance,
 )
 from segpick.reasoning.rules import RuleCondition

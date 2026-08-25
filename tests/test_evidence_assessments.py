@@ -1,9 +1,10 @@
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
 from segpick.analysis.evidence_assessments import CHANNEL_REGISTRY, build_evidence_assessments
 from segpick.models import CandidateContig, ContigMetadata, ReferenceCompatibility
 from segpick.scoring import CandidateRecommendation, Evidence
 from segpick.scoring.scorer import ScoredEvidence
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 
 
 def recommendation():

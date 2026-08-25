@@ -3,29 +3,29 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .blastx import BlastXHit
-from .boundary_coverage import BoundaryCoverageAssessment
 from .blastx_anchored_orf import BlastXAnchoredORF
+from .blastx_consistency import BlastXConsistency
+from .boundary_coverage import BoundaryCoverageAssessment
+from .containment import ContainmentMetrics
+from .convergence import EvidenceConvergence
+from .cross_evidence import CrossEvidenceFinding
+from .evidence_assessment import EvidenceAssessment
+from .evidence_pattern import EvidencePatternEvaluation
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
-from .evidence_pattern import EvidencePatternEvaluation
 from .hypothesis_evaluation import HypothesisEvaluation
-from .blastx_consistency import BlastXConsistency
-from .convergence import EvidenceConvergence
+from .observation import EvidenceObservation
 from .orf import ORFMetrics
 from .orf_alignment import ORFAlignmentMetrics
 from .orf_quality import ORFQuality
-from .observation import EvidenceObservation
 from .protein_interpretation import ProteinInterpretation
 from .protein_relatedness import ProteinRelatedness
 from .read_support import ReadSupportMetrics
-from .reference_dotplot import ReferenceDotplot
-from .reference_compatibility import ReferenceCompatibility
-from .structural_integrity import StructuralIntegrity
-from .containment import ContainmentMetrics
-from .rule_evaluation import RuleEvaluation
-from .cross_evidence import CrossEvidenceFinding
-from .evidence_assessment import EvidenceAssessment
 from .reasoning_graph import MeasurementNode, ReasoningGraph
+from .reference_compatibility import ReferenceCompatibility
+from .reference_dotplot import ReferenceDotplot
+from .rule_evaluation import RuleEvaluation
+from .structural_integrity import StructuralIntegrity
 
 
 @dataclass(slots=True)

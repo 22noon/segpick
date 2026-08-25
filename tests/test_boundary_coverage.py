@@ -1,5 +1,6 @@
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+
 from segpick.analysis.boundary_coverage import assess_reference_boundaries
 from segpick.models import BlastNHSP, CandidateContig, ContigMetadata, ReferenceDotplot
 

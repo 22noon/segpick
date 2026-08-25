@@ -4,18 +4,18 @@ Tests for ReasoningExplorer.next_evidence() for BiologicalHypothesisNode.
 
 from __future__ import annotations
 
+import segpick.explorer.explorer as explorer_module
 from segpick.explorer import ReasoningExplorer
 from segpick.models import (
+    BiologicalHypothesisNode,
+    EvidencePatternNode,
+    InterpretiveFindingNode,
     MeasurementNode,
     ObservationNode,
-    InterpretiveFindingNode,
-    EvidencePatternNode,
-    BiologicalHypothesisNode,
     ReasoningEdge,
     ReasoningGraph,
 )
 from segpick.reasoning.rules import HypothesisRule, RuleCondition
-
 
 # Create test rules that match our test graphs
 TEST_RULE = HypothesisRule(
@@ -94,8 +94,6 @@ def _non_hypothesis_node():
     edges = (ReasoningEdge(o.id, m.id, "supported_by"),)
     return ReasoningGraph(measurements=(m,), observations=(o,), interpretive_findings=(), evidence_patterns=(), biological_hypotheses=(), edges=edges)
 
-
-import segpick.explorer.explorer as explorer_module
 
 
 def test_missing_required_evidence(monkeypatch):

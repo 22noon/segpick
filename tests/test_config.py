@@ -1,9 +1,8 @@
-from segpick.config import resolve_config
 from pathlib import Path
 
 import yaml
 
-from segpick.config import ReadSupportConfig, RunConfig
+from segpick.config import ReadSupportConfig, RunConfig, resolve_config
 
 
 def test_run_config_to_dict_is_yaml_safe() -> None:

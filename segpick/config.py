@@ -8,9 +8,6 @@ import yaml
 
 from segpick.scoring import ScoringWeights
 
-from dataclasses import dataclass, field
-from pathlib import Path
-
 
 @dataclass(frozen=True, slots=True)
 class ReadSupportConfig:

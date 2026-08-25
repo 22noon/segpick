@@ -10,7 +10,7 @@ from Bio import SeqIO
 
 from segpick.alignment.export import safe_name
 from segpick.analysis.reference_dotplot import OUTFMT_FIELDS, _covered_fraction
-from segpick.models import BlastNHSP, CandidateContig, ContigDotplot, Gene, Sample
+from segpick.models import BlastNHSP, CandidateContig, ContigDotplot, Sample
 
 
 def canonical_contig_pair(first_id: str, second_id: str) -> tuple[str, str]:

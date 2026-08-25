@@ -2,10 +2,10 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 from segpick.models import (
+    BlastXAnchoredORF,
     CandidateContig,
     ContigMetadata,
     Gene,
-    BlastXAnchoredORF,
     ORFHit,
     ORFMetrics,
     Sample,

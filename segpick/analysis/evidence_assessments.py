@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from segpick.models import CandidateContig
-from segpick.models.evidence_assessment import AssessmentDiagnostics, DiagnosticCheck, ConfidenceAssessment, ConfidenceFactor, EvidenceAssessment, EvidenceFinding
+from segpick.models.evidence_assessment import AssessmentDiagnostics, ConfidenceAssessment, ConfidenceFactor, DiagnosticCheck, EvidenceAssessment, EvidenceFinding
 from segpick.scoring import CandidateRecommendation
 
 AssessmentBuilder = Callable[[CandidateContig, CandidateRecommendation], EvidenceAssessment]

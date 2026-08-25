@@ -3,17 +3,20 @@ from __future__ import annotations
 import re
 
 from segpick.models import (
-    BiologicalFinding, BiologicalHypothesis, EvidencePatternEvaluation,
-    EvidenceObservation, HypothesisEvaluation,
+    BiologicalFinding,
+    BiologicalHypothesis,
+    EvidenceObservation,
+    EvidencePatternEvaluation,
+    HypothesisEvaluation,
 )
 from segpick.models.reasoning_graph import (
     BiologicalHypothesisNode,
+    EvidencePatternNode,
     InterpretiveFindingNode,
     MeasurementNode,
     ObservationNode,
-    ReasoningGraph,
-    EvidencePatternNode,
     ReasoningEdge,
+    ReasoningGraph,
 )
 
 

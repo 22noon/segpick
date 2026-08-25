@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from segpick.models import EvidencePatternEvaluation, EvidencePatternProvenance
-from .schema import EvidencePatternDefinition
 
 _ORDER = ("low", "moderate", "high")
 

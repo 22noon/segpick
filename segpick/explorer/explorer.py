@@ -9,18 +9,17 @@ from __future__ import annotations
 from collections import defaultdict
 
 from segpick.explorer.provenance import (
-    Provenance,
-    ProvenanceComparison,
     ImpactPath,
     ImpactResult,
     NextEvidenceGap,
     NextEvidenceResult,
+    Provenance,
+    ProvenanceComparison,
 )
-from segpick.explorer.queries import extract_provenance, PROVENANCE_RELATIONSHIPS
+from segpick.explorer.queries import PROVENANCE_RELATIONSHIPS, extract_provenance
+from segpick.models import BiologicalFinding, EvidenceObservation
 from segpick.models.reasoning_graph import ReasoningGraph
 from segpick.reasoning import CANDIDATE_RULES, GENE_RULES
-from segpick.reasoning.rules import HypothesisRule, RuleCondition
-from segpick.models import EvidenceObservation, BiologicalFinding
 
 
 class ReasoningExplorer:

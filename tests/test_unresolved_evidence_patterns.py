@@ -1,12 +1,14 @@
 from pathlib import Path
-from segpick.knowledge.engine import evaluate_evidence_patterns
-from segpick.knowledge.schema import EvidencePatternDefinition
-from segpick.reasoning.rules import RuleCondition
-from segpick.models import CandidateContig, ContigMetadata, EvidenceObservation, Gene, Sample
-from segpick.analysis.evidence_patterns import attach_evidence_patterns
-from segpick.reporting.html_report import write_html_dashboard
+
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+
+from segpick.analysis.evidence_patterns import attach_evidence_patterns
+from segpick.knowledge.engine import evaluate_evidence_patterns
+from segpick.knowledge.schema import EvidencePatternDefinition
+from segpick.models import CandidateContig, ContigMetadata, Gene, Sample
+from segpick.reasoning.rules import RuleCondition
+from segpick.reporting.html_report import write_html_dashboard
 
 
 def _definition():

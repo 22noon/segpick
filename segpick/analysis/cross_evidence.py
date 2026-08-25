@@ -1,8 +1,10 @@
 from __future__ import annotations
+
 from collections.abc import Mapping
+
+from segpick.analysis.evidence_assessments import build_evidence_assessments
 from segpick.cross_evidence import CrossEvidenceContext, evaluate_cross_evidence
 from segpick.models import BiologicalFinding, Sample
-from segpick.analysis.evidence_assessments import build_evidence_assessments
 from segpick.scoring import GeneRecommendation
 
 

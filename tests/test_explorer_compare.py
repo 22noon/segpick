@@ -6,11 +6,11 @@ from __future__ import annotations
 
 from segpick.explorer import ReasoningExplorer
 from segpick.models import (
+    BiologicalHypothesisNode,
+    EvidencePatternNode,
+    InterpretiveFindingNode,
     MeasurementNode,
     ObservationNode,
-    InterpretiveFindingNode,
-    EvidencePatternNode,
-    BiologicalHypothesisNode,
     ReasoningEdge,
     ReasoningGraph,
 )

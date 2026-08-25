@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from segpick.models import BiologicalFinding, CandidateContig
 
-
 _RELATEDNESS_FINDINGS = {
     "well_supported_match": (
         "Well-supported protein match",

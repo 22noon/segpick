@@ -1,15 +1,3 @@
-from .plotting import (
-    safe_coverage_filename,
-    write_coverage_plot,
-    write_sample_coverage_plots,
-)
-
-from .directory import (
-    DepthAttachmentSummary,
-    attach_depth_directory,
-    attached_read_support,
-    candidate_depth_path,
-)
 from .attach import (
     attach_gene_depth_file,
     attach_gene_depths,
@@ -19,6 +7,17 @@ from .depth import (
     calculate_read_support,
     parse_depth_file,
     parse_depth_lines,
+)
+from .directory import (
+    DepthAttachmentSummary,
+    attach_depth_directory,
+    attached_read_support,
+    candidate_depth_path,
+)
+from .plotting import (
+    safe_coverage_filename,
+    write_coverage_plot,
+    write_sample_coverage_plots,
 )
 
 __all__ = [

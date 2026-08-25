@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from io import BytesIO
 import json
-from pathlib import Path
 import zipfile
+from io import BytesIO
+from pathlib import Path
 from typing import Any
 
 from segpick.models.reasoning_graph import ReasoningGraph
-
 
 LLM_BUNDLE_VERSION = "1.0"
 

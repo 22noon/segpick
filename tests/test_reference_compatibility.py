@@ -58,6 +58,7 @@ def test_detects_duplicate_reference_mapping():
 
 def test_reference_compatibility_assessment_reports_duplicated_mapping():
     from types import SimpleNamespace
+
     from segpick.analysis.evidence_assessments import reference
 
     compatibility = reference_compatibility_from_dotplot(dotplot(

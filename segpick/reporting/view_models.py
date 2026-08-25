@@ -1,21 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import base64
 import json
+from dataclasses import dataclass, field
+from itertools import combinations
 
 from segpick.analysis import analyse_protein_continuity, build_evidence_assessments
-from segpick.models import BiologicalHypothesis, EvidencePatternEvaluation, CandidateContig, Gene, RuleEvaluation, HypothesisEvaluation
-from segpick.scoring import GeneRecommendation
-from segpick.knowledge.vocabulary import ConditionDisplay, describe_condition
-from itertools import combinations
-from segpick.reasoning import build_llm_reasoning_bundle, build_llm_review_package, load_llm_bundle_schema, load_llm_output_schema
 from segpick.explorer import ReasoningExplorer
-
-
-
-
-
+from segpick.knowledge.vocabulary import describe_condition
+from segpick.models import BiologicalHypothesis, CandidateContig, EvidencePatternEvaluation, Gene, HypothesisEvaluation, RuleEvaluation
+from segpick.reasoning import build_llm_reasoning_bundle, build_llm_review_package, load_llm_bundle_schema, load_llm_output_schema
+from segpick.scoring import GeneRecommendation
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,9 +93,9 @@ def _evidence_pattern_evidence_view(
 
 
 def build_evidence_pattern_view(item: EvidencePatternEvaluation, graph: object = None) -> EvidencePatternView:
-    provenance = {entry.condition: entry for entry in item.evidence_provenance}
-    observations = tuple(graph.observations) if graph else ()
-    findings = tuple(graph.interpretive_findings) if graph else ()
+    _provenance = {entry.condition: entry for entry in item.evidence_provenance}
+    _observations = tuple(graph.observations) if graph else ()
+    _findings = tuple(graph.interpretive_findings) if graph else ()
     return EvidencePatternView(
         pattern_id=item.pattern_id,
         title=item.title,
@@ -915,8 +910,8 @@ def build_comparison_view(
     # Get node IDs
     nodes_a = {n.id: n for n in prov_a.nodes}
     nodes_b = {n.id: n for n in prov_b.nodes}
-    edges_a = {(e.source_id, e.target_id, e.relationship): e for e in prov_a.edges}
-    edges_b = {(e.source_id, e.target_id, e.relationship): e for e in prov_b.edges}
+    _edges_a = {(e.source_id, e.target_id, e.relationship): e for e in prov_a.edges}
+    _edges_b = {(e.source_id, e.target_id, e.relationship): e for e in prov_b.edges}
 
     common_node_ids = set(nodes_a.keys()) & set(nodes_b.keys())
     unique_a_node_ids = set(nodes_a.keys()) - set(nodes_b.keys())
@@ -1001,7 +996,7 @@ def build_impact_view(
     affected_paths = []
     for path in result.paths:
         steps = []
-        for i, (node, edge) in enumerate(zip(path.nodes, path.edges)):
+        for i, (node, edge) in enumerate(zip(path.nodes, path.edges, strict=True)):
             # Create ProvenanceStepView for each step
             if i == 0:
                 # First step - the source node

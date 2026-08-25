@@ -88,8 +88,8 @@ class RecommendationReport:
 def build_recommendation_report(
     recommended_candidate: str,
     agreement: EvidenceAgreement,
-    protein_continuity: "ProteinContinuity | None" = None,
-    convergences: "tuple[EvidenceConvergence, ...]" = (),
+    protein_continuity: ProteinContinuity | None = None,
+    convergences: tuple[EvidenceConvergence, ...] = (),
     comparisons: tuple[CandidateComparison, ...] = (),
 ) -> RecommendationReport:
     """Convert evidence agreement into an initial explanation report."""

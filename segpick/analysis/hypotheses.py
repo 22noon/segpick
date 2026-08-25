@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from segpick.evidence_plugins import EvidencePluginRegistry
 from segpick.models import BiologicalHypothesis, CandidateContig, Gene, MeasurementNode, Sample
 from segpick.reasoning import CANDIDATE_RULES, GENE_RULES, HypothesisRule, evaluate_rule_set, evaluate_rules
 from segpick.reasoning.graph import build_reasoning_graph
-from segpick.evidence_plugins import EvidencePluginRegistry
 
 
 def candidate_biological_hypotheses(

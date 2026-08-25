@@ -1,8 +1,8 @@
 from .engine import (
+    RULE_REGISTRY,
     ContributionSpec,
     CrossEvidenceContext,
     CrossEvidenceRule,
-    RULE_REGISTRY,
     StructuredCrossEvidenceRule,
     discover_external_rules,
     evaluate_cross_evidence,

@@ -1,5 +1,5 @@
-from pathlib import Path
 import json
+from pathlib import Path
 
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -8,9 +8,9 @@ from segpick.models import (
     BiologicalHypothesis,
     BlastXHit,
     CandidateContig,
-    EvidenceConvergence,
     ContainmentMetrics,
     ContigMetadata,
+    EvidenceConvergence,
     Gene,
     ObservationInterval,
     Sample,
@@ -359,6 +359,7 @@ def test_dashboard_shows_empty_hypothesis_state(tmp_path) -> None:
 
 def test_gene_template_contains_reference_dotplot_panel():
     from pathlib import Path
+
     from segpick.reporting import html_report
 
     template = Path(html_report.__file__).resolve().parent / "templates" / "gene.html"
@@ -372,6 +373,7 @@ def test_gene_template_contains_reference_dotplot_panel():
 
 def test_gene_template_explains_structural_integrity_score():
     from pathlib import Path
+
     from segpick.reporting import html_report
 
     template = Path(html_report.__file__).resolve().parent / "templates" / "gene.html"

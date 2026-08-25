@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from pathlib import Path
 import re
-from typing import Iterable
+from collections.abc import Iterable
+from pathlib import Path
+
+import matplotlib
 
 from segpick.models import Sample
 
 from .depth import parse_depth_file
-
-import matplotlib
 
 matplotlib.use("Agg")
 

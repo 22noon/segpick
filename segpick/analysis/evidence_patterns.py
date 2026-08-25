@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from segpick.knowledge import EvidencePatternDefinition, evaluate_evidence_patterns
 from segpick.models import Sample
+
 
 def attach_evidence_patterns(sample: Sample, candidate_definitions: tuple[EvidencePatternDefinition, ...], gene_definitions: tuple[EvidencePatternDefinition, ...]) -> None:
     for gene in sample.genes.values():

@@ -603,8 +603,13 @@ def test_graph_inspector_builds_typed_path_from_hypothesis_to_measurement():
 
 def test_graph_inspector_consumes_explicit_reasoning_edges():
     from segpick.models import (
-        BiologicalHypothesisNode, EvidencePatternNode, InterpretiveFindingNode,
-        MeasurementNode, ObservationNode, ReasoningEdge, ReasoningGraph,
+        BiologicalHypothesisNode,
+        EvidencePatternNode,
+        InterpretiveFindingNode,
+        MeasurementNode,
+        ObservationNode,
+        ReasoningEdge,
+        ReasoningGraph,
     )
     from segpick.reporting.view_models import build_reasoning_graph_inspector_view
 
@@ -647,7 +652,7 @@ def test_graph_inspector_template_renders_typed_provenance_relationships():
 
 
 def test_reasoning_graph_does_not_infer_missing_edges():
-    from segpick.models import ObservationNode, MeasurementNode, ReasoningGraph
+    from segpick.models import MeasurementNode, ObservationNode, ReasoningGraph
 
     measurement = MeasurementNode("measurement:m:1", "test", "metric", 1)
     observation = ObservationNode(

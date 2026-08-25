@@ -3,7 +3,7 @@ from pathlib import Path
 from segpick.cli import build_parser
 from segpick.config import resolve_config
 from segpick.knowledge import evaluate_evidence_patterns, load_active_evidence_patterns
-from segpick.models import BiologicalFinding, EvidenceObservation, ObservationSource
+from segpick.models import EvidenceObservation, ObservationSource
 
 
 def test_builtin_knowledge_modules_load_by_scope():

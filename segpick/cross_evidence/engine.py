@@ -11,7 +11,6 @@ from segpick.models import (
     EvidenceReference,
 )
 
-
 _LEVEL_SCORE = {"high": 0.9, "moderate": 0.65, "medium": 0.65, "low": 0.35, "not_assessable": 0.0, "unknown": 0.0}
 
 

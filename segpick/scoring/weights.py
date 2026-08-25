@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
 
+
 @dataclass(frozen=True, slots=True)
 class ScoringWeights:
     """Relative weights applied to normalised evidence channels."""
@@ -30,7 +31,7 @@ class ScoringWeights:
         """Return the sum of all configured weights."""
 
         return sum(asdict(self).values())
-    def normalised(self) -> "ScoringWeights":
+    def normalised(self) -> ScoringWeights:
         total = self.total
 
         return ScoringWeights(

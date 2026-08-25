@@ -1,16 +1,16 @@
+from .agreement import EvidenceAgreement, assess_evidence_agreement
 from .builder import (
+    blastx_consistency_evidence,
     build_evidence,
     build_gene_evidence,
-    structural_integrity_evidence,
+    coverage_integrity_evidence,
+    coverage_sufficiency_evidence,
     length_plausibility_evidence,
+    orf_quality_evidence,
     protein_confidence_evidence,
     read_support_evidence,
-    coverage_sufficiency_evidence,
-    coverage_integrity_evidence,
-    orf_quality_evidence,
-    blastx_consistency_evidence,
+    structural_integrity_evidence,
 )
-from .agreement import EvidenceAgreement, assess_evidence_agreement
 from .evidence import Evidence
 from .ranking import rank_gene
 from .reasoning import (

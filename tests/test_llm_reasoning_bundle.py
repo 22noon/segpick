@@ -1,6 +1,6 @@
-from io import BytesIO
 import json
 import zipfile
+from io import BytesIO
 
 import jsonschema
 

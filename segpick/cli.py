@@ -8,31 +8,35 @@ from pathlib import Path
 
 from segpick import __version__
 from segpick.alignment.export import export_anchor_fastas, export_gene_fastas
+from segpick.analysis.biological_hypotheses import attach_biological_hypotheses
 from segpick.analysis.blastx import attach_blastx_hits
-from segpick.analysis.blastx_consistency import attach_blastx_consistency
 from segpick.analysis.blastx_anchored_orf import attach_blastx_anchored_orfs
+from segpick.analysis.blastx_consistency import attach_blastx_consistency
+from segpick.analysis.boundary_coverage import attach_boundary_coverage_assessments
+from segpick.analysis.contig_dotplot import attach_contig_dotplots
+from segpick.analysis.cross_evidence import attach_cross_evidence
+from segpick.analysis.evidence_patterns import attach_evidence_patterns
+from segpick.analysis.findings import attach_biological_findings
+from segpick.analysis.hypotheses import attach_biological_hypotheses as attach_rule_based_findings
+from segpick.analysis.manifest import build_analysis_manifest
+from segpick.analysis.observations import attach_observation_intervals
 from segpick.analysis.orf import attach_orf_metrics
-from segpick.analysis.orf_selection import attach_blastx_guided_orf_metrics
 from segpick.analysis.orf_alignment import attach_orf_alignment_metrics
 from segpick.analysis.orf_quality import attach_orf_quality
+from segpick.analysis.orf_selection import attach_blastx_guided_orf_metrics
 from segpick.analysis.protein_interpretation import attach_protein_interpretations
-from segpick.analysis.observations import attach_observation_intervals
-from segpick.analysis.boundary_coverage import attach_boundary_coverage_assessments
-from segpick.analysis.findings import attach_biological_findings
-from segpick.analysis.manifest import build_analysis_manifest
-from segpick.analysis.reference_dotplot import attach_reference_dotplots
-from segpick.analysis.contig_dotplot import attach_contig_dotplots
-from segpick.analysis.structural_integrity import attach_structural_integrity
 from segpick.analysis.reference_compatibility import attach_reference_compatibility
-from segpick.analysis.hypotheses import attach_biological_hypotheses as attach_rule_based_findings
-from segpick.analysis.evidence_patterns import attach_evidence_patterns
-from segpick.analysis.biological_hypotheses import attach_biological_hypotheses
-from segpick.analysis.cross_evidence import attach_cross_evidence
+from segpick.analysis.reference_dotplot import attach_reference_dotplots
+from segpick.analysis.structural_integrity import attach_structural_integrity
 from segpick.config import RunConfig, load_config, resolve_config
-from segpick.reasoning import load_active_rules
-from segpick.knowledge import load_active_hypotheses, load_active_evidence_patterns
 from segpick.io.builder import build_sample
+from segpick.knowledge import load_active_evidence_patterns, load_active_hypotheses
 from segpick.provenance import write_provenance
+from segpick.read_support import (
+    attach_depth_directory,
+    write_sample_coverage_plots,
+)
+from segpick.reasoning import load_active_rules
 from segpick.reporting import (
     write_analysis_manifest,
     write_gene_json_reports,
@@ -42,10 +46,6 @@ from segpick.reporting import (
     write_summary_tsv,
 )
 from segpick.scoring import rank_gene
-from segpick.read_support import (
-    attach_depth_directory,
-    write_sample_coverage_plots,
-)
 
 
 def run_doctor() -> int:

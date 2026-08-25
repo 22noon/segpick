@@ -5,9 +5,9 @@ from Bio.SeqRecord import SeqRecord
 from .alignment import Alignment
 from .contig import CandidateContig
 from .contig_dotplot import ContigDotplot
+from .evidence_pattern import EvidencePatternEvaluation
 from .finding import BiologicalFinding
 from .hypothesis import BiologicalHypothesis
-from .evidence_pattern import EvidencePatternEvaluation
 from .hypothesis_evaluation import HypothesisEvaluation
 from .reference import ReferenceSequence
 from .rule_evaluation import RuleEvaluation

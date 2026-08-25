@@ -1,5 +1,4 @@
 import math
-from segpick.read_support import attach_read_support
 
 import pytest
 from Bio.Seq import Seq
@@ -10,6 +9,7 @@ from segpick.models import (
     ContainmentMetrics,
     ContigMetadata,
 )
+from segpick.read_support import attach_read_support
 from segpick.scoring import build_evidence, build_gene_evidence
 
 

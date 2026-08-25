@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from .engine import ContributionSpec, StructuredCrossEvidenceRule, register_rule
 
-
 for rule in (
     StructuredCrossEvidenceRule(
         "segpick:read_supported_reference_absent_sequence", "1.1", "segpick.core",

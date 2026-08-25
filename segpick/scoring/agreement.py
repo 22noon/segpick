@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 from .recommendation import CandidateRecommendation
 
-
 STRONG_EVIDENCE_CHANNELS = frozenset({"orf_quality", "blastx_consistency"})
 
 

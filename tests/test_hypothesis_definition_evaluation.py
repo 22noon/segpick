@@ -2,7 +2,6 @@ from segpick.knowledge import HypothesisDefinition, HypothesisModule, evaluate_h
 from segpick.models import (
     EvidencePatternEvaluation,
     HypothesisEvaluation,
-    HypothesisEvaluation,
 )
 
 
