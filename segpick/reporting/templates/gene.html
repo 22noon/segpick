@@ -1089,7 +1089,7 @@
             {% endif %}
             {% if not item.has_details %}<p class="muted">No additional measurement provenance was recorded for this condition.</p>{% endif %}
             {% if candidate and item.graph_node_id and item.graph_node_id in candidate.impact_views %}
-              {{ evidence_action_buttons(item.identifier, item.display_name, item.kind) }}
+              {{ evidence_action_buttons(item.graph_node_id, item.display_name, item.kind) }}
             {% endif %}
           </div>
         </details>
