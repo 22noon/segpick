@@ -24,6 +24,11 @@ dev = ["pytest", "ruff", "black"]
 [project.scripts]
 segpick = "segpick.cli:main"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["segpick*"]
+exclude = ["tests*", "md*"]
+
 [tool.setuptools.package-data]
 segpick = ["reporting/templates/*.html"]
 
