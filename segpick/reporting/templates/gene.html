@@ -2638,24 +2638,28 @@ document.addEventListener("click",event=>{
 // --- Comparison / Impact / Next Evidence Helper Functions ---
 
 function showComparisonModal(candidateId, hypothesisAId, hypothesisBId) {
-  // Remove any existing comparison modal
-  const existing = document.querySelector(".comparison-modal");
-  if (existing) existing.remove();
-
-  // Find the pre-rendered comparison modal
+  // Find the pre-rendered comparison modal FIRST (before any removal)
   const key = [hypothesisAId, hypothesisBId].sort();
   const modalId = "comparison-" + key[0] + "-" + key[1];
   const existingModal = document.getElementById(modalId);
+
+  // If the requested pre-rendered modal exists, use it
   if (existingModal) {
-    // Show the existing modal
-    const existing = document.querySelector(".comparison-modal");
-    if (existing) existing.remove();
+    // Remove only the currently displayed comparison modal (if different from requested)
+    const displayed = document.querySelector(".comparison-modal[open]");
+    if (displayed && displayed !== existingModal) {
+      displayed.remove();
+    }
     document.body.appendChild(existingModal);
-    // Make the pre-rendered modal visible and open (matching fallback behavior)
+    // Make the pre-rendered modal visible and open
     existingModal.style.display = "";
     existingModal.open = true;
     return;
   }
+
+  // If no pre-rendered modal exists, remove any currently displayed modal
+  const displayed = document.querySelector(".comparison-modal[open]");
+  if (displayed) displayed.remove();
 
   // Fallback if not pre-rendered
   const modal = document.createElement("details");
