@@ -2837,7 +2837,7 @@ function showCounterfactualSidebar(candidateId, sourceId, sourceTitle, sourceTyp
   const sidebar = document.createElement("details");
   sidebar.className = "hypothesis-item counterfactual-sidebar";
   sidebar.open = true;
-  sidebar.innerHTML = \`
+  sidebar.innerHTML = `
     <summary class="counterfactual-header">
       <span class="hypothesis-title">Counterfactual: remove ${sourceTitle}</span>
       <span class="hypothesis-badge confidence-high">Show counterfactual</span>
@@ -2847,7 +2847,7 @@ function showCounterfactualSidebar(candidateId, sourceId, sourceTitle, sourceTyp
       <p class="muted">Counterfactual view - uses existing pre-rendered counterfactual evaluations.</p>
       <p class="muted">Navigate to the Reasoning Graph Inspector panel to see full counterfactual analysis.</p>
     </div>
-  \`;
+  `;
 
   // Insert near the evidence patterns panel
   const panel = document.getElementById("evidence-patterns-panel");
