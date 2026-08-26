@@ -30,7 +30,7 @@ def test_counterfactual_invalid_node_id():
     candidate.analysis.reasoning_graph = ReasoningGraph()
     
     # Test invalid node ID with valid prefix but doesn't exist in graph
-    with pytest.raises(KeyError, match="Unknown reasoning node"):
+    with pytest.raises(KeyError, match="Unknown observation node"):
         evaluate_counterfactual(candidate, "observation:nonexistent:node")
 
 
@@ -44,6 +44,7 @@ def test_counterfactual_invalid_node_type():
     candidate.analysis = ContigAnalysis()
     candidate.analysis.reasoning_graph = ReasoningGraph()
     
-    with pytest.raises(ValueError, match="Unsupported node type"):
+    with pytest.raises(ValueError, match="ObservationNode removal"):
         evaluate_counterfactual(candidate, "unsupported_type:foo")
+
 
