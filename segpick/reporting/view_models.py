@@ -7,6 +7,7 @@ from itertools import combinations
 
 from segpick.analysis import analyse_protein_continuity, build_evidence_assessments
 from segpick.explorer import ReasoningExplorer
+from segpick.explorer.counterfactual import evaluate_counterfactual, CounterfactualResult
 from segpick.knowledge.vocabulary import describe_condition
 from segpick.models import BiologicalHypothesis, CandidateContig, EvidencePatternEvaluation, Gene, HypothesisEvaluation, RuleEvaluation
 from segpick.reasoning import build_llm_reasoning_bundle, build_llm_review_package, load_llm_bundle_schema, load_llm_output_schema
@@ -560,6 +561,49 @@ class ImpactView:
     source_title: str
     source_type: str
     affected_paths: tuple[ImpactPathView, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CounterfactualPatternDeltaView:
+    """Delta for an evidence pattern in counterfactual evaluation."""
+    pattern_id: str
+    title: str
+    original_state: str
+    counterfactual_state: str
+    change_type: str  # "unchanged", "weakened", "no_longer_matched", "now_contradicted"
+    lost_required_conditions: tuple[str, ...]
+    lost_supporting_conditions: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CounterfactualHypothesisDeltaView:
+    """Delta for a hypothesis in counterfactual evaluation."""
+    hypothesis_id: str
+    title: str
+    original_confidence: str
+    counterfactual_confidence: str
+    original_state: str
+    counterfactual_state: str
+    change_type: str  # "unchanged", "weakened", "no_longer_supported", "contradicted"
+    lost_supporting_patterns: tuple[str, ...]
+    gained_conflicting_patterns: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CounterfactualResultView:
+    """Result of a counterfactual evaluation."""
+    removed_node_id: str
+    removed_node_type: str
+    original_patterns: tuple[str, ...]  # pattern_ids
+    counterfactual_patterns: tuple[str, ...]  # pattern_ids
+    original_hypotheses: tuple[str, ...]  # hypothesis_ids
+    counterfactual_hypotheses: tuple[str, ...]  # hypothesis_ids
+    pattern_deltas: tuple["CounterfactualPatternDeltaView", ...]
+    hypothesis_deltas: tuple["CounterfactualHypothesisDeltaView", ...]
+    hypotheses_unchanged: int
+    hypotheses_weakened: int
+    hypotheses_no_longer_supported: int
+    hypotheses_contradicted: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -1139,6 +1183,7 @@ class CandidateView:
     next_evidence_views: dict[str, NextEvidenceView]
     impact_views: dict[str, ImpactView]
     comparison_views: dict[tuple[str, str], ComparisonView] = field(default_factory=dict)
+    counterfactual_views: dict[str, CounterfactualResultView] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1405,6 +1450,67 @@ def build_impact_views(candidate: CandidateContig) -> dict[str, ImpactView]:
     return views
 
 
+def build_counterfactual_views(candidate: CandidateContig) -> dict[str, CounterfactualResultView]:
+    """Build CounterfactualResultView for ObservationNodes in the reasoning graph."""
+    graph = candidate.analysis.reasoning_graph
+    if graph is None:
+        return {}
+
+    views = {}
+    for node in graph.observations:
+        try:
+            result = evaluate_counterfactual(candidate, node.id)
+            # Convert CounterfactualResult to CounterfactualResultView
+            view = CounterfactualResultView(
+                removed_node_id=result.removed_node_id,
+                removed_node_type=result.removed_node_type,
+                original_patterns=tuple(p.pattern_id for p in result.original_patterns),
+                counterfactual_patterns=tuple(p.pattern_id for p in result.counterfactual_patterns),
+                original_hypotheses=tuple(h.hypothesis_id for h in result.original_hypotheses),
+                counterfactual_hypotheses=tuple(h.hypothesis_id for h in result.counterfactual_hypotheses),
+                pattern_deltas=tuple(
+                    CounterfactualPatternDeltaView(
+                        pattern_id=d.pattern_id,
+                        title=d.title,
+                        original_state=d.original_state,
+                        counterfactual_state=d.counterfactual_state,
+                        change_type=d.change_type,
+                        lost_required_conditions=d.lost_required_conditions,
+                        lost_supporting_conditions=d.lost_supporting_conditions,
+                    )
+                    for d in result.pattern_deltas
+                ),
+                hypothesis_deltas=tuple(
+                    CounterfactualHypothesisDeltaView(
+                        hypothesis_id=d.hypothesis_id,
+                        title=d.title,
+                        original_confidence=d.original_confidence,
+                        counterfactual_confidence=d.counterfactual_confidence,
+                        original_state=d.original_state,
+                        counterfactual_state=d.counterfactual_state,
+                        change_type=d.change_type,
+                        lost_supporting_patterns=d.lost_supporting_patterns,
+                        gained_conflicting_patterns=d.gained_conflicting_patterns,
+                    )
+                    for d in result.hypothesis_deltas
+                ),
+                hypotheses_unchanged=result.hypotheses_unchanged,
+                hypotheses_weakened=result.hypotheses_weakened,
+                hypotheses_no_longer_supported=result.hypotheses_no_longer_supported,
+                hypotheses_contradicted=result.hypotheses_contradicted,
+            )
+            views[node.id] = view
+        except KeyError:
+            pass
+        except Exception as exc:
+            # Log error but continue with other nodes
+            import logging
+            logging.warning(f"Failed to build counterfactual view for {node.id}: {exc}")
+            pass
+
+    return views
+
+
 def build_comparison_views(candidate: CandidateContig) -> dict[tuple[str, str], ComparisonView]:
     """Build ComparisonView for all pairs of biological hypotheses for a candidate."""
     graph = candidate.analysis.reasoning_graph
@@ -1539,6 +1645,7 @@ def build_gene_page_view(
             next_evidence_views=build_next_evidence_views(candidate),
             impact_views=build_impact_views(candidate),
             comparison_views=build_comparison_views(candidate),
+            counterfactual_views=build_counterfactual_views(candidate),
         )
         for candidate in gene.candidates
     )

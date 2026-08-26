@@ -1294,6 +1294,7 @@
   {% macro evidence_action_buttons(source_id, source_title, source_type) -%}
     <div class="evidence-actions">
       <button type="button" class="secondary" data-action="impact" data-source-id="{{ source_id }}" data-source-title="{{ source_title }}" data-source-type="{{ source_type }}">Impact</button>
+      <button type="button" class="secondary" data-action="counterfactual" data-source-id="{{ source_id }}" data-source-title="{{ source_title }}" data-source-type="{{ source_type }}">Counterfactual</button>
     </div>
   {%- endmacro %}
 
@@ -1374,6 +1375,68 @@
     {% endif %}
   {%- endmacro %}
 
+  {% macro counterfactual_sidebars(candidate) -%}
+    {% if candidate.counterfactual_views %}
+      {% for key, counterfactual in candidate.counterfactual_views.items() %}
+        <details id="counterfactual-{{ key }}" class="hypothesis-item counterfactual-sidebar" style="display:none;">
+          {{ counterfactual_sidebar(counterfactual) }}
+        </details>
+      {% endfor %}
+    {% endif %}
+  {%- endmacro %}
+
+  {% macro counterfactual_sidebar(counterfactual) -%}
+    <details class="hypothesis-item counterfactual-sidebar">
+      <summary class="counterfactual-header">
+        <span class="hypothesis-title">Counterfactual: remove {{ counterfactual.removed_node_id }}</span>
+        <span class="hypothesis-badge confidence-high">Show counterfactual</span>
+        <button type="button" class="secondary" onclick="this.closest('details').remove()">Close</button>
+      </summary>
+      <div class="hypothesis-detail counterfactual-body">
+        <h4>Removed observation: {{ counterfactual.removed_node_id }} ({{ counterfactual.removed_node_type }})</h4>
+        
+        {% if counterfactual.hypothesis_deltas %}
+          <h4>Affected hypotheses</h4>
+          {% for delta in counterfactual.hypothesis_deltas %}
+            <div class="hypothesis-delta">
+              <strong>Hypothesis: {{ delta.title }} ({{ delta.hypothesis_id }})</strong>
+              <div class="delta-detail">
+                <span class="badge badge-{{ delta.change_type }}">{{ delta.change_type }}</span>
+                <span class="muted">Confidence: {{ delta.original_confidence }} → {{ delta.counterfactual_confidence }}</span>
+                <span class="muted">State: {{ delta.original_state }} → {{ delta.counterfactual_state }}</span>
+                {% if delta.lost_supporting_patterns %}
+                  <div class="muted">Lost supporting patterns: {{ delta.lost_supporting_patterns|join(", ") }}</div>
+                {% endif %}
+                {% if delta.gained_conflicting_patterns %}
+                  <div class="muted">Gained conflicting patterns: {{ delta.gained_conflicting_patterns|join(", ") }}</div>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        {% endif %}
+        
+        {% if counterfactual.pattern_deltas %}
+          <h4>Affected evidence patterns</h4>
+          {% for delta in counterfactual.pattern_deltas %}
+            <div class="pattern-delta">
+              <strong>Pattern: {{ delta.title }} ({{ delta.pattern_id }})</strong>
+              <div class="delta-detail">
+                <span class="badge badge-{{ delta.change_type }}">{{ delta.change_type }}</span>
+                <span class="muted">State: {{ delta.original_state }} → {{ delta.counterfactual_state }}</span>
+                {% if delta.lost_required_conditions %}
+                  <div class="muted">Lost required conditions: {{ delta.lost_required_conditions|join(", ") }}</div>
+                {% endif %}
+                {% if delta.lost_supporting_conditions %}
+                  <div class="muted">Lost supporting conditions: {{ delta.lost_supporting_conditions|join(", ") }}</div>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </details>
+  {%- endmacro %}
+
   <nav id="reasoning-navigation" class="reasoning-nav" aria-label="Reasoning sections">
     <h2>Reasoning explorer</h2>
     <a href="#reasoning-path-panel">Reasoning path</a>
@@ -1424,6 +1487,9 @@
     {% endfor %}
     {% for candidate in view.candidates %}
       {{ impact_sidebars(candidate) }}
+    {% endfor %}
+    {% for candidate in view.candidates %}
+      {{ counterfactual_sidebars(candidate) }}
     {% endfor %}
   </section
 
@@ -2646,6 +2712,17 @@ document.addEventListener("click",event=>{
     if(graphInspector) graphInspector.scrollIntoView({behavior:"smooth"});
     // Could also pre-select the path in the graph inspector
   }
+
+  // Counterfactual action
+  const counterfactualBtn=event.target.closest("[data-action='counterfactual']");
+  if(counterfactualBtn){
+    const candidateId=DashboardState.selectedCandidate;
+    if(!candidateId){alert("Select a candidate first");return;}
+    const sourceId=counterfactualBtn.dataset.sourceId;
+    const sourceTitle=counterfactualBtn.dataset.sourceTitle;
+    const sourceType=counterfactualBtn.dataset.sourceType;
+    showCounterfactualSidebar(candidateId, sourceId, sourceTitle, sourceType);
+  }
 });
 
 // --- Comparison / Impact / Next Evidence Helper Functions ---
@@ -2730,6 +2807,47 @@ function showImpactSidebar(candidateId, sourceId, sourceTitle, sourceType) {
       <p class="muted">Navigate to the Reasoning Graph Inspector panel to see full downstream paths for any evidence node.</p>
     </div>
   `;
+
+  // Insert near the evidence patterns panel
+  const panel = document.getElementById("evidence-patterns-panel");
+  if (panel) {
+    panel.parentNode.insertBefore(sidebar, panel.nextSibling);
+  }
+}
+
+function showCounterfactualSidebar(candidateId, sourceId, sourceTitle, sourceType) {
+  // Remove any existing counterfactual sidebar
+  const existing = document.querySelector(".counterfactual-sidebar");
+  if (existing) existing.remove();
+
+  // Find the pre-rendered counterfactual sidebar
+  const sidebarId = "counterfactual-" + sourceId;
+  const existingSidebar = document.getElementById(sidebarId);
+  if (existingSidebar) {
+    // Show the existing sidebar
+    const existing = document.querySelector(".counterfactual-sidebar");
+    if (existing) existing.remove();
+    document.body.appendChild(existingSidebar);
+    existingSidebar.style.display = "";
+    existingSidebar.open = true;
+    return;
+  }
+
+  // Fallback if not pre-rendered
+  const sidebar = document.createElement("details");
+  sidebar.className = "hypothesis-item counterfactual-sidebar";
+  sidebar.open = true;
+  sidebar.innerHTML = \`
+    <summary class="counterfactual-header">
+      <span class="hypothesis-title">Counterfactual: remove ${sourceTitle}</span>
+      <span class="hypothesis-badge confidence-high">Show counterfactual</span>
+      <button type="button" class="secondary" onclick="this.closest('details').remove()">Close</button>
+    </summary>
+    <div class="hypothesis-detail counterfactual-body">
+      <p class="muted">Counterfactual view - uses existing pre-rendered counterfactual evaluations.</p>
+      <p class="muted">Navigate to the Reasoning Graph Inspector panel to see full counterfactual analysis.</p>
+    </div>
+  \`;
 
   // Insert near the evidence patterns panel
   const panel = document.getElementById("evidence-patterns-panel");
