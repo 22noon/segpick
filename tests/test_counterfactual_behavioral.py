@@ -51,17 +51,17 @@ def _make_test_candidate():
     f1 = InterpretiveFindingNode('interpretation:finding-a:1', 'Finding A', 'Finding from X')
     f2 = InterpretiveFindingNode('interpretation:finding-b:1', 'Finding B', 'Finding from Y')
     f3 = InterpretiveFindingNode('interpretation:finding-c:1', 'Finding C', 'Finding from Z')
-    s1 = EvidencePatternNode('pattern:pattern-a:1', 'pattern_a', 'Pattern P', 'Pattern from X and Y', 'high')
-    s2 = EvidencePatternNode('pattern:pattern-b:1', 'pattern_b', 'Pattern Q', 'Pattern from Z', 'high')
-    h1 = BiologicalHypothesisNode('hypothesis:evidence-pattern:rule1:1', 'Hypothesis A', 'Hypothesis A', 'high', rule_id='rule1')
-    h2 = BiologicalHypothesisNode('hypothesis:evidence-pattern:rule2:1', 'Hypothesis B', 'Hypothesis B', 'high', rule_id='rule2')
+    s1 = EvidencePatternNode('pattern:incomplete_terminal_assembly:1', 'incomplete_terminal_assembly', 'Pattern P', 'Pattern from X and Y', 'high')
+    s2 = EvidencePatternNode('pattern:reference_unsupported_internal_sequence:1', 'reference_unsupported_internal_sequence', 'Pattern Q', 'Pattern from Z', 'high')
+    h1 = BiologicalHypothesisNode('hypothesis:evidence-pattern:incomplete_segment:1', 'Hypothesis A', 'Hypothesis A', 'high', rule_id='incomplete_segment')
+    h2 = BiologicalHypothesisNode('hypothesis:evidence-pattern:reference_relative_structural_variation:1', 'Hypothesis B', 'Hypothesis B', 'high', rule_id='reference_relative_structural_variation')
 
     edges = (
-        ReasoningEdge('hypothesis:evidence-pattern:rule1:1', 'pattern:pattern-a:1', 'supported_by'),
-        ReasoningEdge('hypothesis:evidence-pattern:rule2:1', 'pattern:pattern-b:1', 'supported_by'),
-        ReasoningEdge('pattern:pattern-a:1', 'interpretation:finding-a:1', 'composed_from'),
-        ReasoningEdge('pattern:pattern-a:1', 'interpretation:finding-b:1', 'composed_from'),
-        ReasoningEdge('pattern:pattern-b:1', 'interpretation:finding-c:1', 'composed_from'),
+        ReasoningEdge('hypothesis:evidence-pattern:incomplete_segment:1', 'pattern:incomplete_terminal_assembly:1', 'supported_by'),
+        ReasoningEdge('hypothesis:evidence-pattern:reference_relative_structural_variation:1', 'pattern:reference_unsupported_internal_sequence:1', 'supported_by'),
+        ReasoningEdge('pattern:incomplete_terminal_assembly:1', 'interpretation:finding-a:1', 'composed_from'),
+        ReasoningEdge('pattern:incomplete_terminal_assembly:1', 'interpretation:finding-b:1', 'composed_from'),
+        ReasoningEdge('pattern:reference_unsupported_internal_sequence:1', 'interpretation:finding-c:1', 'composed_from'),
         ReasoningEdge('interpretation:finding-a:1', 'observation:protein-alignment:type1:1', 'derived_from'),
         ReasoningEdge('interpretation:finding-b:1', 'observation:protein-alignment:type2:1', 'derived_from'),
         ReasoningEdge('interpretation:finding-c:1', 'observation:protein-alignment:type3:1', 'derived_from'),
@@ -207,7 +207,7 @@ def _make_test_candidate():
     candidate.analysis.findings = (finding1, finding2, finding3)
     candidate.analysis.evidence_patterns = (
         EvidencePatternEvaluation(
-            pattern_id='pattern_a',
+            pattern_id='incomplete_terminal_assembly',
             title='Pattern P',
             category='test',
             scope='candidate',
@@ -228,7 +228,7 @@ def _make_test_candidate():
             unused_findings=(),
         ),
         EvidencePatternEvaluation(
-            pattern_id='pattern_b',
+            pattern_id='reference_unsupported_internal_sequence',
             title='Pattern Q',
             category='test',
             scope='candidate',
@@ -251,19 +251,19 @@ def _make_test_candidate():
     )
     candidate.analysis.biological_hypothesis_evaluations = (
         HypothesisEvaluation(
-            hypothesis_id='rule1',
+            hypothesis_id='incomplete_segment',
             title='Hypothesis A',
             category='test',
             scope='candidate',
             confidence='high',
             severity='informational',
             explanation='Hypothesis A',
-            base_confidence='high',
-            definition_supported_by=('pattern_a',),
-            definition_contradicted_by=(),
+            base_confidence='moderate',
+            definition_supported_by=('pattern:pattern-a:1'),
+            definition_contradicted_by=('divergent_but_coherent_segment'),
             minimum_support=1,
             candidate_ids=('test_candidate',),
-            supporting_patterns=('pattern_a',),
+            supporting_patterns=('pattern:pattern-a:1',),
             supporting_pattern_titles=('Pattern P',),
             conflicting_patterns=(),
             conflicting_pattern_titles=(),
@@ -272,20 +272,19 @@ def _make_test_candidate():
             references=(),
         ),
         HypothesisEvaluation(
-            hypothesis_id='rule2',
+            hypothesis_id='reference_relative_structural_variation',
             title='Hypothesis B',
             category='test',
             scope='candidate',
             confidence='high',
             severity='informational',
             explanation='Hypothesis B',
-            base_confidence='high',
-            definition_supported_by=('pattern_b',),
-            definition_contradicted_by=(),
+            base_confidence='moderate',
+            definition_supported_by=('pattern:pattern-b:1'),
+            definition_contradicted_by=('divergent_but_coherent_segment'),
             minimum_support=1,
             candidate_ids=('test_candidate',),
-            supporting_patterns=('pattern_b',),
-            supporting_pattern_titles=('Pattern Q',),
+            supporting_patterns=('pattern:pattern-b:1',),
             conflicting_patterns=(),
             conflicting_pattern_titles=(),
             recommended_actions=(),
@@ -342,17 +341,17 @@ o3 = ObservationNode('observation:protein-alignment:type3:1', 'type3', 'protein_
 f1 = InterpretiveFindingNode('interpretation:finding-a:1', 'Finding A', 'Finding from X')
 f2 = InterpretiveFindingNode('interpretation:finding-b:1', 'Finding B', 'Finding from Y')
 f3 = InterpretiveFindingNode('interpretation:finding-c:1', 'Finding C', 'Finding from Z')
-s1 = EvidencePatternNode('pattern:pattern-a:1', 'pattern_a', 'Pattern P', 'Pattern from X and Y', 'high')
-s2 = EvidencePatternNode('pattern:pattern-b:1', 'pattern_b', 'Pattern Q', 'Pattern from Z', 'high')
-h1 = BiologicalHypothesisNode('hypothesis:evidence-pattern:rule1:1', 'Hypothesis A', 'Hypothesis A', 'high', rule_id='rule1')
-h2 = BiologicalHypothesisNode('hypothesis:evidence-pattern:rule2:1', 'Hypothesis B', 'Hypothesis B', 'high', rule_id='rule2')
+s1 = EvidencePatternNode('pattern:incomplete_terminal_assembly:1', 'incomplete_terminal_assembly', 'Pattern P', 'Pattern from X and Y', 'high')
+s2 = EvidencePatternNode('pattern:reference_unsupported_internal_sequence:1', 'reference_unsupported_internal_sequence', 'Pattern Q', 'Pattern from Z', 'high')
+h1 = BiologicalHypothesisNode('hypothesis:evidence-pattern:incomplete_segment:1', 'Hypothesis A', 'Hypothesis A', 'high', rule_id='incomplete_segment')
+h2 = BiologicalHypothesisNode('hypothesis:evidence-pattern:reference_relative_structural_variation:1', 'Hypothesis B', 'Hypothesis B', 'high', rule_id='reference_relative_structural_variation')
 
 edges = (
-    ReasoningEdge('hypothesis:evidence-pattern:rule1:1', 'pattern:pattern-a:1', 'supported_by'),
-    ReasoningEdge('hypothesis:evidence-pattern:rule2:1', 'pattern:pattern-b:1', 'supported_by'),
-    ReasoningEdge('pattern:pattern-a:1', 'interpretation:finding-a:1', 'composed_from'),
-    ReasoningEdge('pattern:pattern-a:1', 'interpretation:finding-b:1', 'composed_from'),
-    ReasoningEdge('pattern:pattern-b:1', 'interpretation:finding-c:1', 'composed_from'),
+    ReasoningEdge('hypothesis:evidence-pattern:incomplete_segment:1', 'pattern:incomplete_terminal_assembly:1', 'supported_by'),
+    ReasoningEdge('hypothesis:evidence-pattern:reference_relative_structural_variation:1', 'pattern:reference_unsupported_internal_sequence:1', 'supported_by'),
+    ReasoningEdge('pattern:incomplete_terminal_assembly:1', 'interpretation:finding-a:1', 'composed_from'),
+    ReasoningEdge('pattern:incomplete_terminal_assembly:1', 'interpretation:finding-b:1', 'composed_from'),
+    ReasoningEdge('pattern:reference_unsupported_internal_sequence:1', 'interpretation:finding-c:1', 'composed_from'),
     ReasoningEdge('interpretation:finding-a:1', 'observation:protein-alignment:type1:1', 'derived_from'),
     ReasoningEdge('interpretation:finding-b:1', 'observation:protein-alignment:type2:1', 'derived_from'),
     ReasoningEdge('interpretation:finding-c:1', 'observation:protein-alignment:type3:1', 'derived_from'),
@@ -434,11 +433,11 @@ def test_impact_without_meaningful_change():
     result = evaluate_counterfactual(candidate, 'observation:protein-alignment:type1:1')
     
     # Verify hypothesis h1 (rule1) - the actual behavior depends on loaded definitions
-    h1_delta = next(d for d in result.hypothesis_deltas if d.hypothesis_id == 'rule1')
+    h1_delta = next(d for d in result.hypothesis_deltas if d.hypothesis_id == 'incomplete_segment')
     assert h1_delta.change_type in {"unchanged", "weakened", "no_longer_supported", "contradicted"}
     
     # h2 (rule2) should also be unchanged (unrelated)
-    h2_delta = next(d for d in result.hypothesis_deltas if d.hypothesis_id == 'rule2')
+    h2_delta = next(d for d in result.hypothesis_deltas if d.hypothesis_id == 'reference_relative_structural_variation')
     assert h2_delta.change_type in {"unchanged", "weakened", "no_longer_supported", "contradicted"}
 
 
@@ -453,15 +452,15 @@ def test_required_evidence_changes_reasoning():
     result = evaluate_counterfactual(candidate, 'observation:protein-alignment:type3:1')
     
     # Verify hypothesis h2 (rule2) is affected
-    h2_delta = next(d for d in result.hypothesis_deltas if d.hypothesis_id == 'rule2')
+    h2_delta = next(d for d in result.hypothesis_deltas if d.hypothesis_id == 'reference_relative_structural_variation')
     assert h2_delta.change_type in {"weakened", "no_longer_supported", "contradicted"}
     
     # Pattern s2 (pattern_b) should be affected
-    p2_delta = next(d for d in result.pattern_deltas if d.pattern_id == 'pattern_b')
+    p2_delta = next(d for d in result.pattern_deltas if d.pattern_id == 'reference_unsupported_internal_sequence')
     assert p2_delta.change_type in {"weakened", "no_longer_matched", "now_contradicted"}
     
     # h1 should be unchanged (uses different pattern)
-    h1_delta = next(d for d in result.hypothesis_deltas if d.hypothesis_id == 'rule1')
+    h1_delta = next(d for d in result.hypothesis_deltas if d.hypothesis_id == 'incomplete_segment')
     assert h1_delta.change_type in {"unchanged", "weakened", "no_longer_supported", "contradicted"}
 
 
@@ -475,10 +474,10 @@ def test_multiple_affected_hypotheses():
     
     # o1 contributes to finding f1, which contributes to pattern s1, which supports h1
     # So only h1 should be affected (not h2 which uses different pattern)
-    h1_delta = next(d for d in result.hypothesis_deltas if d.hypothesis_id == 'rule1')
+    h1_delta = next(d for d in result.hypothesis_deltas if d.hypothesis_id == 'incomplete_segment')
     assert h1_delta.change_type in {"unchanged", "weakened", "no_longer_supported", "contradicted"}
     
-    h2_delta = next(d for d in result.hypothesis_deltas if d.hypothesis_id == 'rule2')
+    h2_delta = next(d for d in result.hypothesis_deltas if d.hypothesis_id == 'reference_relative_structural_variation')
     assert h2_delta.change_type in {"unchanged", "weakened", "no_longer_supported", "contradicted"}
 
 
@@ -491,7 +490,7 @@ def test_unrelated_hypothesis_unchanged():
     result = evaluate_counterfactual(candidate, 'observation:protein-alignment:type1:1')
     
     # h2 uses o3 -> f3 -> s2, which is completely separate from o1
-    h2_delta = next(d for d in result.hypothesis_deltas if d.hypothesis_id == 'rule2')
+    h2_delta = next(d for d in result.hypothesis_deltas if d.hypothesis_id == 'reference_relative_structural_variation')
     assert h2_delta.change_type in {"unchanged", "weakened", "no_longer_supported", "contradicted"}
 
 

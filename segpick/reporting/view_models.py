@@ -1040,7 +1040,11 @@ def build_impact_view(
     affected_paths = []
     for path in result.paths:
         steps = []
-        for i, (node, edge) in enumerate(zip(path.nodes, path.edges, strict=True)):
+        # path.nodes has N elements, path.edges has N-1 elements
+        # Iterate over edges and get corresponding nodes
+        for i in range(len(path.edges)):
+            node = path.nodes[i]
+            edge = path.edges[i]
             # Create ProvenanceStepView for each step
             if i == 0:
                 # First step - the source node
