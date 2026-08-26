@@ -27,7 +27,10 @@ from segpick.models import (
 )
 from segpick.knowledge.schema import EvidencePatternDefinition
 from segpick.knowledge.hypothesis_definition import HypothesisDefinition
-from segpick.models.reasoning_graph import ReasoningGraph
+from segpick.models.reasoning_graph import (
+    ReasoningGraph,
+    InterpretiveFindingNode,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,7 +97,8 @@ def _filter_observation(obs: EvidenceObservation, node_id: str) -> bool:
     """Check if an observation matches the node_id to remove."""
     import re
     slug_source = re.sub(r'[^a-z0-9]+', '-', obs.source_name.lower()).strip('-')
-    base = f"observation:{slug_source}:{obs.observation_type}"
+    slug_type = re.sub(r'[^a-z0-9]+', '-', obs.observation_type.lower()).strip('-')
+    base = f"observation:{slug_source}:{slug_type}"
     return node_id.startswith(base + ":")
 
 
@@ -141,10 +145,42 @@ def _build_counterfactual_context(
 def _remove_observation(context: "_CounterfactualContext", node_id: str) -> "_CounterfactualContext":
     """Virtually remove an observation from the evaluation context."""
     filtered_obs = tuple(o for o in context.observations if not _filter_observation(o, node_id))
+    
+    # Find affected findings that depend on the removed observation
+    # Use the reasoning graph to trace observation -> finding relationships
+    from segpick.explorer import ReasoningExplorer
+    explorer = ReasoningExplorer(context.original_reasoning_graph)
+    affected_finding_ids = set()
+    for path in explorer.impact(node_id).paths:
+        for node in path.nodes:
+            if isinstance(node, InterpretiveFindingNode):
+                affected_finding_ids.add(node.title)
+    
+    # Keep findings that either aren't affected, or have other observation parents
+    # Generate observation IDs matching the graph's format
+    def _obs_id(obs):
+        import re
+        slug_source = re.sub(r'[^a-z0-9]+', '-', obs.source_name.lower()).strip('-')
+        slug_type = re.sub(r'[^a-z0-9]+', '-', obs.observation_type.lower()).strip('-')
+        return f"observation:{slug_source}:{slug_type}:1"
+    all_obs_ids = {_obs_id(o) for o in filtered_obs}
+    findings_to_keep = []
+    for finding in context.findings:
+        if finding.title not in affected_finding_ids:
+            findings_to_keep.append(finding)
+            continue
+        # Check if this finding has other observation parents
+        obs_parents = [e.source_id for e in context.original_reasoning_graph.edges 
+                       if e.target_id == finding.title and e.relationship == 'derived_from']
+        remaining_parents = [p for p in obs_parents if p in all_obs_ids]
+        if remaining_parents:
+            findings_to_keep.append(finding)
+        # else: finding is dropped (no remaining observation parents)
+    
     return _CounterfactualContext(
         candidate_id=context.candidate_id,
         observations=filtered_obs,
-        findings=context.findings,
+        findings=tuple(findings_to_keep),
         evidence_patterns=context.evidence_patterns,
         biological_hypotheses=context.biological_hypotheses,
         pattern_definitions=context.pattern_definitions,
@@ -157,7 +193,8 @@ def _filter_observation(obs: EvidenceObservation, node_id: str) -> bool:
     """Check if an observation matches the node_id to remove."""
     import re
     slug_source = re.sub(r'[^a-z0-9]+', '-', obs.source_name.lower()).strip('-')
-    base = f"observation:{slug_source}:{obs.observation_type}"
+    slug_type = re.sub(r'[^a-z0-9]+', '-', obs.observation_type.lower()).strip('-')
+    base = f"observation:{slug_source}:{slug_type}"
     return node_id.startswith(base + ":")
 
 
@@ -395,10 +432,42 @@ def evaluate_counterfactual(
 def _remove_observation(context: "_CounterfactualContext", node_id: str) -> "_CounterfactualContext":
     """Virtually remove an observation from the evaluation context."""
     filtered_obs = tuple(o for o in context.observations if not _filter_observation(o, node_id))
+    
+    # Find affected findings that depend on the removed observation
+    # Use the reasoning graph to trace observation -> finding relationships
+    from segpick.explorer import ReasoningExplorer
+    explorer = ReasoningExplorer(context.original_reasoning_graph)
+    affected_finding_ids = set()
+    for path in explorer.impact(node_id).paths:
+        for node in path.nodes:
+            if isinstance(node, InterpretiveFindingNode):
+                affected_finding_ids.add(node.title)
+    
+    # Keep findings that either aren't affected, or have other observation parents
+    # Generate observation IDs matching the graph's format
+    def _obs_id(obs):
+        import re
+        slug_source = re.sub(r'[^a-z0-9]+', '-', obs.source_name.lower()).strip('-')
+        slug_type = re.sub(r'[^a-z0-9]+', '-', obs.observation_type.lower()).strip('-')
+        return f"observation:{slug_source}:{slug_type}:1"
+    all_obs_ids = {_obs_id(o) for o in filtered_obs}
+    findings_to_keep = []
+    for finding in context.findings:
+        if finding.title not in affected_finding_ids:
+            findings_to_keep.append(finding)
+            continue
+        # Check if this finding has other observation parents
+        obs_parents = [e.source_id for e in context.original_reasoning_graph.edges 
+                       if e.target_id == finding.title and e.relationship == 'derived_from']
+        remaining_parents = [p for p in obs_parents if p in all_obs_ids]
+        if remaining_parents:
+            findings_to_keep.append(finding)
+        # else: finding is dropped (no remaining observation parents)
+    
     return _CounterfactualContext(
         candidate_id=context.candidate_id,
         observations=filtered_obs,
-        findings=context.findings,
+        findings=tuple(findings_to_keep),
         evidence_patterns=context.evidence_patterns,
         biological_hypotheses=context.biological_hypotheses,
         pattern_definitions=context.pattern_definitions,
@@ -411,7 +480,8 @@ def _filter_observation(obs: EvidenceObservation, node_id: str) -> bool:
     """Check if an observation matches the node_id to remove."""
     import re
     slug_source = re.sub(r'[^a-z0-9]+', '-', obs.source_name.lower()).strip('-')
-    base = f"observation:{slug_source}:{obs.observation_type}"
+    slug_type = re.sub(r'[^a-z0-9]+', '-', obs.observation_type.lower()).strip('-')
+    base = f"observation:{slug_source}:{slug_type}"
     return node_id.startswith(base + ":")
 
 

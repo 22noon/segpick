@@ -1308,7 +1308,7 @@
           <summary class="comparison-header">
             <span class="hypothesis-title">Comparison: {{ comparison.hypothesis_a_title }} vs {{ comparison.hypothesis_b_title }}</span>
             <span class="hypothesis-badge confidence-high">Compare</span>
-            <button type="button" class="secondary" onclick="this.closest('details').remove()">Close</button>
+            <button type="button" class="secondary" data-action="close-counterfactual">Close</button>
           </summary>
           <div class="hypothesis-detail comparison-body">
             <div class="hypothesis-trace">
@@ -1390,7 +1390,7 @@
       <summary class="counterfactual-header">
         <span class="hypothesis-title">Counterfactual: remove {{ counterfactual.removed_node_id }}</span>
         <span class="hypothesis-badge confidence-high">Show counterfactual</span>
-        <button type="button" class="secondary" onclick="this.closest('details').remove()">Close</button>
+        <button type="button" class="secondary" data-action="close-counterfactual">Close</button>
       </summary>
       <div class="hypothesis-detail counterfactual-body">
         <h4>Removed observation: {{ counterfactual.removed_node_id }} ({{ counterfactual.removed_node_type }})</h4>
@@ -2723,6 +2723,16 @@ document.addEventListener("click",event=>{
     const sourceType=counterfactualBtn.dataset.sourceType;
     showCounterfactualSidebar(candidateId, sourceId, sourceTitle, sourceType);
   }
+
+  // Close counterfactual sidebar
+  const closeCounterfactualBtn=event.target.closest("[data-action='close-counterfactual']");
+  if(closeCounterfactualBtn){
+    const details=closeCounterfactualBtn.closest('details');
+    if(details){
+      details.open=false;
+      details.style.display='none';
+    }
+  }
 });
 
 // --- Comparison / Impact / Next Evidence Helper Functions ---
@@ -2760,7 +2770,7 @@ function showComparisonModal(candidateId, hypothesisAId, hypothesisBId) {
     <summary class="comparison-header">
       <span class="hypothesis-title">Comparing ${hypothesisAId} vs ${hypothesisBId}</span>
       <span class="hypothesis-badge confidence-high">Compare</span>
-      <button type="button" class="secondary" onclick="this.closest('details').remove()">Close</button>
+      <button type="button" class="secondary" data-action="close-counterfactual">Close</button>
     </summary>
     <div class="hypothesis-detail comparison-body">
       <p class="muted">Comparison data not pre-rendered.</p>
@@ -2800,7 +2810,7 @@ function showImpactSidebar(candidateId, sourceId, sourceTitle, sourceType) {
     <summary class="impact-header">
       <span class="hypothesis-title">Impact of ${sourceTitle}</span>
       <span class="hypothesis-badge confidence-high">Show downstream</span>
-      <button type="button" class="secondary" onclick="this.closest('details').remove()">Close</button>
+      <button type="button" class="secondary" data-action="close-counterfactual">Close</button>
     </summary>
     <div class="hypothesis-detail impact-body">
       <p class="muted">Impact view - uses existing typed provenance paths from the Reasoning Graph Inspector.</p>
@@ -2841,7 +2851,7 @@ function showCounterfactualSidebar(candidateId, sourceId, sourceTitle, sourceTyp
     <summary class="counterfactual-header">
       <span class="hypothesis-title">Counterfactual: remove ${sourceTitle}</span>
       <span class="hypothesis-badge confidence-high">Show counterfactual</span>
-      <button type="button" class="secondary" onclick="this.closest('details').remove()">Close</button>
+      <button type="button" class="secondary" data-action="close-counterfactual">Close</button>
     </summary>
     <div class="hypothesis-detail counterfactual-body">
       <p class="muted">Counterfactual view - uses existing pre-rendered counterfactual evaluations.</p>
