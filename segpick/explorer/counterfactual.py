@@ -311,6 +311,7 @@ def _compute_hypothesis_deltas(
             
             lost_supporting = tuple(p for p in orig.supporting_patterns if p not in cf.supporting_patterns)
             gained_conflicting = tuple(p for p in cf.conflicting_patterns if p not in orig.conflicting_patterns)
+            cf_state = getattr(cf, 'state', 'supported')
             
         elif orig and not cf:
             change_type = "no_longer_supported"
@@ -645,6 +646,7 @@ def _compute_hypothesis_deltas(
             
             lost_supporting = tuple(p for p in orig.supporting_patterns if p not in cf.supporting_patterns)
             gained_conflicting = tuple(p for p in cf.conflicting_patterns if p not in orig.conflicting_patterns)
+            cf_state = getattr(cf, 'state', 'supported')
             
         elif orig and not cf:
             change_type = "no_longer_supported"
