@@ -264,6 +264,11 @@ class HypothesisEvaluationView:
     severity: str
     explanation: str
     candidate_ids: tuple[str, ...]
+    # Pattern *rule_ids* used for navigation. Always match the DOM id of the
+    # evidence pattern card, which is "pattern-{pattern_id}". Do not confuse
+    # these with supporting_pattern_titles, which are human-readable titles.
+    supporting_pattern_ids: tuple[str, ...]
+    conflicting_pattern_ids: tuple[str, ...]
     supporting_pattern_titles: tuple[str, ...]
     conflicting_pattern_titles: tuple[str, ...]
     recommended_actions: tuple[str, ...]
@@ -276,6 +281,9 @@ def build_biological_hypothesis_evaluation_view(item: HypothesisEvaluation) -> H
         hypothesis_id=item.hypothesis_id, title=item.title, category=item.category,
         scope=item.scope, confidence=item.confidence, severity=item.severity,
         explanation=item.explanation, candidate_ids=item.candidate_ids,
+        # Pattern *ids* drive navigation; *titles* drive display only.
+        supporting_pattern_ids=item.supporting_patterns,
+        conflicting_pattern_ids=item.conflicting_patterns,
         supporting_pattern_titles=item.supporting_pattern_titles,
         conflicting_pattern_titles=item.conflicting_pattern_titles,
         recommended_actions=item.recommended_actions, source=item.source,

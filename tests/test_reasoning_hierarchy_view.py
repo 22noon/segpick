@@ -309,3 +309,143 @@ def test_dashboard_includes_interpretations_panel_when_findings_present():
     # Actually, in make_sample the candidate.analysis.findings is empty.
     # We rely on the pattern-card existence to confirm structural changes
     assert "interpretation-item" in html or "interpretations-panel" in html
+
+
+def test_hypothesis_pattern_links_resolve_to_existing_pattern_dom_ids():
+    """Regression test: every .pattern-link data-pattern-id produced for a
+    hypothesis card must match an id="pattern-{id}" of an evidence pattern card.
+
+    Previously, the link used the human-readable title (supporting_pattern_titles)
+    as the navigation key, which did not match the DOM id (built from the
+    rule_id), so navigation silently failed.
+    """
+    import os
+    import tempfile
+
+    from segpick.knowledge import evaluate_evidence_patterns, load_active_evidence_patterns
+    from segpick.models import EvidenceObservation
+    from segpick.models.observation import ObservationSource
+    from segpick.reporting.html_report import write_html_dashboard
+    from tests.test_recommendation_reporting import make_sample
+
+    sample, recommendations = make_sample()
+    candidate_patterns, _ = load_active_evidence_patterns()
+    contig = sample.genes["VP2"].candidates[0]
+    contig.analysis.observations = (
+        EvidenceObservation(
+            observation_type="reference_structural_discontinuity",
+            source=ObservationSource.STRUCTURAL_ALIGNMENT,
+            description="Two structural blocks.", attributes={"hsp_count": 2},
+        ),
+        EvidenceObservation(
+            observation_type="coverage_drop_at_reference_boundary",
+            source=ObservationSource.CROSS_EVIDENCE,
+            description="Depth decreases at the boundary.", attributes={"depth_ratio": 0.2},
+        ),
+    )
+    contig.analysis.evidence_patterns = evaluate_evidence_patterns(
+        candidate_patterns, contig.analysis.observations, (), candidate_ids=(contig.id,)
+    )
+    tmp_path = tempfile.mkdtemp()
+    write_html_dashboard(sample, tmp_path, recommendations)
+    html = open(os.path.join(tmp_path, "genes", "VP2.html")).read()
+
+    import re
+    pattern_ids_in_dom = set(re.findall(r'id="(pattern-[^"]+)"', html))
+    pattern_link_targets = set(re.findall(r'data-pattern-id="([^"]+)"', html))
+    for target in pattern_link_targets:
+        assert f"pattern-{target}" in pattern_ids_in_dom, (
+            f"Pattern link target {target!r} has no matching pattern card "
+            f"(expected id='pattern-{target}'). DOM ids: {sorted(pattern_ids_in_dom)}"
+        )
+
+
+def test_hypothesis_link_targets_resolve_to_existing_hypothesis_dom_ids():
+    """Reverse direction: every .hypothesis-link data-hypothesis-id must match
+    an id="hypothesis-{id}" of a hypothesis card.
+    """
+    import os
+    import tempfile
+
+    from segpick.reporting.html_report import write_html_dashboard
+    from tests.test_recommendation_reporting import make_sample
+
+    sample, recommendations = make_sample()
+    tmp_path = tempfile.mkdtemp()
+    write_html_dashboard(sample, tmp_path, recommendations)
+    html = open(os.path.join(tmp_path, "genes", "VP2.html")).read()
+
+    import re
+    hyp_ids_in_dom = set(re.findall(r'id="(hypothesis-[^"]+)"', html))
+    hyp_link_targets = set(re.findall(r'data-hypothesis-id="([^"]+)"', html))
+    for target in hyp_link_targets:
+        assert f"hypothesis-{target}" in hyp_ids_in_dom, (
+            f"Hypothesis link target {target!r} has no matching hypothesis card."
+        )
+
+
+def test_hypothesis_evaluation_view_exposes_pattern_rule_ids():
+    """HypothesisEvaluationView must expose supporting_pattern_ids and
+    conflicting_pattern_ids (rule_ids) so the template can use them as
+    navigation keys.
+    """
+
+    from segpick.models import (
+        BiologicalFinding,
+        EvidencePatternEvaluation,
+        HypothesisEvaluation,
+    )
+    from segpick.reporting.view_models import build_biological_hypothesis_evaluation_view
+
+    # These objects are not used by the assertion below; the test verifies
+    # that the view exposes rule_ids even when titles differ.
+    BiologicalFinding(
+        category="rule", title="Finding A", severity="informational",
+        confidence="high", scope="candidate", summary="summary",
+        sources=("protein_alignment",), candidate_ids=("c1",),
+    )
+    EvidencePatternEvaluation(
+        pattern_id="pattern_a", title="Pattern A", category="cat",
+        scope="candidate", confidence="high", severity="review",
+        interpretation="interp", candidate_ids=("c1",),
+        matched_required=("finding:Finding A",), matched_supporting=(),
+        matched_conflicting=(),
+        suggested_actions=(), source="builtin", references=(),
+        evidence_provenance=(), state="matched",
+        missing_required=(), missing_supporting=(),
+    )
+    hyp = HypothesisEvaluation(
+        hypothesis_id="h1", title="H1", category="cat", scope="candidate",
+        confidence="high", severity="informational", explanation="e",
+        supporting_patterns=("pattern_a",),
+        supporting_pattern_titles=("Pattern A",),
+        conflicting_patterns=(),
+    )
+
+    view = build_biological_hypothesis_evaluation_view(hyp)
+    assert view.supporting_pattern_ids == ("pattern_a",)
+    assert view.supporting_pattern_titles == ("Pattern A",)
+    assert view.conflicting_pattern_ids == ()
+
+
+def test_navigation_handler_uses_existing_dom_ids():
+    """The event delegation JS must use getElementById with the exact same
+    id-format ('pattern-' + data-pattern-id) that the template produces.
+    """
+    import os
+    import tempfile
+
+    from segpick.reporting.html_report import write_html_dashboard
+    from tests.test_recommendation_reporting import make_sample
+
+    sample, recommendations = make_sample()
+    tmp_path = tempfile.mkdtemp()
+    write_html_dashboard(sample, tmp_path, recommendations)
+    html = open(os.path.join(tmp_path, "genes", "VP2.html")).read()
+
+    # The JS handler must reference the same id format that the template uses.
+    assert 'getElementById("pattern-" + patternId)' in html
+    assert 'getElementById("hypothesis-" + hypothesisId)' in html
+    # And the highlight class must be added/removed.
+    assert "nav-target-flash" in html
+
