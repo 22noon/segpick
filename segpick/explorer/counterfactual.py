@@ -316,10 +316,12 @@ def _compute_hypothesis_deltas(
             change_type = "no_longer_supported"
             lost_supporting = orig.supporting_patterns
             gained_conflicting = ()
+            cf_state = "absent"
         else:
             change_type = "unchanged"
             lost_supporting = ()
             gained_conflicting = ()
+            cf_state = getattr(cf, 'state', 'supported') if cf else "absent"
         
         deltas.append(HypothesisDelta(
             hypothesis_id=hid,
@@ -327,7 +329,7 @@ def _compute_hypothesis_deltas(
             original_confidence=orig.confidence if orig else "absent",
             counterfactual_confidence=cf.confidence if cf else "absent",
             original_state=getattr(orig, 'state', 'supported'),
-            counterfactual_state=getattr(cf, 'state', 'supported'),
+            counterfactual_state=cf_state,
             change_type=change_type,
             lost_supporting_patterns=lost_supporting,
             gained_conflicting_patterns=gained_conflicting,
@@ -648,10 +650,12 @@ def _compute_hypothesis_deltas(
             change_type = "no_longer_supported"
             lost_supporting = orig.supporting_patterns
             gained_conflicting = ()
+            cf_state = "absent"
         else:
             change_type = "unchanged"
             lost_supporting = ()
             gained_conflicting = ()
+            cf_state = getattr(cf, 'state', 'supported') if cf else "absent"
         
         deltas.append(HypothesisDelta(
             hypothesis_id=hid,
@@ -659,7 +663,7 @@ def _compute_hypothesis_deltas(
             original_confidence=orig.confidence if orig else "absent",
             counterfactual_confidence=cf.confidence if cf else "absent",
             original_state=getattr(orig, 'state', 'supported'),
-            counterfactual_state=getattr(cf, 'state', 'supported'),
+            counterfactual_state=cf_state,
             change_type=change_type,
             lost_supporting_patterns=lost_supporting,
             gained_conflicting_patterns=gained_conflicting,
