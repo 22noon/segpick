@@ -5,44 +5,19 @@ These tests verify the actual counterfactual semantics using real evaluation mac
 
 from __future__ import annotations
 
-import pytest
-
 
 def _make_test_candidate():
     """Create a test candidate with a complete reasoning graph and analysis data."""
     # Import everything inside the function to avoid circular imports
-    from segpick.models import (
-        CandidateContig,
-        ContigMetadata,
-        ContigAnalysis,
-        StructuralIntegrity,
-        ContainmentMetrics,
-    )
-    from segpick.models.reasoning_graph import (
-        MeasurementNode, ObservationNode, InterpretiveFindingNode,
-        EvidencePatternNode, BiologicalHypothesisNode, ReasoningEdge, ReasoningGraph
-    )
-    from Bio.SeqRecord import SeqRecord
     from Bio.Seq import Seq
-    from segpick.knowledge import (
-        load_active_evidence_patterns,
-        load_active_hypotheses,
-        evaluate_evidence_patterns,
-        evaluate_hypotheses,
-    )
+    from Bio.SeqRecord import SeqRecord
+
     from segpick.models import (
-        EvidenceObservation,
         BiologicalFinding,
-        EvidencePatternEvaluation,
-        HypothesisEvaluation,
+        EvidenceObservation,
         ObservationSource,
     )
-    from segpick.models.reasoning_graph import (
-        MeasurementNode, ObservationNode, InterpretiveFindingNode,
-        EvidencePatternNode, BiologicalHypothesisNode, ReasoningEdge, ReasoningGraph
-    )
-    from Bio.SeqRecord import SeqRecord
-    from Bio.Seq import Seq
+    from segpick.models.reasoning_graph import BiologicalHypothesisNode, EvidencePatternNode, InterpretiveFindingNode, MeasurementNode, ObservationNode, ReasoningEdge, ReasoningGraph
 
     m1 = MeasurementNode('m1', 'channel1', 'metric', 42.0)
     o1 = ObservationNode('observation:protein-alignment:type1:1', 'type1', 'protein_alignment', 'Evidence X')
@@ -110,11 +85,8 @@ def _make_test_candidate():
     
     # Mock observations with valid ObservationSource values
     from segpick.models import (
-        EvidenceObservation,
-        BiologicalFinding,
         EvidencePatternEvaluation,
         HypothesisEvaluation,
-        ObservationSource,
     )
     
     obs1 = EvidenceObservation(
@@ -299,40 +271,18 @@ def _make_test_candidate():
 
 
 # Import all needed types at the end to avoid circular imports
+
 from segpick.models import (
-    CandidateContig,
-    ContigMetadata,
-    ContigAnalysis,
-    StructuralIntegrity,
-    ContainmentMetrics,
-)
-from segpick.models.reasoning_graph import (
-    MeasurementNode, ObservationNode, InterpretiveFindingNode,
-    EvidencePatternNode, BiologicalHypothesisNode, ReasoningEdge, ReasoningGraph
-)
-from Bio.SeqRecord import SeqRecord
-from Bio.Seq import Seq
-from segpick.knowledge import (
-    EvidencePatternDefinition, 
-    HypothesisDefinition,
-    load_active_evidence_patterns,
-    load_active_hypotheses,
-    evaluate_evidence_patterns,
-    evaluate_hypotheses,
-)
-from segpick.models import (
-    EvidenceObservation,
     BiologicalFinding,
-    EvidencePatternEvaluation,
-    HypothesisEvaluation,
+    CandidateContig,
+    ContainmentMetrics,
+    ContigAnalysis,
+    ContigMetadata,
+    EvidenceObservation,
     ObservationSource,
+    StructuralIntegrity,
 )
-from segpick.models.reasoning_graph import (
-    MeasurementNode, ObservationNode, InterpretiveFindingNode,
-    EvidencePatternNode, BiologicalHypothesisNode, ReasoningEdge, ReasoningGraph
-)
-from Bio.SeqRecord import SeqRecord
-from Bio.Seq import Seq
+from segpick.models.reasoning_graph import BiologicalHypothesisNode, EvidencePatternNode, InterpretiveFindingNode, MeasurementNode, ObservationNode, ReasoningEdge, ReasoningGraph
 
 m1 = MeasurementNode('m1', 'channel1', 'metric', 42.0)
 o1 = ObservationNode('observation:protein-alignment:type1:1', 'type1', 'protein_alignment', 'Evidence X')
@@ -419,7 +369,6 @@ finding3 = BiologicalFinding(
     candidate_ids=('test_candidate',),
 )
 
-import pytest
 
 
 def test_impact_without_meaningful_change():
@@ -531,3 +480,31 @@ def test_original_candidate_unchanged():
     # Also verify counterfactual didn't modify original data
     assert result.original_patterns is candidate.analysis.evidence_patterns
     assert result.original_hypotheses is candidate.analysis.biological_hypothesis_evaluations
+
+def test_determinism():
+    """Test that repeated counterfactual calls return identical results."""
+    candidate = _make_test_candidate()
+    
+    from segpick.explorer.counterfactual import evaluate_counterfactual
+    
+    result1 = evaluate_counterfactual(candidate, 'observation:protein-alignment:type1:1')
+    result2 = evaluate_counterfactual(candidate, 'observation:protein-alignment:type1:1')
+    
+    # Results should be identical
+    assert result1.removed_node_id == result2.removed_node_id
+    assert len(result1.pattern_deltas) == len(result2.pattern_deltas)
+    assert len(result1.hypothesis_deltas) == len(result2.hypothesis_deltas)
+    
+    for d1, d2 in zip(result1.pattern_deltas, result2.pattern_deltas, strict=True):
+        assert d1.pattern_id == d2.pattern_id
+        assert d1.original_state == d2.original_state
+        assert d1.counterfactual_state == d2.counterfactual_state
+        assert d1.change_type == d2.change_type
+    
+    for d1, d2 in zip(result1.hypothesis_deltas, result2.hypothesis_deltas, strict=True):
+        assert d1.hypothesis_id == d2.hypothesis_id
+        assert d1.original_confidence == d2.original_confidence
+        assert d1.counterfactual_confidence == d2.counterfactual_confidence
+        assert d1.change_type == d2.change_type
+
+

@@ -5,18 +5,16 @@ Tests for query-time counterfactual evaluation.
 from __future__ import annotations
 
 import pytest
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 from segpick.explorer.counterfactual import evaluate_counterfactual
 from segpick.models import (
     CandidateContig,
-    ContigMetadata,
     ContigAnalysis,
-    StructuralIntegrity,
-    ContainmentMetrics,
+    ContigMetadata,
 )
 from segpick.models.reasoning_graph import ReasoningGraph
-from Bio.SeqRecord import SeqRecord
-from Bio.Seq import Seq
 
 
 def test_counterfactual_invalid_node_id():

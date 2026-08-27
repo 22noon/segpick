@@ -7,7 +7,7 @@ from itertools import combinations
 
 from segpick.analysis import analyse_protein_continuity, build_evidence_assessments
 from segpick.explorer import ReasoningExplorer
-from segpick.explorer.counterfactual import evaluate_counterfactual, CounterfactualResult
+from segpick.explorer.counterfactual import evaluate_counterfactual
 from segpick.knowledge.vocabulary import describe_condition
 from segpick.models import BiologicalHypothesis, CandidateContig, EvidencePatternEvaluation, Gene, HypothesisEvaluation, RuleEvaluation
 from segpick.reasoning import build_llm_reasoning_bundle, build_llm_review_package, load_llm_bundle_schema, load_llm_output_schema
@@ -598,8 +598,8 @@ class CounterfactualResultView:
     counterfactual_patterns: tuple[str, ...]  # pattern_ids
     original_hypotheses: tuple[str, ...]  # hypothesis_ids
     counterfactual_hypotheses: tuple[str, ...]  # hypothesis_ids
-    pattern_deltas: tuple["CounterfactualPatternDeltaView", ...]
-    hypothesis_deltas: tuple["CounterfactualHypothesisDeltaView", ...]
+    pattern_deltas: tuple[CounterfactualPatternDeltaView, ...]
+    hypothesis_deltas: tuple[CounterfactualHypothesisDeltaView, ...]
     hypotheses_unchanged: int
     hypotheses_weakened: int
     hypotheses_no_longer_supported: int

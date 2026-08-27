@@ -396,10 +396,15 @@ def evaluate_counterfactual(
         candidate_ids=(cf_context.candidate_id,),
     )
     
-    # Re-evaluate affected hypotheses with new patterns
+    # Filter patterns to matched/contradicted only (matching normal evaluation pipeline)
+    new_patterns_filtered = tuple(
+        p for p in new_patterns if p.state in {"matched", "contradicted"}
+    )
+    
+    # Re-evaluate affected hypotheses with filtered new patterns
     new_hypotheses = _evaluate_hypotheses(
         cf_context.hypothesis_definitions,
-        new_patterns,
+        new_patterns_filtered,
         candidate_ids=(cf_context.candidate_id,),
     )
     

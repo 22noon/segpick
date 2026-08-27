@@ -2826,22 +2826,27 @@ function showImpactSidebar(candidateId, sourceId, sourceTitle, sourceType) {
 }
 
 function showCounterfactualSidebar(candidateId, sourceId, sourceTitle, sourceType) {
-  // Remove any existing counterfactual sidebar
-  const existing = document.querySelector(".counterfactual-sidebar");
-  if (existing) existing.remove();
-
-  // Find the pre-rendered counterfactual sidebar
+  // Find the pre-rendered counterfactual sidebar FIRST (before any removal)
   const sidebarId = "counterfactual-" + sourceId;
   const existingSidebar = document.getElementById(sidebarId);
+
+  // If the requested pre-rendered sidebar exists, use it
   if (existingSidebar) {
-    // Show the existing sidebar
-    const existing = document.querySelector(".counterfactual-sidebar");
-    if (existing) existing.remove();
+    // Remove only the currently displayed counterfactual sidebar (if different from requested)
+    const displayed = document.querySelector(".counterfactual-sidebar[open]");
+    if (displayed && displayed !== existingSidebar) {
+      displayed.remove();
+    }
     document.body.appendChild(existingSidebar);
+    // Make the pre-rendered sidebar visible and open
     existingSidebar.style.display = "";
     existingSidebar.open = true;
     return;
   }
+
+  // If no pre-rendered sidebar exists, remove any currently displayed sidebar
+  const displayed = document.querySelector(".counterfactual-sidebar[open]");
+  if (displayed) displayed.remove();
 
   // Fallback if not pre-rendered
   const sidebar = document.createElement("details");
