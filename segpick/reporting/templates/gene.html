@@ -1098,8 +1098,35 @@
     {% endif %}
   {%- endmacro %}
 
+  {% macro evidence_group_by_kind(title, items, candidate=none) -%}
+    {% set obs = [] %}
+    {% set intp = [] %}
+    {% for item in items %}
+      {% if item.kind == "observation" %}{% set _ = obs.append(item) %}{% else %}{% set _ = intp.append(item) %}{% endif %}
+    {% endfor %}
+    {% if obs %}
+      <h4>{{ title }} — Observations</h4>
+      <ul>
+        {% for item in obs %}
+          <li class="evidence-observation"><strong>{{ item.display_name }}</strong>{% if item.source_display_name %} <span class="muted">· {{ item.source_display_name }}</span>{% endif %}<span class="muted"> — {{ item.description }}</span></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if intp %}
+      <h4>{{ title }} — Interpretations</h4>
+      <ul>
+        {% for item in intp %}
+          <li class="evidence-interpretation"><strong>{{ item.display_name }}</strong>{% if item.source_display_name %} <span class="muted">· {{ item.source_display_name }}</span>{% endif %}<span class="muted"> — {{ item.description }}</span></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if not obs and not intp %}
+      <p class="muted">{{ title }}: none recorded.</p>
+    {% endif %}
+  {%- endmacro %}
+
   {% macro evidence_pattern_card(pattern, candidate=none) -%}
-    <details class="hypothesis-item evidence-pattern-item">
+    <details class="hypothesis-item evidence-pattern-item" id="pattern-{{ pattern.pattern_id }}">
       <summary class="evidence-pattern-summary">
         <span><strong>{{ pattern.title }}</strong></span>
         <span class="hypothesis-badge confidence-{{ pattern.confidence }}">{{ pattern.confidence|upper }}</span>
@@ -1108,19 +1135,29 @@
       </summary>
       <div class="evidence-pattern-body">
         <p>{{ pattern.interpretation }}</p>
+        {{ evidence_group_by_kind('Required evidence', pattern.matched_required, candidate) }}
         {{ evidence_group('Required evidence', pattern.matched_required, candidate) }}
+        {{ evidence_group_by_kind('Supporting evidence', pattern.matched_supporting, candidate) }}
         {{ evidence_group('Supporting evidence', pattern.matched_supporting, candidate) }}
+        {{ evidence_group_by_kind('Conflicting evidence', pattern.matched_conflicting, candidate) }}
         {{ evidence_group('Conflicting evidence', pattern.matched_conflicting, candidate) }}
+        {{ evidence_group_by_kind('Missing required evidence', pattern.missing_required, candidate) }}
         {{ evidence_group('Missing required evidence', pattern.missing_required, candidate) }}
+        {{ evidence_group_by_kind('Missing supporting evidence', pattern.missing_supporting, candidate) }}
         {{ evidence_group('Missing supporting evidence', pattern.missing_supporting, candidate) }}
         {% if pattern.suggested_actions %}<h4>Suggested checks</h4><ul>{% for action in pattern.suggested_actions %}<li>{{ action }}</li>{% endfor %}</ul>{% endif %}
+        {% if pattern.supporting_hypotheses or pattern.conflicting_hypotheses %}
+        <h4>Connected hypotheses</h4>
+        {% if pattern.supporting_hypotheses %}<div class="muted">Supports: {% for hid in pattern.supporting_hypotheses %}<a href="#hypothesis-{{ hid }}" class="hypothesis-link" data-hypothesis-id="{{ hid }}">{{ hid }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+        {% if pattern.conflicting_hypotheses %}<div class="muted">Conflicts: {% for hid in pattern.conflicting_hypotheses %}<a href="#hypothesis-{{ hid }}" class="hypothesis-link" data-hypothesis-id="{{ hid }}">{{ hid }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+        {% endif %}
         <p class="hypothesis-meta">{{ pattern.pattern_id }} · {{ pattern.source }}</p>
       </div>
     </details>
   {%- endmacro %}
 
   {% macro biological_hypothesis_evaluation_card(hypothesis, next_evidence=none, _candidate=none) -%}
-    <details class="hypothesis-item biological-hypothesis-evaluation-item">
+    <details class="hypothesis-item biological-hypothesis-evaluation-item" id="hypothesis-{{ hypothesis.hypothesis_id }}">
       <summary>
         <span class="hypothesis-title">{{ hypothesis.title }}</span>
         <span class="hypothesis-badge confidence-{{ hypothesis.confidence }}">{{ hypothesis.confidence|upper }}</span>
@@ -1131,11 +1168,11 @@
         <div class="hypothesis-trace">
           <div>
             <h4>Supported by evidence patterns</h4>
-            {% if hypothesis.supporting_pattern_titles %}<ul>{% for title in hypothesis.supporting_pattern_titles %}<li>{{ title }}</li>{% endfor %}</ul>{% else %}<p class="muted">None recorded.</p>{% endif %}
+            {% if hypothesis.supporting_pattern_titles %}<ul>{% for title in hypothesis.supporting_pattern_titles %}<li><a href="#pattern-{{ title }}" class="pattern-link" data-pattern-id="{{ title }}">{{ title }}</a></li>{% endfor %}</ul>{% else %}<p class="muted">None recorded.</p>{% endif %}
           </div>
           <div>
             <h4>Conflicting evidence patterns</h4>
-            {% if hypothesis.conflicting_pattern_titles %}<ul>{% for title in hypothesis.conflicting_pattern_titles %}<li>{{ title }}</li>{% endfor %}</ul>{% else %}<p class="muted">None recognised.</p>{% endif %}
+            {% if hypothesis.conflicting_pattern_titles %}<ul>{% for title in hypothesis.conflicting_pattern_titles %}<li><a href="#pattern-{{ title }}" class="pattern-link" data-pattern-id="{{ title }}">{{ title }}</a></li>{% endfor %}</ul>{% else %}<p class="muted">None recognised.</p>{% endif %}
           </div>
           <div>
             <h4>Recommended checks</h4>
@@ -1153,6 +1190,43 @@
     </details>
 
   {%- endmacro %}
+  {% macro interpretation_card(item) -%}
+    <details class="hypothesis-item interpretation-item" id="interpretation-{{ item.finding_id }}">
+      <summary>
+        <span class="hypothesis-title">{{ item.title }}</span>
+        <span class="hypothesis-badge interpretation-type-{{ item.finding_type }}">{{ item.finding_type|replace('_', ' ')|upper }}</span>
+        <span class="hypothesis-badge confidence-{{ item.confidence }}">{{ item.confidence|upper }}</span>
+      </summary>
+      <div class="hypothesis-detail">
+        <p>{{ item.description }}</p>
+        {% if item.finding_type == 'cross_evidence' and item.confidence_score is not none %}
+        <p class="muted">Calculated confidence: {{ "%.2f"|format(item.confidence_score) }}{% if item.evidence_completeness is not none %} · evidence completeness {{ "%.0f%%"|format(item.evidence_completeness * 100) }}{% endif %}</p>
+        {% endif %}
+        {% if item.supporting_evidence %}
+        <h4>Supporting evidence</h4>
+        <ul>{% for se in item.supporting_evidence %}<li>{{ se }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if item.conflicting_evidence %}
+        <h4>Conflicting evidence</h4>
+        <ul>{% for ce in item.conflicting_evidence %}<li>{{ ce }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if item.missing_evidence %}
+        <h4>Missing evidence</h4>
+        <ul>{% for me in item.missing_evidence %}<li>{{ me }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if item.consuming_pattern_ids %}
+        <h4>Consumed by evidence patterns</h4>
+        <ul>
+          {% for pid in item.consuming_pattern_ids %}
+            <li><a href="#pattern-{{ pid }}" class="pattern-link" data-pattern-id="{{ pid }}">{{ pid }}</a></li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% if item.rule_id %}<p class="hypothesis-meta">Rule: {{ item.rule_id }}{% if item.rule_version %} v{{ item.rule_version }}{% endif %} · Source: {{ item.source_plugin }}</p>{% endif %}
+      </div>
+    </details>
+  {%- endmacro %}
+
   {% macro comparison_modal(comparison) -%}
     <details class="hypothesis-item comparison-modal" open>
       <summary class="comparison-header">
@@ -1480,10 +1554,10 @@
       <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
         <div class="reasoning-path" aria-label="Reasoning path for {{ candidate.candidate_id }}">
           <div class="reasoning-step"><strong>Evidence assessments</strong><span>Structural, reference, read and ORF evidence</span><a href="#structural-integrity-panel">Inspect evidence →</a></div>
-          <div class="reasoning-step"><strong>Cross-evidence findings</strong><span>{{ candidate.cross_evidence_findings|length }} finding{% if candidate.cross_evidence_findings|length != 1 %}s{% endif %}</span><a href="#cross-evidence-panel">Open findings →</a></div>
+          <div class="reasoning-step"><strong>Hypotheses</strong><span>{% if candidate.biological_hypothesis_evaluations|length == 1 %}1 hypothesis{% else %}{{ candidate.biological_hypothesis_evaluations|length }} hypotheses{% endif %}</span><a href="#biological-hypotheses-panel">Open hypotheses →</a></div>
           <div class="reasoning-step"><strong>Evidence patterns</strong><span>{{ candidate.evidence_patterns|length }} pattern{% if candidate.evidence_patterns|length != 1 %}s{% endif %}</span><a href="#evidence-patterns-panel">Open patterns →</a></div>
-          <div class="reasoning-step"><strong>Biological hypotheses</strong><span>{% if candidate.biological_hypothesis_evaluations|length == 1 %}1 hypothesis{% else %}{{ candidate.biological_hypothesis_evaluations|length }} hypotheses{% endif %}</span><a href="#biological-hypotheses-panel">Open hypotheses →</a></div>
-          <div class="reasoning-step"><strong>Recommendation context</strong><span>Interpretation supporting expert review</span><a href="#biological-interpretation-panel">Open interpretation →</a></div>
+          <div class="reasoning-step"><strong>Interpretations</strong><span>{{ candidate.interpretations.items|length }} interpretation{% if candidate.interpretations.items|length != 1 %}s{% endif %}</span><a href="#interpretations-panel">Open interpretations →</a></div>
+          <div class="reasoning-step"><strong>Reasoning graph inspector</strong><span>Expert diagnostic view</span><a href="#reasoning-graph-inspector">Open inspector →</a></div>
         </div>
       </div>
     {% endfor %}
@@ -1518,6 +1592,20 @@
       {{ counterfactual_sidebars(candidate) }}
     {% endfor %}
   </section
+
+  <section id="interpretations-panel" class="card hypothesis-card">
+    <h2>Interpretations</h2>
+    <p class="muted">Interpretive findings derived from one or more observations. Rule-based and cross-evidence interpretations are presented at the same conceptual level. Where an interpretation is actually consumed by an evidence pattern, a direct link is shown.</p>
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+        {% if candidate.interpretations.items %}
+          {% for item in candidate.interpretations.items %}
+            {{ interpretation_card(item) }}
+          {% endfor %}
+        {% else %}<p class="muted">No interpretations were generated for this candidate.</p>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
 
   <section id="cross-evidence-panel" class="card hypothesis-card">
     <h2>Cross-evidence findings</h2>
@@ -2751,6 +2839,32 @@ document.addEventListener("click",event=>{
   }
 
   // Close counterfactual sidebar
+  // Pattern link navigation (hypothesis -> evidence pattern)
+  const patternLink=event.target.closest(".pattern-link");
+  if(patternLink){
+    event.preventDefault();
+    const patternId=patternLink.dataset.patternId;
+    const target=document.getElementById("pattern-" + patternId);
+    if(target){
+      target.open=true;
+      target.scrollIntoView({behavior:"smooth", block:"start"});
+    }
+    return;
+  }
+
+  // Hypothesis link navigation (evidence pattern -> hypothesis)
+  const hypothesisLink=event.target.closest(".hypothesis-link");
+  if(hypothesisLink){
+    event.preventDefault();
+    const hypothesisId=hypothesisLink.dataset.hypothesisId;
+    const target=document.getElementById("hypothesis-" + hypothesisId);
+    if(target){
+      target.open=true;
+      target.scrollIntoView({behavior:"smooth", block:"start"});
+    }
+    return;
+  }
+
   const closeCounterfactualBtn=event.target.closest("[data-action='close-counterfactual']");
   if(closeCounterfactualBtn){
     const details=closeCounterfactualBtn.closest('details');

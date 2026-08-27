@@ -52,6 +52,8 @@ class EvidencePatternView:
     state: str
     missing_required: tuple[EvidencePatternEvidenceView, ...]
     missing_supporting: tuple[EvidencePatternEvidenceView, ...]
+    supporting_hypotheses: tuple[str, ...]
+    conflicting_hypotheses: tuple[str, ...]
 
 
 def _evidence_pattern_evidence_view(
@@ -93,6 +95,106 @@ def _evidence_pattern_evidence_view(
     )
 
 
+def _interpretation_consuming_patterns(graph: object, finding_node_id: str) -> tuple[str, ...]:
+    """Return pattern_ids that consume the given interpretation finding.
+
+    Derived deterministically from the materialized reasoning graph: a pattern
+    consumes a finding when there is a composed_from edge originating at the
+    pattern and targeting the finding. This uses only data the graph already
+    records (see segpick/reasoning/graph.py::_evidence_pattern_nodes).
+    """
+    if graph is None:
+        return ()
+    pattern_ids: list[str] = []
+    for node in graph.evidence_patterns:
+        for edge in graph.edges:
+            if edge.source_id == node.id and edge.target_id == finding_node_id and edge.relationship in ("composed_from", "conflicted_by"):
+                pattern_ids.append(node.pattern_id)
+                break
+    return tuple(dict.fromkeys(pattern_ids))
+
+
+def build_interpretation_view_from_biological_finding(finding: object) -> InterpretationView:
+    """Build an InterpretationView from a rule-based biological finding."""
+    return InterpretationView(
+        finding_id=getattr(finding, "title", ""),
+        title=getattr(finding, "title", ""),
+        description=getattr(finding, "summary", ""),
+        confidence=getattr(finding, "confidence", ""),
+        severity=getattr(finding, "severity", "informational"),
+        finding_type="rule_based",
+        source_plugin=getattr(finding, "sources", ("",))[0] if getattr(finding, "sources", ()) else "",
+        supporting_evidence=getattr(finding, "sources", ()),
+        limitations=(),
+    )
+
+
+def build_interpretation_view_from_cross_evidence(finding: object, graph: object = None) -> InterpretationView:
+    """Build an InterpretationView from a cross-evidence finding."""
+    finding_id = getattr(finding, "finding_id", "")
+    consuming = _interpretation_consuming_patterns(graph, finding_id)
+    return InterpretationView(
+        finding_id=finding_id,
+        title=getattr(finding, "title", ""),
+        description=getattr(finding, "description", ""),
+        confidence=getattr(finding, "confidence", ""),
+        severity=getattr(finding, "severity", "informational"),
+        finding_type="cross_evidence",
+        source_plugin=getattr(finding, "source_plugin", ""),
+        confidence_score=getattr(finding, "confidence_score", None),
+        match_status=getattr(finding, "match_status", None),
+        evidence_completeness=getattr(finding, "evidence_completeness", None),
+        rule_id=getattr(finding, "rule_id", None),
+        rule_version=getattr(finding, "rule_version", None),
+        supporting_evidence=tuple(ref.title for ref in getattr(finding, "supporting_evidence", ())),
+        conflicting_evidence=tuple(ref.title for ref in getattr(finding, "conflicting_evidence", ())),
+        missing_evidence=tuple(item.title for item in getattr(finding, "missing_contributions", ())),
+        limitations=getattr(finding, "limitations", ()),
+        confidence_method=getattr(finding, "confidence_method", None),
+        confidence_method_version=getattr(finding, "confidence_method_version", None),
+        consuming_pattern_ids=consuming,
+    )
+
+
+def build_interpretation_collection(candidate: CandidateContig) -> InterpretationCollectionView:
+    """Build a unified InterpretationCollectionView for the candidate.
+
+    Combines rule-based biological findings (from candidate.analysis.findings)
+    and cross-evidence findings (from candidate.analysis.cross_evidence_findings)
+    into one list, preserving technical metadata via finding_type. We do NOT
+    invent cross-references: consuming_pattern_ids is determined from the
+    materialized reasoning graph only.
+    """
+    graph = getattr(candidate.analysis, "reasoning_graph", None)
+    rule_based = [
+        build_interpretation_view_from_biological_finding(item)
+        for item in getattr(candidate.analysis, "findings", ())
+    ]
+    cross_evidence = [
+        build_interpretation_view_from_cross_evidence(item, graph)
+        for item in getattr(candidate.analysis, "cross_evidence_findings", ())
+    ]
+    # Stable, deterministic ordering: cross-evidence first, then rule-based,
+    # sorted by title within each group.
+    items = tuple(sorted(cross_evidence, key=lambda v: v.title) + sorted(rule_based, key=lambda v: v.title))
+    return InterpretationCollectionView(candidate_id=candidate.id, items=items)
+
+
+def _pattern_hypothesis_backlinks(
+    pattern_id: str,
+    biological_hypothesis_evaluations: tuple[HypothesisEvaluation, ...] = (),
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Return (supporting_hypothesis_ids, conflicting_hypothesis_ids) for the pattern."""
+    supporting: list[str] = []
+    conflicting: list[str] = []
+    for hyp in biological_hypothesis_evaluations:
+        if pattern_id in hyp.supporting_patterns:
+            supporting.append(hyp.hypothesis_id)
+        if pattern_id in hyp.conflicting_patterns:
+            conflicting.append(hyp.hypothesis_id)
+    return tuple(dict.fromkeys(supporting)), tuple(dict.fromkeys(conflicting))
+
+
 def build_evidence_pattern_view(item: EvidencePatternEvaluation, graph: object = None) -> EvidencePatternView:
     _provenance = {entry.condition: entry for entry in item.evidence_provenance}
     _observations = tuple(graph.observations) if graph else ()
@@ -115,6 +217,40 @@ def build_evidence_pattern_view(item: EvidencePatternEvaluation, graph: object =
         state=item.state,
         missing_required=tuple(_evidence_pattern_evidence_view(value, {entry.condition: entry for entry in item.evidence_provenance}, graph.observations if graph else (), graph.interpretive_findings if graph else ()) for value in item.missing_required),
         missing_supporting=tuple(_evidence_pattern_evidence_view(value, {entry.condition: entry for entry in item.evidence_provenance}, graph.observations if graph else (), graph.interpretive_findings if graph else ()) for value in item.missing_supporting),
+        supporting_hypotheses=(),
+        conflicting_hypotheses=(),
+    )
+
+
+def build_evidence_pattern_view_for_candidate(
+    item: EvidencePatternEvaluation,
+    candidate: CandidateContig | None = None,
+) -> EvidencePatternView:
+    """Build EvidencePatternView including reverse hypothesis backlinks for the candidate."""
+    graph = getattr(getattr(candidate, "analysis", None), "reasoning_graph", None) if candidate else None
+    base = build_evidence_pattern_view(item, graph)
+    evaluations = getattr(getattr(candidate, "analysis", None), "biological_hypothesis_evaluations", ()) if candidate else ()
+    supporting, conflicting = _pattern_hypothesis_backlinks(item.pattern_id, evaluations)
+    return EvidencePatternView(
+        pattern_id=base.pattern_id,
+        title=base.title,
+        category=base.category,
+        scope=base.scope,
+        confidence=base.confidence,
+        severity=base.severity,
+        interpretation=base.interpretation,
+        candidate_ids=base.candidate_ids,
+        matched_required=base.matched_required,
+        matched_supporting=base.matched_supporting,
+        matched_conflicting=base.matched_conflicting,
+        suggested_actions=base.suggested_actions,
+        source=base.source,
+        references=base.references,
+        state=base.state,
+        missing_required=base.missing_required,
+        missing_supporting=base.missing_supporting,
+        supporting_hypotheses=supporting,
+        conflicting_hypotheses=conflicting,
     )
 
 
@@ -465,6 +601,50 @@ class CrossEvidenceFindingView:
     confidence_method_version: str
     limitations: tuple[str, ...]
 
+
+
+@dataclass(frozen=True, slots=True)
+class InterpretationView:
+    """A unified interpretation/finding view.
+
+    Represents either a rule-based interpretive finding or a cross-evidence
+    finding. Both are interpretations of one or more observations, presented
+    to the user at the same conceptual level. The 'finding_type' field is
+    technical metadata, not a separate reasoning layer.
+    """
+    finding_id: str
+    title: str
+    description: str
+    confidence: str
+    severity: str
+    finding_type: str  # "rule_based" | "cross_evidence"
+    source_plugin: str
+    confidence_score: float | None = None
+    match_status: str | None = None
+    evidence_completeness: float | None = None
+    rule_id: str | None = None
+    rule_version: str | None = None
+    supporting_evidence: tuple[str, ...] = ()
+    conflicting_evidence: tuple[str, ...] = ()
+    missing_evidence: tuple[str, ...] = ()
+    limitations: tuple[str, ...] = ()
+    confidence_method: str | None = None
+    confidence_method_version: str | None = None
+    # Determined deterministically from the reasoning graph:
+    # pattern_ids whose composed_from/conflicted_by edge originates at this finding.
+    consuming_pattern_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class InterpretationCollectionView:
+    """Collection of interpretation views for a single candidate.
+
+    Combines rule-based and cross-evidence findings into one presentation.
+    Findings consumed by at least one evidence pattern can be navigated to
+    that pattern; otherwise they remain visible as standalone interpretations.
+    """
+    candidate_id: str
+    items: tuple[InterpretationView, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -1270,6 +1450,7 @@ class CandidateView:
     unresolved_evidence_patterns: tuple[EvidencePatternView, ...]
     biological_hypothesis_evaluations: tuple[HypothesisEvaluationView, ...]
     cross_evidence_findings: tuple[CrossEvidenceFindingView, ...]
+    interpretations: InterpretationCollectionView
     reasoning_graph: ReasoningGraphInspectorView
     next_evidence_views: dict[str, NextEvidenceView]
     impact_views: dict[str, ImpactView]
@@ -1727,7 +1908,7 @@ def build_gene_page_view(
                 )
                 for item in candidate.analysis.boundary_coverage
             ),
-            evidence_patterns=tuple(build_evidence_pattern_view(item, candidate.analysis.reasoning_graph) for item in candidate.analysis.evidence_patterns),
+            evidence_patterns=tuple(build_evidence_pattern_view_for_candidate(item, candidate) for item in candidate.analysis.evidence_patterns),
             unresolved_evidence_patterns=tuple(build_evidence_pattern_view(item, candidate.analysis.reasoning_graph) for item in candidate.analysis.unresolved_evidence_patterns),
             biological_hypothesis_evaluations=tuple(build_biological_hypothesis_evaluation_view(item) for item in candidate.analysis.biological_hypothesis_evaluations),
             cross_evidence_findings=tuple(
@@ -1752,6 +1933,7 @@ def build_gene_page_view(
                 )
                 for item in candidate.analysis.cross_evidence_findings
             ),
+            interpretations=build_interpretation_collection(candidate),
             reasoning_graph=build_reasoning_graph_inspector_view(candidate),
             next_evidence_views=build_next_evidence_views(candidate),
             impact_views=build_impact_views(candidate),

@@ -154,7 +154,7 @@ def test_pattern_dashboard_uses_collapsed_nested_provenance(tmp_path):
     contig.analysis.evidence_patterns = evaluate_evidence_patterns(candidate, contig.analysis.observations, (), candidate_ids=(contig.id,))
     write_html_dashboard(sample, tmp_path, recommendations)
     html = (tmp_path / "genes" / "VP2.html").read_text()
-    assert '<details class="hypothesis-item evidence-pattern-item">' in html
+    assert 'class="hypothesis-item evidence-pattern-item"' in html
     assert '<details class="provenance-item">' in html
     assert "Measurements" in html
     assert "Examine evidence" in html
