@@ -628,6 +628,93 @@ class NextEvidenceView:
     missing_required: tuple[NextEvidenceGapView, ...]
     missing_supporting: tuple[NextEvidenceGapView, ...]
 
+
+@dataclass(frozen=True, slots=True)
+class AdditionalSupportingEvidenceView:
+    """Missing supporting evidence for a specific evidence pattern that supports a hypothesis."""
+    pattern_id: str
+    pattern_title: str
+    missing_supporting: tuple[EvidencePatternEvidenceView, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class AdditionalSupportingEvidenceCollectionView:
+    """Collection of additional supporting evidence for a hypothesis."""
+    hypothesis_id: str
+    items: tuple[AdditionalSupportingEvidenceView, ...]
+
+
+def build_additional_supporting_evidence(
+    hypothesis: HypothesisEvaluation,
+    evidence_patterns: tuple[EvidencePatternEvaluation, ...],
+    graph: object = None,
+) -> AdditionalSupportingEvidenceCollectionView:
+    """Build view of additional supporting evidence for a supported hypothesis.
+    
+    For each evidence pattern that supports the hypothesis, check if it has
+    missing supporting conditions that would strengthen it.
+    """
+    # Build lookup of evidence patterns by ID
+    pattern_by_id = {p.pattern_id: p for p in evidence_patterns}
+    
+    items = []
+    for pattern_id in hypothesis.supporting_patterns:
+        pattern = pattern_by_id.get(pattern_id)
+        if not pattern:
+            continue
+        
+        # Check if this pattern has missing supporting conditions
+        missing_supporting = []
+        for missing in pattern.missing_supporting:
+            # Build the evidence view for this missing condition
+            _provenance = {entry.condition: entry for entry in pattern.evidence_provenance}
+            _observations = tuple(graph.observations) if graph else ()
+            _findings = tuple(graph.interpretive_findings) if graph else ()
+            
+            display = describe_condition(missing)
+            provenance = _provenance.get(missing)
+            
+            # Look up graph node ID
+            graph_node_id = None
+            kind, _, remainder = missing.partition(":")
+            value, _, source = remainder.partition("@")
+            if kind == "observation":
+                for node in _observations:
+                    if node.observation_type == value and (not source or node.source == source):
+                        graph_node_id = node.id
+                        break
+            else:
+                for node in _findings:
+                    if node.title == value:
+                        graph_node_id = node.id
+                        break
+            
+            missing_supporting.append(EvidencePatternEvidenceView(
+                identifier=display.identifier,
+                display_name=display.display_name,
+                description=display.description,
+                source=display.source,
+                source_display_name=display.source_display_name,
+                kind=display.kind,
+                graph_node_id=graph_node_id,
+                observed_descriptions=tuple(getattr(provenance, "descriptions", ())),
+                measurements=tuple(getattr(provenance, "measurements", ())),
+                regions=tuple(getattr(provenance, "regions", ())),
+                visualisations=tuple(getattr(provenance, "visualisations", ())),
+            ))
+        
+        if missing_supporting:
+            items.append(AdditionalSupportingEvidenceView(
+                pattern_id=pattern.pattern_id,
+                pattern_title=pattern.title,
+                missing_supporting=tuple(missing_supporting),
+            ))
+    
+    return AdditionalSupportingEvidenceCollectionView(
+        hypothesis_id=hypothesis.hypothesis_id,
+        items=tuple(items),
+    )
+
 @dataclass(frozen=True, slots=True)
 class ReasoningComponentView:
     component_id: str
@@ -1188,6 +1275,7 @@ class CandidateView:
     impact_views: dict[str, ImpactView]
     comparison_views: dict[tuple[str, str], ComparisonView] = field(default_factory=dict)
     counterfactual_views: dict[str, CounterfactualResultView] = field(default_factory=dict)
+    additional_supporting_evidence_views: dict[str, AdditionalSupportingEvidenceCollectionView] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1424,6 +1512,25 @@ def build_next_evidence_views(candidate: CandidateContig) -> dict[str, NextEvide
     return views
 
 
+def build_additional_supporting_evidence_views(candidate: CandidateContig) -> dict[str, AdditionalSupportingEvidenceCollectionView]:
+    """Build AdditionalSupportingEvidenceCollectionView for each biological hypothesis evaluation."""
+    graph = candidate.analysis.reasoning_graph
+    if graph is None:
+        return {}
+
+    evidence_patterns = candidate.analysis.evidence_patterns
+    views = {}
+
+    for hyp_eval in candidate.analysis.biological_hypothesis_evaluations:
+        # Only build for supported hypotheses
+        if hyp_eval.confidence in {"low", "moderate", "high"}:
+            view = build_additional_supporting_evidence(hyp_eval, evidence_patterns, graph)
+            if view.items:
+                views[hyp_eval.hypothesis_id] = view
+
+    return views
+
+
 def build_impact_views(candidate: CandidateContig) -> dict[str, ImpactView]:
     """Build ImpactView for key evidence nodes in the reasoning graph."""
     graph = candidate.analysis.reasoning_graph
@@ -1650,6 +1757,7 @@ def build_gene_page_view(
             impact_views=build_impact_views(candidate),
             comparison_views=build_comparison_views(candidate),
             counterfactual_views=build_counterfactual_views(candidate),
+            additional_supporting_evidence_views=build_additional_supporting_evidence_views(candidate),
         )
         for candidate in gene.candidates
     )

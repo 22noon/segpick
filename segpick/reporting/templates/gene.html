@@ -1119,7 +1119,7 @@
     </details>
   {%- endmacro %}
 
-  {% macro biological_hypothesis_evaluation_card(hypothesis, next_evidence=none) -%}
+  {% macro biological_hypothesis_evaluation_card(hypothesis, next_evidence=none, _candidate=none) -%}
     <details class="hypothesis-item biological-hypothesis-evaluation-item">
       <summary>
         <span class="hypothesis-title">{{ hypothesis.title }}</span>
@@ -1144,6 +1144,10 @@
         </div>
         {{ hypothesis_action_buttons(hypothesis.hypothesis_id, hypothesis.title) }}
         {{ evidence_gaps_section(next_evidence) }}
+        {% set additional_evidence = _candidate.additional_supporting_evidence_views.get(hypothesis.hypothesis_id) %}
+        {% if additional_evidence %}
+            {{ additional_supporting_evidence_section(additional_evidence) }}
+        {% endif %}
         <p class="hypothesis-meta">{{ hypothesis.hypothesis_id }} · {{ hypothesis.source }}</p>
       </div>
     </details>
@@ -1277,6 +1281,28 @@
         {% endif %}
       {% else %}
         <p class="muted">All required and supporting evidence is present.</p>
+      {% endif %}
+    </div>
+  {%- endmacro %}
+
+  {% macro additional_supporting_evidence_section(additional_evidence) -%}
+    <div class="additional-supporting-evidence-section">
+      {% if additional_evidence.items %}
+        <h4>Additional supporting evidence</h4>
+        {% for item in additional_evidence.items %}
+          <div class="evidence-pattern-supporting">
+            <h5>{{ item.pattern_title }} ({{ item.pattern_id }})</h5>
+            <ul>
+              {% for evidence in item.missing_supporting %}
+                <li class="additional-supporting-evidence">
+                  <strong>{{ evidence.display_name }}</strong>
+                  {% if evidence.source_display_name %}<span class="muted"> · {{ evidence.source_display_name }}</span>{% endif %}
+                  <span class="muted">{{ evidence.description }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endfor %}
       {% endif %}
     </div>
   {%- endmacro %}
@@ -1479,7 +1505,7 @@
             <span>Select all</span>
           </label>
         </div>
-        {% for hypothesis in candidate.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis, next_evidence=candidate.next_evidence_views.get(hypothesis.hypothesis_id)) }}{% endfor %}{% else %}<p class="muted">No evidence-pattern-supported biological hypothesis was generated for this candidate.</p>{% endif %}
+        {% for hypothesis in candidate.biological_hypothesis_evaluations %}{{ biological_hypothesis_evaluation_card(hypothesis, next_evidence=candidate.next_evidence_views.get(hypothesis.hypothesis_id), _candidate=candidate) }}{% endfor %}{% else %}<p class="muted">No evidence-pattern-supported biological hypothesis was generated for this candidate.</p>{% endif %}
       </div>
     {% endfor %}
     {% for candidate in view.candidates %}
