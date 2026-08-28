@@ -215,3 +215,17 @@ The vertical axis represents candidate-specific reasoning.
 The horizontal axis represents reusable biological knowledge.
 
 Future extensions should add knowledge rather than change the reasoning architecture whenever possible.
+
+---
+
+# LLM Generation Boundary
+
+**Principle**: SegPick performs deterministic inference from observations through interpretations, evidence patterns, hypotheses, and ultimately scientific conclusions/recommendations. LLM-based generation is downstream of this deterministic reasoning layer and should consume structured conclusions/provenance rather than replace the underlying deterministic reasoning.
+
+The deterministic reasoning pipeline (observations → interpretations → evidence patterns → hypotheses → conclusions) produces fully traceable, reproducible scientific conclusions with explicit provenance. LLM-based generation must consume these structured conclusions and their provenance as input, not replace the deterministic reasoning pipeline itself.
+
+This boundary ensures:
+- Scientific conclusions are reproducible and auditable
+- Provenance is preserved end-to-end
+- LLM hallucinations cannot corrupt the evidence chain
+- Expert review can trace any conclusion to raw measurements
