@@ -236,6 +236,114 @@ def _biological_hypothesis_nodes(
     return node_tuple, tuple(edges)
 
 
+def _scientific_conclusion_nodes(
+    conclusions: tuple,
+    hypotheses: tuple,
+) -> tuple[tuple, tuple[ReasoningEdge, ...]]:
+
+    """Build scientific conclusion nodes and their edges to supporting hypotheses."""
+
+    from segpick.models.reasoning_graph import ScientificConclusionNode
+
+    from segpick.reasoning.conclusion_rules import HypothesisRelationship
+
+
+    # Build lookup of hypothesis rule_id to node id
+
+    hyp_by_rule_id = {h.rule_id: h.id for h in hypotheses}
+
+
+    nodes = []
+
+    for index, conclusion in enumerate(conclusions, 1):
+
+        # Get the supporting hypothesis node IDs
+
+        supporting_hyp_ids = tuple(
+
+            hyp_by_rule_id.get(hid)
+
+            for hid in conclusion.supporting_hypotheses
+
+            if conclusion.hypothesis_id in hyp_by_rule_id
+
+        )
+
+        conflicting_hyp_ids = tuple(
+
+            hyp_by_rule_id.get(hid)
+
+            for hid in conclusion.conflicting_hypotheses
+
+            if conclusion.hypothesis_id in hyp_by_rule_id
+
+        )
+
+
+        # Determine the generating relationship
+
+        generating_rel = ""
+
+        generating_hyps = ()
+
+        # This would be populated from the ConclusionRule that generated this conclusion
+
+
+        node = ScientificConclusionNode(
+
+            id=f"conclusion:{conclusion.rule_id}:{index}",
+
+            rule_id=conclusion.rule_id,
+
+            title=conclusion.title,
+
+            summary=conclusion.explanation,
+
+            state=conclusion.state,
+
+            confidence=conclusion.confidence,
+
+            category=conclusion.category,
+
+            scope=conclusion.scope,
+
+            severity=conclusion.severity,
+
+            rule_source=conclusion.source,
+
+            rule_description=conclusion.description,
+
+            rule_references=conclusion.references,
+
+            conclusion_id=conclusion.conclusion_id,
+
+            supporting_hypotheses=conclusion.supporting_hypotheses,
+
+            conflicting_hypotheses=conclusion.conflicting_hypotheses,
+
+        )
+
+        nodes.append((node, tuple(conclusion.supporting_hypotheses), tuple(conclusion.conflicting_hypotheses)))
+
+
+    node_tuple = tuple(node for node, *_ in nodes)
+
+    edges = []
+
+    for node, supporting, conflicting in zip(nodes, [c.supporting_hypotheses for c in conclusions], [c.conflicting_hypotheses for c in conclusions]):
+
+        # We need to map hypothesis rule_ids to their node IDs
+
+        # This requires access to the hypothesis node map
+
+        pass
+
+
+    return tuple(), tuple()
+
+
+
+
 def build_reasoning_graph(candidate) -> ReasoningGraph:
     measurements = tuple(candidate.analysis.plugin_measurements)
     observation_nodes, observation_edges = _observation_nodes(

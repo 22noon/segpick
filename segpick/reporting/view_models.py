@@ -1465,6 +1465,8 @@ class CandidateView:
     comparison_views: dict[tuple[str, str], ComparisonView] = field(default_factory=dict)
     counterfactual_views: dict[str, CounterfactualResultView] = field(default_factory=dict)
     additional_supporting_evidence_views: dict[str, AdditionalSupportingEvidenceCollectionView] = field(default_factory=dict)
+    scientific_conclusion_views: dict[str, ScientificConclusionView] = field(default_factory=dict)
+    scientific_conclusion_views: dict[str, ScientificConclusionView] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1480,6 +1482,44 @@ class GenePageView:
     rule_evaluations: tuple[RuleEvaluationView, ...]
     evidence_patterns: tuple[EvidencePatternView, ...]
     biological_hypothesis_evaluations: tuple[HypothesisEvaluationView, ...]
+
+
+def build_scientific_conclusion_view(
+    conclusion: ScientificConclusionEvaluation,
+    graph: object = None,
+) -> ScientificConclusionView:
+    """Build a ScientificConclusionView from a conclusion evaluation."""
+    return ScientificConclusionView(
+        conclusion_id=conclusion.conclusion_id,
+        title=conclusion.title,
+        category=conclusion.category,
+        scope=conclusion.scope,
+        state=conclusion.state,
+        confidence=conclusion.confidence,
+        severity=conclusion.severity,
+        rule_id=conclusion.rule_id,
+        rule_version=conclusion.rule_version,
+        source=conclusion.source,
+        references=conclusion.references,
+        recommended_actions=conclusion.recommended_actions,
+        explanation=conclusion.explanation,
+        base_confidence=conclusion.base_confidence,
+        supporting_hypotheses=conclusion.supporting_hypotheses,
+        conflicting_hypotheses=conclusion.conflicting_hypotheses,
+        conditional_requirements=conclusion.conditional_requirements,
+    )
+
+
+def build_scientific_conclusion_views(
+    candidate: CandidateContig,
+) -> dict[str, ScientificConclusionView]:
+    """Build ScientificConclusionView for each scientific conclusion evaluation."""
+    conclusions = candidate.analysis.scientific_conclusions
+    views = {}
+    for conclusion in conclusions:
+        view = build_scientific_conclusion_view(conclusion)
+        views[conclusion.conclusion_id] = view
+    return views
 
 
 def build_recommendation_view(
@@ -1948,6 +1988,7 @@ def build_gene_page_view(
             comparison_views=build_comparison_views(candidate),
             counterfactual_views=build_counterfactual_views(candidate),
             additional_supporting_evidence_views=build_additional_supporting_evidence_views(candidate),
+            scientific_conclusion_views=build_scientific_conclusion_views(candidate),
         )
         for candidate in gene.candidates
     )

@@ -116,6 +116,45 @@ class BiologicalHypothesisNode:
 
 
 @dataclass(frozen=True, slots=True)
+class ScientificConclusionNode:
+    id: str
+    rule_id: str
+    title: str
+    summary: str
+    state: Literal["supported", "conditional", "unsupported", "contradicted"]
+    confidence: Literal["low", "moderate", "high", "provisional"]
+    category: str
+    scope: Literal["candidate", "gene"]
+    severity: str
+    rule_source: str = ""
+    rule_description: str = ""
+    rule_references: tuple[str, ...] = ()
+    conclusion_id: str = ""
+    rule_source: str = ""
+    rule_description: str = ""
+    rule_references: tuple[str, ...] = ()
+    conclusion_type: str = "scientific"
+    
+    # Provenance: hypotheses that support/contradict this conclusion
+    supporting_hypotheses: tuple[str, ...] = ()
+    conflicting_hypotheses: tuple[str, ...] = ()
+    
+    # The hypothesis relationship that generated this conclusion
+    generating_relationship: str = ""  # "jointly_supports" or "competes_with"
+    generating_hypotheses: tuple[str, ...] = ()  # hypothesis IDs involved in the relationship
+
+    def to_dict(self) -> dict[str, Any]:
+        data = asdict(self)
+        data["provenance"] = {
+            "supporting_hypotheses": list(self.supporting_hypotheses),
+            "conflicting_hypotheses": list(self.conflicting_hypotheses),
+            "generating_relationship": self.generating_relationship,
+            "generating_hypotheses": list(self.generating_hypotheses),
+        }
+        return data
+
+
+@dataclass(frozen=True, slots=True)
 class ReasoningEdge:
     source_id: str
     target_id: str
@@ -146,6 +185,7 @@ class ReasoningGraph:
     interpretive_findings: tuple[InterpretiveFindingNode, ...] = ()
     evidence_patterns: tuple[EvidencePatternNode, ...] = ()
     biological_hypotheses: tuple[BiologicalHypothesisNode, ...] = ()
+    scientific_conclusions: tuple = ()
     edges: tuple[ReasoningEdge, ...] = ()
 
     SCHEMA_VERSION = "4.0"

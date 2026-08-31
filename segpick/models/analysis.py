@@ -60,4 +60,5 @@ class ContigAnalysis:
     recommendation_reason: str | None = None
     plugin_measurements: tuple[MeasurementNode, ...] = ()
     reasoning_graph: ReasoningGraph | None = None
+    scientific_conclusions: tuple[ScientificConclusionEvaluation, ...] = ()
 
