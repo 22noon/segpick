@@ -42,6 +42,7 @@ def extract_provenance(
             graph.interpretive_findings,
             graph.evidence_patterns,
             graph.biological_hypotheses,
+            graph.scientific_conclusions,
         )
         for node in collection
     }

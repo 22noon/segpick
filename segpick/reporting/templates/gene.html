@@ -1024,6 +1024,47 @@
     .graph-paths { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.82rem; }
     .graph-json-preview { max-height:24rem; overflow:auto; white-space:pre; padding:.8rem; border:1px solid var(--line); border-radius:8px; background:#f8fafc; font-size:.78rem; }
 
+
+    .conclusion-state-supported {
+      border-left: 4px solid #16a34a;
+    }
+    .conclusion-state-conditional {
+      border-left: 4px solid #f59e0b;
+    }
+    .conclusion-state-unsupported {
+      border-left: 4px solid #9ca3af;
+      opacity: 0.7;
+    }
+    .conclusion-state-contradicted {
+      border-left: 4px solid #dc2626;
+    }
+    .conclusion-state-supported .conclusion-state-supported,
+    .conclusion-state-conditional .conclusion-state-conditional,
+    .conclusion-state-unsupported .conclusion-state-unsupported,
+    .conclusion-state-contradicted .conclusion-state-contradicted {
+      font-weight: 750;
+    }
+    .conclusion-state-supported .conclusion-state-supported {
+      color: #166534;
+    }
+    .conclusion-state-conditional .conclusion-state-conditional {
+      color: #92400e;
+    }
+    .conclusion-state-unsupported .conclusion-state-unsupported {
+      color: #6b7280;
+    }
+    .conclusion-state-contradicted .conclusion-state-contradicted {
+      color: #dc2626;
+    }
+    .hypothesis-link-muted {
+      color: #9ca3af;
+      cursor: default;
+      text-decoration: none;
+    }
+    .hypothesis-link-muted:hover {
+      color: #9ca3af;
+      text-decoration: none;
+    }
 </style>
 </head>
 <body>
@@ -1199,6 +1240,89 @@
               {{ additional_supporting_evidence_section(additional_evidence) }}
           {% endif %}
           <p class="hypothesis-meta">{{ hypothesis.hypothesis_id }} · {{ hypothesis.source }}</p>
+        </details>
+      </div>
+    </details>
+
+  {%- endmacro %}
+  {% macro scientific_conclusion_card(conclusion, candidate=none) -%}
+    <details class="hypothesis-item scientific-conclusion-item conclusion-state-{{ conclusion.state }}" id="conclusion-{{ conclusion.conclusion_id }}">
+      <summary class="scientific-conclusion-summary">
+        <span class="scientific-conclusion-title">{{ conclusion.title }}</span>
+        <span class="hypothesis-badge confidence-{{ conclusion.confidence }}">{{ conclusion.confidence|upper }}</span>
+        <span class="hypothesis-scope conclusion-state-{{ conclusion.state }}">{{ conclusion.state|replace('_', ' ')|title }}</span>
+      </summary>
+      <div class="hypothesis-detail">
+        <p class="hypothesis-explanation">{{ conclusion.explanation }}</p>
+        
+        {% if conclusion.generating_relationship %}
+        <div class="hypothesis-trace">
+          <h4>Generating relationship: {{ conclusion.generating_relationship|replace('_', ' ')|title }}</h4>
+          <p class="muted">This conclusion synthesizes {{ conclusion.generating_hypotheses|length }} hypotheses: 
+            {% for hyp in conclusion.generating_hypotheses %}
+              {% if hyp in conclusion.available_hypothesis_ids %}
+                <a href="#hypothesis-{{ hyp }}" class="hypothesis-link" data-hypothesis-id="{{ hyp }}">{{ hyp }}</a>
+              {% else %}
+                <span class="hypothesis-link-muted">{{ hyp }}</span>
+              {% endif %}
+              {% if not loop.last %}, {% endif %}
+            {% endfor %}
+          </p>
+        </div>
+        {% endif %}
+        
+        {% if conclusion.supporting_hypotheses %}
+        <div class="hypothesis-trace">
+          <h4>Supporting hypotheses</h4>
+          <ul class="pattern-link-list">
+            {% for hyp in conclusion.supporting_hypotheses %}
+              <li>
+                {% if hyp in conclusion.available_hypothesis_ids %}
+                  <a href="#hypothesis-{{ hyp }}" class="hypothesis-link" data-hypothesis-id="{{ hyp }}">{{ hyp }}</a>
+                {% else %}
+                  <span class="hypothesis-link-muted">{{ hyp }}</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        
+        {% if conclusion.conflicting_hypotheses %}
+        <div class="hypothesis-trace">
+          <h4>Conflicting hypotheses</h4>
+          <ul class="pattern-link-list">
+            {% for hyp in conclusion.conflicting_hypotheses %}
+              <li>
+                {% if hyp in conclusion.available_hypothesis_ids %}
+                  <a href="#hypothesis-{{ hyp }}" class="hypothesis-link" data-hypothesis-id="{{ hyp }}">{{ hyp }}</a>
+                {% else %}
+                  <span class="hypothesis-link-muted">{{ hyp }}</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        
+        {% if conclusion.conditional_requirements %}
+        <div class="hypothesis-trace">
+          <h4>Conditional requirements</h4>
+          <ul class="muted">
+            {% for req in conclusion.conditional_requirements %}
+              <li>{{ req }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+        
+        <details class="hypothesis-secondary">
+          <summary>More details</summary>
+          {% if conclusion.recommended_actions %}
+          <h4>Recommended checks</h4>
+          <ul>{% for action in conclusion.recommended_actions %}<li>{{ action }}</li>{% endfor %}</ul>
+          {% endif %}
+          <p class="hypothesis-meta">Rule: {{ conclusion.rule_id }} · Source: {{ conclusion.source }}</p>
         </details>
       </div>
     </details>
@@ -1556,6 +1680,7 @@
     <a href="#evidence-patterns-panel">Evidence patterns</a>
     <a href="#unresolved-evidence-patterns-panel">Unresolved evidence patterns</a>
     <a href="#biological-hypotheses-panel">Biological hypotheses</a>
+    <a href="#scientific-conclusions-panel">Scientific conclusions</a>
     <a href="#biological-interpretation-panel">Rule-based interpretation</a>
   </nav>
 
@@ -1603,7 +1728,21 @@
     {% for candidate in view.candidates %}
       {{ counterfactual_sidebars(candidate) }}
     {% endfor %}
-  </section
+  </section>
+
+  <section id="scientific-conclusions-panel" class="card hypothesis-card">
+    <h2>Scientific Conclusions</h2>
+    <p class="muted">Higher-level scientific inferences derived from relationships among biological hypotheses. Conclusions represent synthesized knowledge that cannot be reduced to a single hypothesis.</p>
+    {% for candidate in view.candidates %}
+      <div class="candidate-detail {% if candidate.recommended %}active{% endif %}" data-sequence-id="{{ candidate.candidate_id }}">
+      {% if candidate.scientific_conclusion_views %}
+        {% for conclusion in candidate.scientific_conclusion_views.values() %}
+          {{ scientific_conclusion_card(conclusion, candidate) }}
+        {% endfor %}
+      {% else %}<p class="muted">No scientific conclusion was generated for this candidate.</p>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
 
   <section id="interpretations-panel" class="card hypothesis-card">
     <h2>Interpretations</h2>
@@ -3051,7 +3190,7 @@ const DashboardTabs = {
   summary: new Set(["Recommended candidate"]),
   comparison: new Set(["Evidence table"]),
   evidence: new Set(["Structural integrity", "Reference compatibility", "Read evidence", "ORF structural evidence"]),
-  reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Evidence patterns", "Unresolved evidence patterns", "Interpretive findings"]),
+  reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Evidence patterns", "Unresolved evidence patterns", "Interpretive findings", "Scientific Conclusions"]),
   plots: new Set(["Visualizations", "Candidate-to-candidate structural comparison", "Candidates aligned to shared nucleotide reference", "Candidate versus closest nucleotide reference", "Protein coordinate map", "Protein relatedness", "Read coverage"]),
   downloads: new Set(["Download selected sequences", "Selected candidate sequence"]),
   expert: new Set(["Reasoning graph inspector", "Rule explorer"])

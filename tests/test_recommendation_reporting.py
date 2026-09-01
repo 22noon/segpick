@@ -238,7 +238,7 @@ def test_dashboard_contains_recommendation(tmp_path) -> None:
     assert 'href="#evidence-patterns-panel"' in html
     assert 'href="#biological-hypotheses-panel"' in html
     assert 'href="#biological-interpretation-panel"' in html
-    assert 'reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Evidence patterns", "Unresolved evidence patterns", "Interpretive findings"])' in html
+    assert 'reasoning: new Set(["Reasoning path", "Biological hypotheses", "Cross-evidence findings", "Evidence patterns", "Unresolved evidence patterns", "Interpretive findings", "Scientific Conclusions"])' in html
     assert 'initialiseSectionNavigation("reasoning-navigation", "reasoning")' in html
     assert 'href="#structural-integrity-panel"' in html
     assert 'href="#reference-compatibility-panel"' in html

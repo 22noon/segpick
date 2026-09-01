@@ -89,6 +89,7 @@ class ReasoningExplorer:
                 self._graph.interpretive_findings,
                 self._graph.evidence_patterns,
                 self._graph.biological_hypotheses,
+                self._graph.scientific_conclusions,
             )
             for node in collection
         }
@@ -102,9 +103,10 @@ class ReasoningExplorer:
             if edge.relationship in PROVENANCE_RELATIONSHIPS:
                 reverse_adj[edge.target_id].append((edge.source_id, edge))
 
-        # DFS from source to find all paths to claims (biological hypotheses)
-        # A claim is a biological hypothesis node
+        # DFS from source to find all paths to claims (biological hypotheses AND scientific conclusions)
+        # A claim is a biological hypothesis node or a scientific conclusion node
         claim_types = {n.id for n in self._graph.biological_hypotheses}
+        claim_types.update(n.id for n in self._graph.scientific_conclusions)
 
         paths = []
 
@@ -116,7 +118,8 @@ class ReasoningExplorer:
                     nodes=tuple(node_index[nid] for nid in path_nodes + [current_id]),
                     edges=tuple(path_edges),
                 ))
-                return
+                # Continue searching to find paths to conclusions beyond this claim
+                # (don't return early)
 
             for next_id, edge in reverse_adj.get(current_id, ()):
                 dfs(next_id, path_nodes + [current_id], path_edges + [edge])

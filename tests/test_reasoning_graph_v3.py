@@ -411,6 +411,7 @@ def test_reasoning_graph_export_uses_single_canonical_schema():
         "interpretive_findings",
         "evidence_patterns",
         "biological_hypotheses",
+        "scientific_conclusions",
         "edges",
     }
 

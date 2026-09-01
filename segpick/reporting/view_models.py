@@ -1419,6 +1419,31 @@ def build_next_evidence_view(
 
 
 @dataclass(frozen=True, slots=True)
+class ScientificConclusionView:
+    conclusion_id: str
+    title: str
+    category: str
+    scope: str
+    state: str
+    confidence: str
+    severity: str
+    rule_id: str
+    rule_version: str
+    source: str
+    references: tuple[str, ...]
+    recommended_actions: tuple[str, ...]
+    explanation: str
+    base_confidence: str
+    supporting_hypotheses: tuple[str, ...]
+    conflicting_hypotheses: tuple[str, ...]
+    conditional_requirements: tuple[str, ...]
+    generating_relationship: str
+    generating_hypotheses: tuple[str, ...]
+    # Available hypothesis IDs that can be navigated to (subset of supporting/conflicting/generating)
+    available_hypothesis_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class CandidateView:
     candidate_id: str
     length: int
@@ -1466,7 +1491,6 @@ class CandidateView:
     counterfactual_views: dict[str, CounterfactualResultView] = field(default_factory=dict)
     additional_supporting_evidence_views: dict[str, AdditionalSupportingEvidenceCollectionView] = field(default_factory=dict)
     scientific_conclusion_views: dict[str, ScientificConclusionView] = field(default_factory=dict)
-    scientific_conclusion_views: dict[str, ScientificConclusionView] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1487,6 +1511,7 @@ class GenePageView:
 def build_scientific_conclusion_view(
     conclusion: ScientificConclusionEvaluation,
     graph: object = None,
+    available_hypothesis_ids: tuple[str, ...] = (),
 ) -> ScientificConclusionView:
     """Build a ScientificConclusionView from a conclusion evaluation."""
     return ScientificConclusionView(
@@ -1507,6 +1532,9 @@ def build_scientific_conclusion_view(
         supporting_hypotheses=conclusion.supporting_hypotheses,
         conflicting_hypotheses=conclusion.conflicting_hypotheses,
         conditional_requirements=conclusion.conditional_requirements,
+        generating_relationship=getattr(conclusion, "generating_relationship", ""),
+        generating_hypotheses=getattr(conclusion, "generating_hypotheses", ()),
+        available_hypothesis_ids=available_hypothesis_ids,
     )
 
 
@@ -1515,9 +1543,18 @@ def build_scientific_conclusion_views(
 ) -> dict[str, ScientificConclusionView]:
     """Build ScientificConclusionView for each scientific conclusion evaluation."""
     conclusions = candidate.analysis.scientific_conclusions
+    
+    # Collect all available hypothesis IDs from the candidate's biological hypotheses
+    available_hypothesis_ids = tuple(
+        h.hypothesis_id for h in candidate.analysis.biological_hypothesis_evaluations
+    )
+    
     views = {}
     for conclusion in conclusions:
-        view = build_scientific_conclusion_view(conclusion)
+        view = build_scientific_conclusion_view(
+            conclusion, 
+            available_hypothesis_ids=available_hypothesis_ids
+        )
         views[conclusion.conclusion_id] = view
     return views
 

@@ -11,25 +11,24 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from segpick.explorer import ReasoningExplorer
 from segpick.knowledge import (
     evaluate_evidence_patterns,
     evaluate_hypotheses,
     load_active_evidence_patterns,
     load_active_hypotheses,
 )
-from segpick.explorer import ReasoningExplorer
-from segpick.explorer.provenance import ImpactResult
+from segpick.knowledge.hypothesis_definition import HypothesisDefinition
+from segpick.knowledge.schema import EvidencePatternDefinition
 from segpick.models import (
-    EvidenceObservation,
     BiologicalFinding,
+    EvidenceObservation,
     EvidencePatternEvaluation,
     HypothesisEvaluation,
 )
-from segpick.knowledge.schema import EvidencePatternDefinition
-from segpick.knowledge.hypothesis_definition import HypothesisDefinition
 from segpick.models.reasoning_graph import (
-    ReasoningGraph,
     InterpretiveFindingNode,
+    ReasoningGraph,
 )
 
 
@@ -46,8 +45,8 @@ class CounterfactualResult:
     counterfactual_hypotheses: tuple[HypothesisEvaluation, ...]
     
     # Explicit deltas
-    pattern_deltas: tuple["PatternDelta", ...]
-    hypothesis_deltas: tuple["HypothesisDelta", ...]
+    pattern_deltas: tuple[PatternDelta, ...]
+    hypothesis_deltas: tuple[HypothesisDelta, ...]
     
     # Summary counts
     hypotheses_unchanged: int
@@ -106,7 +105,7 @@ def _build_counterfactual_context(
     candidate,
     pattern_definitions: tuple[EvidencePatternDefinition, ...],
     hypothesis_definitions: tuple[HypothesisDefinition, ...],
-) -> "_CounterfactualContext":
+) -> _CounterfactualContext:
     """Extract all evaluation inputs from a candidate."""
     analysis = candidate.analysis
     
@@ -115,7 +114,6 @@ def _build_counterfactual_context(
     # But we also need to include all patterns from the candidate's analysis
     
     # Load all pattern definitions from knowledge base
-    from segpick.knowledge import load_active_evidence_patterns
     all_pattern_defs, _ = load_active_evidence_patterns()
     
     # Filter to only those patterns present in the candidate's analysis
@@ -142,7 +140,7 @@ def _build_counterfactual_context(
     )
 
 
-def _remove_observation(context: "_CounterfactualContext", node_id: str) -> "_CounterfactualContext":
+def _remove_observation(context: _CounterfactualContext, node_id: str) -> _CounterfactualContext:
     """Virtually remove an observation from the evaluation context."""
     filtered_obs = tuple(o for o in context.observations if not _filter_observation(o, node_id))
     
@@ -205,7 +203,6 @@ def _evaluate_patterns(
     candidate_ids: tuple[str, ...],
 ) -> tuple[EvidencePatternEvaluation, ...]:
     """Re-evaluate evidence patterns with modified inputs."""
-    from segpick.knowledge import evaluate_evidence_patterns
     return evaluate_evidence_patterns(
         definitions,
         observations,
@@ -221,14 +218,13 @@ def _evaluate_hypotheses(
     candidate_ids: tuple[str, ...],
 ) -> tuple[HypothesisEvaluation, ...]:
     """Re-evaluate hypotheses with modified pattern inputs."""
-    from segpick.knowledge import evaluate_hypotheses
     return evaluate_hypotheses(definitions, patterns, candidate_ids=candidate_ids)
 
 
 def _compute_pattern_deltas(
     original: tuple[EvidencePatternEvaluation, ...],
     counterfactual: tuple[EvidencePatternEvaluation, ...],
-) -> tuple["PatternDelta", ...]:
+) -> tuple[PatternDelta, ...]:
     """Compute deltas between original and counterfactual patterns."""
     original_by_id = {p.pattern_id: p for p in original}
     counterfactual_by_id = {p.pattern_id: p for p in counterfactual}
@@ -282,7 +278,7 @@ def _compute_pattern_deltas(
 def _compute_hypothesis_deltas(
     original: tuple[HypothesisEvaluation, ...],
     counterfactual: tuple[HypothesisEvaluation, ...],
-) -> tuple["HypothesisDelta", ...]:
+) -> tuple[HypothesisDelta, ...]:
     """Compute deltas between original and counterfactual hypotheses."""
     original_by_id = {h.hypothesis_id: h for h in original}
     counterfactual_by_id = {h.hypothesis_id: h for h in counterfactual}
@@ -342,7 +338,7 @@ def _compute_hypothesis_deltas(
 def evaluate_counterfactual(
     candidate,
     node_id: str,
-) -> "CounterfactualResult":
+) -> CounterfactualResult:
     """
     Evaluate the counterfactual effect of removing an ObservationNode.
     
@@ -358,7 +354,6 @@ def evaluate_counterfactual(
         ValueError: If the node type is not an ObservationNode
     """
     # Load knowledge definitions once
-    from segpick.knowledge import load_active_evidence_patterns, load_active_hypotheses
     pattern_defs, _ = load_active_evidence_patterns()
     hypothesis_defs, _ = load_active_hypotheses()
     
@@ -437,7 +432,7 @@ def evaluate_counterfactual(
     )
 
 
-def _remove_observation(context: "_CounterfactualContext", node_id: str) -> "_CounterfactualContext":
+def _remove_observation(context: _CounterfactualContext, node_id: str) -> _CounterfactualContext:
     """Virtually remove an observation from the evaluation context."""
     filtered_obs = tuple(o for o in context.observations if not _filter_observation(o, node_id))
     
@@ -497,7 +492,7 @@ def _build_counterfactual_context(
     candidate,
     pattern_definitions: tuple[EvidencePatternDefinition, ...],
     hypothesis_definitions: tuple[HypothesisDefinition, ...],
-) -> "_CounterfactualContext":
+) -> _CounterfactualContext:
     """Extract all evaluation inputs from a candidate."""
     analysis = candidate.analysis
     
@@ -506,7 +501,6 @@ def _build_counterfactual_context(
     # But we also need to include all patterns from the candidate's analysis
     
     # Load all pattern definitions from knowledge base
-    from segpick.knowledge import load_active_evidence_patterns
     all_pattern_defs, _ = load_active_evidence_patterns()
     
     # Filter to only those patterns present in the candidate's analysis
@@ -540,7 +534,6 @@ def _evaluate_patterns(
     candidate_ids: tuple[str, ...],
 ) -> tuple[EvidencePatternEvaluation, ...]:
     """Re-evaluate evidence patterns with modified inputs."""
-    from segpick.knowledge import evaluate_evidence_patterns
     return evaluate_evidence_patterns(
         definitions,
         observations,
@@ -556,14 +549,13 @@ def _evaluate_hypotheses(
     candidate_ids: tuple[str, ...],
 ) -> tuple[HypothesisEvaluation, ...]:
     """Re-evaluate hypotheses with modified pattern inputs."""
-    from segpick.knowledge import evaluate_hypotheses
     return evaluate_hypotheses(definitions, patterns, candidate_ids=candidate_ids)
 
 
 def _compute_pattern_deltas(
     original: tuple[EvidencePatternEvaluation, ...],
     counterfactual: tuple[EvidencePatternEvaluation, ...],
-) -> tuple["PatternDelta", ...]:
+) -> tuple[PatternDelta, ...]:
     """Compute deltas between original and counterfactual patterns."""
     original_by_id = {p.pattern_id: p for p in original}
     counterfactual_by_id = {p.pattern_id: p for p in counterfactual}
@@ -617,7 +609,7 @@ def _compute_pattern_deltas(
 def _compute_hypothesis_deltas(
     original: tuple[HypothesisEvaluation, ...],
     counterfactual: tuple[HypothesisEvaluation, ...],
-) -> tuple["HypothesisDelta", ...]:
+) -> tuple[HypothesisDelta, ...]:
     """Compute deltas between original and counterfactual hypotheses."""
     original_by_id = {h.hypothesis_id: h for h in original}
     counterfactual_by_id = {h.hypothesis_id: h for h in counterfactual}
@@ -687,8 +679,8 @@ class CounterfactualResult:
     counterfactual_hypotheses: tuple[HypothesisEvaluation, ...]
     
     # Explicit deltas
-    pattern_deltas: tuple["PatternDelta", ...]
-    hypothesis_deltas: tuple["HypothesisDelta", ...]
+    pattern_deltas: tuple[PatternDelta, ...]
+    hypothesis_deltas: tuple[HypothesisDelta, ...]
     
     # Summary counts
     hypotheses_unchanged: int
@@ -734,4 +726,3 @@ class _CounterfactualContext:
     original_reasoning_graph: ReasoningGraph
 
 
-from segpick.models.reasoning_graph import ReasoningGraph

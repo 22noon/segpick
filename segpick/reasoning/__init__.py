@@ -1,6 +1,14 @@
 """Rule-based biological reasoning."""
 
 from .builtin_rules import CANDIDATE_RULES, GENE_RULES
+from .conclusion_rules import (
+    ConclusionCondition,
+    ConclusionRule,
+    HypothesisRelationship,
+    ScientificConclusionEvaluation,
+    evaluate_conclusions,
+    load_active_conclusion_rules,
+)
 from .engine import evaluate_rule_set, evaluate_rules
 from .graph import build_reasoning_graph
 from .llm_bundle import (
@@ -37,4 +45,11 @@ __all__ = [
     "load_llm_bundle_schema",
     "load_llm_output_schema",
     "write_llm_reasoning_bundle",
+    # Conclusion layer
+    "ConclusionCondition",
+    "ConclusionRule",
+    "HypothesisRelationship",
+    "ScientificConclusionEvaluation",
+    "evaluate_conclusions",
+    "load_active_conclusion_rules",
 ]

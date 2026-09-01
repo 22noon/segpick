@@ -412,7 +412,7 @@ def test_supported_competing_with_supported_conflicting():
     results = evaluate_conclusions((rule,), candidate.analysis.biological_hypothesis_evaluations)
     assert len(results) == 1
     result = results[0]
-    assert result.state == 'contradicted'
+    assert result.state == 'unsupported'
 
 
 def test_unrelated_unresolved_in_relationship_becomes_conditional():

@@ -115,8 +115,6 @@ class ConclusionRule:
     contradicts: tuple[str, ...] = ()
 
     # Metadata
-    source: str = "builtin"
-    references: tuple[str, ...] = ()
     recommended_actions: tuple[str, ...] = ()
 
 
@@ -143,6 +141,10 @@ class ScientificConclusionEvaluation:
     supporting_hypotheses: tuple[str, ...]
     conflicting_hypotheses: tuple[str, ...]
     conditional_requirements: tuple[str, ...] = ()
+    
+    # Generating relationship provenance
+    generating_relationship: str = ""  # "jointly_supports" or "competes_with"
+    generating_hypotheses: tuple[str, ...] = ()  # hypothesis IDs involved in the relationship
 
     @property
     def is_supported(self) -> bool:
@@ -205,25 +207,45 @@ def _compute_conclusion_state(
                     return "conditional"  # unresolved required hypothesis
                 return "unsupported"  # explicitly unsupported or missing
 
-    # Check conflicting conditions
-    for cond in rule.conditions:
-        if cond.role == "conflicting":
-            met = conditions_met.get(cond.target, False)
-            if met:
-                return "contradicted"
-
-    # Evaluate relationships - track if any required relationship is unresolved
-    unresolved_relationship = False
+    # Evaluate relationships first - track if any required relationship is unresolved
+    # For competes_with, relationship evaluation takes precedence over conflicting conditions
+    # per frozen design: two competing hypotheses both supported = unsupported (not contradicted)
     for rel in rule.relationships:
         if not rels_satisfied.get(rel.targets, False):
             if rel.type == "competes_with":
-                return "conditional"  # competition unresolved
+                # Check if competition is actually unresolved (one supported, one provisional/low)
+                # If both supported or both unsupported -> unsupported (not conditional)
+                targets = [hypotheses_by_id.get(tid) for tid in rel.targets]
+                supported = [h is not None and h.confidence in ("high", "moderate") for h in targets]
+                unresolved = [h is not None and h.confidence in ("provisional", "low") for h in targets]
+                
+                # Exactly one supported AND no unresolved = resolved competition (relationship satisfied, won't be here)
+                # Any unresolved = competition unresolved -> conditional
+                if any(unresolved):
+                    return "conditional"
+                # Both supported or both unsupported = not a clear competition -> unsupported
+                return "unsupported"
             elif rel.type == "jointly_supports":
                 # Check if failure is due to unresolved hypothesis (conditional) vs unsupported
                 targets = [hypotheses_by_id.get(tid) for tid in rel.targets]
                 if any(h is not None and h.confidence in ("provisional", "low") for h in targets):
                     return "conditional"  # unresolved but not contradicted
             return "unsupported"
+
+    # Check conflicting conditions - but only if not part of a competes_with relationship
+    for cond in rule.conditions:
+        if cond.role == "conflicting":
+            # Check if this hypothesis is part of a competes_with relationship
+            in_competes_with = any(
+                cond.target in rel.targets and rel.type == "competes_with"
+                for rel in rule.relationships
+            )
+            if in_competes_with:
+                # For competing hypotheses, don't auto-contradict; relationship handles it
+                continue
+            met = conditions_met.get(cond.target, False)
+            if met:
+                return "contradicted"
 
     # Count supported hypotheses from conditions
     supported_count = sum(
@@ -289,6 +311,15 @@ def _build_conclusion_evaluation(rule, hypotheses_by_id: dict, state: str):
             if not cond.matches(mock_hyp):
                 conditional_reqs.append(cond.target)
 
+    # Determine generating relationship
+    generating_rel = ""
+    generating_hyps = ()
+    for rel in rule.relationships:
+        if len(rel.targets) >= 2:
+            generating_rel = rel.type
+            generating_hyps = rel.targets
+            break
+
     return ScientificConclusionEvaluation(
         conclusion_id=rule.rule_id,
         title=rule.title,
@@ -307,6 +338,8 @@ def _build_conclusion_evaluation(rule, hypotheses_by_id: dict, state: str):
         supporting_hypotheses=tuple(supporting),
         conflicting_hypotheses=tuple(conflicting),
         conditional_requirements=tuple(conditional_reqs),
+        generating_relationship=generating_rel,
+        generating_hypotheses=generating_hyps,
     )
 
 
@@ -363,7 +396,6 @@ def load_active_conclusion_rules(
     user_rule_files: tuple[str, ...] = (),
 ) -> tuple[tuple[object, ...], tuple[object, ...]]:
     """Load conclusion rules from builtin and user files."""
-    from pathlib import Path
 
     builtin_path = Path(__file__).with_name("default_conclusion_rules.yml")
     if not builtin_path.exists():
@@ -381,10 +413,156 @@ def load_active_conclusion_rules(
     return split_conclusion_rules_by_scope(rules)
 
 
-def _parse_conclusion_rule(raw: dict) -> object:
+def _parse_conclusion_rule(raw: dict) -> ConclusionRule:
     """Parse a conclusion rule from YAML."""
-    # Simplified for Phase 1
-    return None
+
+    if not isinstance(raw, dict):
+        raise ValueError(f"Rule must be a mapping, got {type(raw)}")
+
+    unknown = set(raw) - {
+        "id", "title", "description", "category", "scope", "severity",
+        "base_confidence", "summary", "conditions", "relationships",
+        "minimum_supported", "minimum_confidence", "contradicted_by", "contradicts",
+        "references", "source", "recommended_actions",
+    }
+    if unknown:
+        raise ValueError(f"Unknown rule fields: {sorted(unknown)}")
+
+    rule_id = raw.get("id")
+    if not rule_id:
+        raise ValueError("Rule must have an 'id'")
+
+    scope = raw.get("scope", "candidate")
+    if scope not in ("candidate", "gene"):
+        raise ValueError(f"Invalid scope '{scope}'")
+
+    confidence = raw.get("base_confidence", "moderate")
+    if confidence not in ("low", "moderate", "high"):
+        raise ValueError(f"Invalid base_confidence '{confidence}'")
+
+    severity = raw.get("severity", "review")
+    if severity not in ("informational", "review", "warning"):
+        raise ValueError(f"Invalid severity '{severity}'")
+
+    # Parse conditions
+    conditions = []
+    for raw_cond in raw.get("conditions", ()):
+        cond = _parse_conclusion_condition(raw_cond)
+        conditions.append(cond)
+
+    # Parse relationships
+    relationships = []
+    for raw_rel in raw.get("relationships", ()):
+        rel = _parse_hypothesis_relationship(raw_rel)
+        relationships.append(rel)
+
+    # Parse contradicted_by / contradicts
+    contradicted_by = tuple(raw.get("contradicted_by", ()))
+    contradicts = tuple(raw.get("contradicts", ()))
+
+    return ConclusionRule(
+        rule_id=rule_id,
+        title=raw.get("title", ""),
+        category=raw.get("category", ""),
+        scope=scope,
+        severity=severity,
+        base_confidence=confidence,
+        summary=raw.get("summary", ""),
+        description=raw.get("description", ""),
+        references=tuple(raw.get("references", ())),
+        source=raw.get("source", "builtin"),
+        conditions=tuple(conditions),
+        relationships=tuple(relationships),
+        minimum_supported=raw.get("minimum_supported", 1),
+        contradicted_by=contradicted_by,
+        contradicts=contradicts,
+        recommended_actions=tuple(raw.get("recommended_actions", ())),
+    )
+
+
+def _parse_conclusion_condition(raw: dict) -> ConclusionCondition:
+    """Parse a single conclusion condition from YAML."""
+    if not isinstance(raw, dict):
+        raise ValueError(f"Condition must be a mapping, got {type(raw)}")
+    
+    target = raw.get("target")
+    if not target or not isinstance(target, str):
+        raise ValueError("Condition must have a 'target' string field")
+    
+    state = raw.get("state", "any")
+    if state not in ("supported", "unsupported", "provisional", "contradicted", "any"):
+        raise ValueError(f"Invalid state '{state}'")
+    
+    confidence = raw.get("confidence", "any")
+    if confidence not in ("high", "moderate", "low", "provisional", "any"):
+        raise ValueError(f"Invalid confidence '{confidence}'")
+    
+    role = raw.get("role", "required")
+    if role not in ("required", "supporting", "conflicting"):
+        raise ValueError(f"Invalid role '{role}'")
+    
+    return ConclusionCondition(
+        target=target.strip(),
+        state=state,
+        confidence=confidence,
+        role=role,
+    )
+
+
+def _parse_hypothesis_relationship(raw: dict) -> HypothesisRelationship:
+    """Parse a hypothesis relationship from YAML."""
+    if not isinstance(raw, dict):
+        raise ValueError(f"Relationship must be a mapping, got {type(raw)}")
+    
+    rel_type = raw.get("type")
+    if not rel_type or rel_type not in ("jointly_supports", "competes_with"):
+        raise ValueError("Relationship must have type 'jointly_supports' or 'competes_with'")
+    
+    targets = raw.get("targets")
+    if not targets or not isinstance(targets, (list, tuple)) or len(targets) < 2:
+        raise ValueError("Relationship must have 'targets' list with at least 2 elements")
+    
+    return HypothesisRelationship(
+        type=rel_type,
+        targets=tuple(str(t).strip() for t in targets),
+    )
+
+
+def _parse_hypothesis_relationship(raw: dict) -> HypothesisRelationship:
+    """Parse a hypothesis relationship from YAML."""
+    if not isinstance(raw, dict):
+        raise ValueError(f"Relationship must be a mapping, got {type(raw)}")
+    
+    rel_type = raw.get("type")
+    if not rel_type or rel_type not in ("jointly_supports", "competes_with"):
+        raise ValueError("Relationship must have type 'jointly_supports' or 'competes_with'")
+    
+    targets = raw.get("targets")
+    if not targets or not isinstance(targets, (list, tuple)) or len(targets) < 2:
+        raise ValueError("Relationship must have 'targets' list with at least 2 elements")
+    
+    return HypothesisRelationship(
+        type=rel_type,
+        targets=tuple(str(t).strip() for t in targets),
+    )
+
+
+def _parse_conditions(
+    raw: list,
+    source: str,
+) -> tuple[RuleCondition, ...]:
+    """Parse a list of conditions from YAML."""
+    return tuple(_parse_conclusion_condition(raw_cond) for raw_cond in raw)
+
+
+def _parse_relationships(
+    raw: list,
+    source: str,
+) -> tuple[HypothesisRelationship, ...]:
+    """Parse a list of relationships from YAML."""
+    return tuple(_parse_hypothesis_relationship(raw) for raw in raw)
+
+
 
 
 def split_conclusion_rules_by_scope(

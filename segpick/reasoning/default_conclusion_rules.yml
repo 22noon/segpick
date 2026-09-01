@@ -1,0 +1,110 @@
+version: 1
+rules:
+  - id: structural_difference_supported
+    title: "Structural difference supported"
+    category: structural
+    scope: candidate
+    severity: review
+    base_confidence: high
+    summary: "Structural difference supported by evidence"
+    description: "Both incomplete assembly and structural variation hypotheses are supported"
+    conditions:
+      - target: incomplete_segment
+        state: supported
+        role: required
+      - target: reference_relative_structural_variation
+        state: supported
+        role: required
+    relationships:
+      - type: jointly_supports
+        targets:
+          - incomplete_segment
+          - reference_relative_structural_variation
+    minimum_supported: 2
+    minimum_confidence: high
+
+  - id: incomplete_with_ambiguous_variation
+    title: "Incomplete with ambiguous variation"
+    category: structural
+    scope: candidate
+    severity: review
+    base_confidence: high
+    summary: "Incomplete assembly with ambiguous structural variation"
+    conditions:
+      - target: incomplete_segment
+        state: supported
+        role: required
+      - target: reference_relative_structural_variation
+        state: supported
+        role: required
+    relationships:
+      - type: jointly_supports
+        targets:
+          - incomplete_segment
+          - reference_relative_structural_variation
+    minimum_supported: 2
+    minimum_confidence: high
+
+  - id: structural_variation_vs_artefact
+    title: "Structural variation vs assembly artefact"
+    category: structural
+    scope: candidate
+    severity: warning
+    base_confidence: high
+    summary: "Structural variation vs assembly artefact"
+    conditions:
+      - target: true_structural_variation
+        state: supported
+        role: required
+      - target: assembly_artefact
+        state: supported
+        role: conflicting
+    relationships:
+      - type: competes_with
+        targets:
+          - true_structural_variation
+          - assembly_artefact
+    minimum_supported: 1
+
+  - id: incomplete_with_ambiguous_variation
+    title: "Incomplete with ambiguous variation"
+    category: structural
+    scope: candidate
+    severity: review
+    base_confidence: high
+    summary: "Incomplete assembly with ambiguous structural variation"
+    conditions:
+      - target: incomplete_segment
+        state: supported
+        role: required
+      - target: reference_relative_structural_variation
+        state: supported
+        role: required
+    relationships:
+      - type: jointly_supports
+        targets:
+          - incomplete_segment
+          - reference_relative_structural_variation
+    minimum_supported: 2
+    minimum_confidence: high
+
+  - id: structural_variation_vs_artefact
+    title: "Structural variation vs assembly artefact"
+    category: structural
+    scope: candidate
+    severity: warning
+    base_confidence: high
+    summary: "Structural variation vs assembly artefact"
+    conditions:
+      - target: true_structural_variation
+        state: supported
+        role: required
+      - target: assembly_artefact
+        state: supported
+        role: conflicting
+    relationships:
+      - type: competes_with
+        targets:
+          - true_structural_variation
+          - assembly_artefact
+    minimum_supported: 1

@@ -121,10 +121,10 @@ class ScientificConclusionNode:
     rule_id: str
     title: str
     summary: str
-    state: Literal["supported", "conditional", "unsupported", "contradicted"]
-    confidence: Literal["low", "moderate", "high", "provisional"]
+    state: Literal[supported, conditional, unsupported, contradicted]
+    confidence: Literal[low, moderate, high, provisional]
     category: str
-    scope: Literal["candidate", "gene"]
+    scope: Literal[candidate, gene]
     severity: str
     rule_source: str = ""
     rule_description: str = ""
@@ -262,6 +262,7 @@ class ReasoningGraph:
             "interpretive_finding": self.interpretive_findings,
             "evidence_synthesis": self.evidence_patterns,
             "biological_hypothesis": self.biological_hypotheses,
+            "scientific_conclusion": self.scientific_conclusions,
         }
         node_types = {item.id: node_type for node_type, items in node_groups.items() for item in items}
         expected = sum(len(items) for items in node_groups.values())
@@ -281,6 +282,8 @@ class ReasoningGraph:
             ("evidence_synthesis", "interpretive_finding", "conflicted_by"),
             ("biological_hypothesis", "evidence_synthesis", "supported_by"),
             ("biological_hypothesis", "evidence_synthesis", "contradicted_by"),
+            ("scientific_conclusion", "biological_hypothesis", "supported_by"),
+            ("scientific_conclusion", "biological_hypothesis", "contradicted_by"),
         }
         edge_keys: set[tuple[str, str, str]] = set()
         for edge in self.edges:
@@ -309,6 +312,7 @@ class ReasoningGraph:
             "interpretive_findings": [item.to_dict() for item in self.interpretive_findings],
             "evidence_patterns": [item.to_dict() for item in self.evidence_patterns],
             "biological_hypotheses": [item.to_dict() for item in self.biological_hypotheses],
+            "scientific_conclusions": [item.to_dict() for item in self.scientific_conclusions],
             "edges": [item.to_dict() for item in self.provenance_edges()],
         }
 
@@ -328,6 +332,7 @@ class ReasoningGraph:
             ("interpretive_finding", self.interpretive_findings),
             ("evidence_pattern", self.evidence_patterns),
             ("biological_hypothesis", self.biological_hypotheses),
+            ("scientific_conclusion", self.scientific_conclusions),
         )
         nodes: list[dict[str, Any]] = []
         for node_type, items in node_groups:
